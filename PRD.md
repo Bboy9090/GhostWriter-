@@ -1,14 +1,14 @@
 # Planning Guide
 
-A local-only, security-focused payment card metadata manager that helps users organize and quickly find their cards without ever storing sensitive data like full card numbers or CVVs.
+A local-only, security-focused payment card metadata manager with spending insights that helps users organize and track their cards and transactions without ever storing sensitive data like full card numbers or CVVs.
 
 **Experience Qualities**:
 1. **Secure** - Every interaction reinforces that sensitive data is protected, with visual cues and clear messaging about what is and isn't stored
 2. **Reassuring** - The PIN lock, panic wipe, and security warnings create confidence that the tool prioritizes user safety
-3. **Efficient** - Powerful search, filtering, and sorting capabilities make finding the right card instantaneous
+3. **Efficient** - Powerful search, filtering, and sorting capabilities make finding the right card instantaneous, while analytics provide actionable spending insights
 
 **Complexity Level**: Light Application (multiple features with basic state)
-This is a focused tool with several interconnected features (card CRUD, authentication, security measures) but maintains a single-view paradigm with modals for interactions.
+This is a focused tool with several interconnected features (card CRUD, authentication, security measures, usage tracking, analytics dashboard) but maintains a tabbed single-view paradigm with modals for interactions.
 
 ## Essential Features
 
@@ -25,6 +25,20 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - Trigger: User clicks "Add Card" button or clicks edit icon on existing card
 - Progression: Click action → Modal opens with form → User fills metadata → Save → Card appears in list → Data persists to localStorage
 - Success criteria: Cards persist across sessions, display all metadata clearly, and can be edited or deleted
+
+**Usage Tracking & Transaction Logging**
+- Functionality: Record transaction details (amount, merchant, category, date) associated with specific cards
+- Purpose: Enable spending insights and usage analytics without storing sensitive payment information
+- Trigger: User clicks "Add Transaction" button in Insights tab
+- Progression: Click action → Modal opens → User selects card and enters transaction details → Save → Transaction persists and appears in analytics
+- Success criteria: Transactions persist across sessions, link correctly to cards, and update analytics in real-time
+
+**Spending Insights Dashboard**
+- Functionality: Visual analytics showing spending by card, category, and time period with trend analysis
+- Purpose: Help users understand spending patterns and make informed decisions about card usage
+- Trigger: User switches to "Insights" tab
+- Progression: Tab selection → Dashboard loads → Statistics calculate from usage data → Charts and metrics display
+- Success criteria: Analytics update instantly when transactions added; show accurate totals, percentages, and trends; compare current vs previous periods
 
 **Search & Filter System**
 - Functionality: Real-time text search and multiple filter dropdowns (status, tags, sort order)
@@ -51,15 +65,18 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 
 - **First Run Setup**: If no PIN exists, redirect to PIN creation flow with confirmation field to prevent typos
 - **No Cards State**: Show welcoming empty state with "Add Your First Card" CTA and explanation of what metadata is safe to store
+- **No Usage Data**: Show empty state in analytics dashboard encouraging users to add transactions for insights
 - **Browser Without Crypto API**: Show error message that app requires modern browser with Web Crypto API support
 - **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
 - **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
 - **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
 - **Export/Import**: No export feature (security by design) - users must manually re-enter if switching browsers
+- **Deleted Cards with Usage History**: Usage data for deleted cards remains for analytics continuity but shows as "Unknown Card"
+- **Future Dated Transactions**: Prevent adding transactions with dates in the future
 
 ## Design Direction
 
-The design should evoke feelings of **security**, **control**, and **clarity**. Visual language should communicate protection and organization - like a digital security vault meets a modern command center. The interface should feel authoritative yet approachable, with clear hierarchies that make security features obvious and operational features efficient.
+The design should evoke feelings of **security**, **control**, and **clarity**. Visual language should communicate protection and organization - like a digital security vault meets a modern command center with financial intelligence. The interface should feel authoritative yet approachable, with clear hierarchies that make security features obvious, operational features efficient, and insights actionable.
 
 ## Color Selection
 
@@ -108,12 +125,13 @@ Animations should reinforce security and precision - deliberate, not decorative.
 ## Component Selection
 
 **Components**:
-- **Dialog (Lock Screen & Modals)**: Shadcn Dialog for PIN entry, card add/edit forms, and panic wipe confirmation - full-screen dialog for lock screen with backdrop blur
-- **Card**: Shadcn Card component for each card metadata display - customized with status badges and hover states
+- **Dialog (Lock Screen & Modals)**: Shadcn Dialog for PIN entry, card add/edit forms, transaction forms, and panic wipe confirmation - full-screen dialog for lock screen with backdrop blur
+- **Card**: Shadcn Card component for each card metadata display and analytics stat cards - customized with status badges and hover states
+- **Tabs**: Shadcn Tabs for switching between Cards and Insights views - prominent tab bar with icons
 - **Input**: Shadcn Input for search box and form fields - with leading icons from Phosphor
-- **Select**: Shadcn Select for status filter, tag filter, and sort dropdown
+- **Select**: Shadcn Select for status filter, tag filter, sort dropdown, and transaction category selection
 - **Button**: Shadcn Button with variants - default for primary, destructive for panic wipe, outline for secondary actions
-- **Badge**: Shadcn Badge for status indicators (active=green, frozen=blue, closed=gray) and usage tags
+- **Badge**: Shadcn Badge for status indicators (active=green, frozen=blue, closed=gray), usage tags, and category labels
 - **Alert**: Shadcn Alert for security warnings and helper text
 - **Separator**: Shadcn Separator to divide sections (danger zone, settings)
 
@@ -122,12 +140,15 @@ Animations should reinforce security and precision - deliberate, not decorative.
 - **Security Badge**: Custom component in header showing lock icon + "Secured" text when unlocked
 - **PIN Input Dots**: Custom masked input showing dots for each digit entered
 - **Countdown Timer**: Custom circular progress indicator for inactivity timeout warning
+- **Spending Charts**: Custom bar chart visualization using CSS for daily spending trends
+- **Progress Bars**: Custom horizontal progress bars showing spending distribution by card and category
 
 **States**:
 - **Buttons**: Clear hover (lift + brightness), active (pressed scale), disabled (reduced opacity + no pointer)
 - **Inputs**: Focus ring in accent color with glow effect, error state with red border + shake
 - **Cards**: Hover elevation, selected state with accent border, expired cards with muted appearance
 - **Lock Screen**: Loading state during hash validation (subtle spinner)
+- **Analytics**: Loading state while calculating statistics, empty state with call-to-action
 
 **Icon Selection**:
 - Lock/Unlock: `Lock`, `LockOpen` (Phosphor) - for security states
@@ -141,6 +162,8 @@ Animations should reinforce security and precision - deliberate, not decorative.
 - Status: `CheckCircle` (active), `Snowflake` (frozen), `XCircle` (closed)
 - Tags: `Tag` - for usage tags
 - Timer: `Timer` - for inactivity countdown
+- Analytics: `ChartLineUp`, `ChartBarHorizontal`, `TrendUp`, `Calendar`, `Receipt` - for insights dashboard
+- Trends: `ArrowUp` (increase), `ArrowDown` (decrease), `Minus` (neutral)
 
 **Spacing**:
 - Container padding: `p-6` (24px)
@@ -148,11 +171,14 @@ Animations should reinforce security and precision - deliberate, not decorative.
 - Form field spacing: `space-y-4` (16px)
 - Section margins: `mb-8` (32px)
 - Tight inline spacing (badges): `gap-2` (8px)
+- Dashboard card spacing: `space-y-6` (24px)
 
 **Mobile**:
 - Single column card grid on mobile (<768px)
-- Sticky search/filter toolbar at top
+- Sticky tab bar at top for quick navigation
+- Full-width analytics cards stacking vertically
 - Bottom sheet for add/edit forms (using Shadcn Sheet component)
 - Larger touch targets for PIN input (48px minimum)
 - Collapsible filter section to save vertical space
 - Cards take full width with comfortable padding
+- Horizontal scroll for timeline chart on small screens

@@ -1,15 +1,18 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Card as CardType } from './lib/types'
+import { Card as CardType, UsageEntry } from './lib/types'
 import { storage, INACTIVITY_TIMEOUT } from './lib/storage'
 import { LockScreen } from './components/LockScreen'
 import { CardItem } from './components/CardItem'
 import { CardForm } from './components/CardForm'
 import { PanicWipeDialog } from './components/PanicWipeDialog'
+import { StatsDashboard } from './components/StatsDashboard'
+import { UsageForm } from './components/UsageForm'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
 import { Alert, AlertDescription } from './components/ui/alert'
 import { Separator } from './components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { 
   Lock, 
   LockOpen, 
@@ -19,7 +22,9 @@ import {
   Plus, 
   Warning,
   ShieldCheck,
-  Info
+  Info,
+  ChartLineUp,
+  Receipt
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -28,6 +33,7 @@ type SortBy = 'label' | 'bank' | 'expiry'
 function App() {
   const [isLocked, setIsLocked] = useState(true)
   const [cards, setCards] = useState<CardType[]>([])
+  const [usage, setUsage] = useState<UsageEntry[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [tagFilter, setTagFilter] = useState<string>('all')
@@ -37,15 +43,21 @@ function App() {
   const [isPanicDialogOpen, setIsPanicDialogOpen] = useState(false)
   const [showDangerZone, setShowDangerZone] = useState(false)
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isUsageFormOpen, setIsUsageFormOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('cards')
 
   useEffect(() => {
     const loadedCards = storage.loadCards()
+    const loadedUsage = storage.loadUsage()
+    
     if (loadedCards.length === 0) {
       const sampleCards = storage.resetToSampleData()
       setCards(sampleCards)
     } else {
       setCards(loadedCards)
     }
+    
+    setUsage(loadedUsage)
   }, [])
 
   useEffect(() => {
@@ -91,6 +103,7 @@ function App() {
   const handlePanicWipe = () => {
     storage.performPanicWipe()
     setCards([])
+    setUsage([])
     setIsLocked(true)
     setIsPanicDialogOpen(false)
     toast.success('Local data wiped successfully.')
@@ -106,7 +119,7 @@ function App() {
       updatedCards = cards.map(c => c.id === card.id ? card : c)
       toast.success('Card updated successfully')
     } else {
-      updatedCards = [...cards, card]
+      updatedCards = [...cards, { ...card, createdAt: Date.now() }]
       toast.success('Card added successfully')
     }
     
@@ -130,6 +143,13 @@ function App() {
       storage.saveCards(updatedCards)
       toast.success('Card deleted')
     }
+  }
+
+  const handleSaveUsage = (usageEntry: UsageEntry) => {
+    const updatedUsage = [...usage, usageEntry]
+    setUsage(updatedUsage)
+    storage.saveUsage(updatedUsage)
+    toast.success('Transaction added successfully')
   }
 
   const allTags = useMemo(() => {
@@ -211,120 +231,150 @@ function App() {
           </Alert>
         </header>
 
-        <div className="mb-6 space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex-1 min-w-[250px] relative">
-              <MagnifyingGlass size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search cards by name, bank, network, last 4, or notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="cards" className="gap-2">
+              <CreditCard size={20} weight="duotone" />
+              Cards
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="gap-2">
+              <ChartLineUp size={20} weight="duotone" />
+              Insights
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="cards" className="space-y-6">
+            <div className="mb-6 space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex-1 min-w-[250px] relative">
+                  <MagnifyingGlass size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search cards by name, bank, network, last 4, or notes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button onClick={() => setIsFormOpen(true)}>
+                  <Plus size={20} weight="bold" className="mr-2" />
+                  Add Card
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Funnel size={18} className="text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Filters:</span>
+                </div>
+                
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="frozen">Frozen</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={tagFilter} onValueChange={setTagFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tags</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag} value={tag} className="capitalize">
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={(val: SortBy) => setSortBy(val)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="label">Sort by Label (A-Z)</SelectItem>
+                    <SelectItem value="bank">Sort by Bank</SelectItem>
+                    <SelectItem value="expiry">Sort by Expiration</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {(searchQuery || statusFilter !== 'all' || tagFilter !== 'all') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery('')
+                      setStatusFilter('all')
+                      setTagFilter('all')
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
             </div>
-            <Button onClick={() => setIsFormOpen(true)}>
-              <Plus size={20} weight="bold" className="mr-2" />
-              Add Card
-            </Button>
-          </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Funnel size={18} className="text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Filters:</span>
-            </div>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="frozen">Frozen</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
+            {filteredAndSortedCards.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-muted mb-4">
+                  <CreditCard size={48} className="text-muted-foreground" weight="duotone" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-2">
+                  {cards.length === 0 ? 'No cards yet' : 'No cards found'}
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  {cards.length === 0 
+                    ? 'Add your first card to get started organizing your payment methods'
+                    : 'Try adjusting your search or filter criteria'}
+                </p>
+                {cards.length === 0 && (
+                  <Button onClick={() => setIsFormOpen(true)} size="lg">
+                    <Plus size={20} weight="bold" className="mr-2" />
+                    Add Your First Card
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                  {filteredAndSortedCards.map((card) => (
+                    <CardItem
+                      key={card.id}
+                      card={card}
+                      onEdit={handleEditCard}
+                      onDelete={handleDeleteCard}
+                    />
+                  ))}
+                </div>
 
-            <Select value={tagFilter} onValueChange={setTagFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Tag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tags</SelectItem>
-                {allTags.map(tag => (
-                  <SelectItem key={tag} value={tag} className="capitalize">
-                    {tag}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={(val: SortBy) => setSortBy(val)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="label">Sort by Label (A-Z)</SelectItem>
-                <SelectItem value="bank">Sort by Bank</SelectItem>
-                <SelectItem value="expiry">Sort by Expiration</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(searchQuery || statusFilter !== 'all' || tagFilter !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery('')
-                  setStatusFilter('all')
-                  setTagFilter('all')
-                }}
-              >
-                Clear Filters
-              </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  Showing {filteredAndSortedCards.length} of {cards.length} cards
+                </div>
+              </>
             )}
-          </div>
-        </div>
+          </TabsContent>
 
-        {filteredAndSortedCards.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-muted mb-4">
-              <CreditCard size={48} className="text-muted-foreground" weight="duotone" />
-            </div>
-            <h3 className="text-2xl font-semibold mb-2">
-              {cards.length === 0 ? 'No cards yet' : 'No cards found'}
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              {cards.length === 0 
-                ? 'Add your first card to get started organizing your payment methods'
-                : 'Try adjusting your search or filter criteria'}
-            </p>
-            {cards.length === 0 && (
-              <Button onClick={() => setIsFormOpen(true)} size="lg">
-                <Plus size={20} weight="bold" className="mr-2" />
-                Add Your First Card
+          <TabsContent value="insights" className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">Spending Insights</h2>
+                <p className="text-sm text-muted-foreground">Track your card usage and spending patterns</p>
+              </div>
+              <Button onClick={() => setIsUsageFormOpen(true)}>
+                <Receipt size={20} weight="bold" className="mr-2" />
+                Add Transaction
               </Button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {filteredAndSortedCards.map((card) => (
-                <CardItem
-                  key={card.id}
-                  card={card}
-                  onEdit={handleEditCard}
-                  onDelete={handleDeleteCard}
-                />
-              ))}
             </div>
 
-            <div className="text-center text-sm text-muted-foreground">
-              Showing {filteredAndSortedCards.length} of {cards.length} cards
-            </div>
-          </>
-        )}
+            <StatsDashboard cards={cards} usage={usage} />
+          </TabsContent>
+        </Tabs>
 
         <Separator className="my-12" />
 
@@ -373,6 +423,13 @@ function App() {
         }}
         onSave={handleSaveCard}
         editCard={editingCard}
+      />
+
+      <UsageForm
+        open={isUsageFormOpen}
+        onClose={() => setIsUsageFormOpen(false)}
+        onSave={handleSaveUsage}
+        cards={cards}
       />
 
       <PanicWipeDialog

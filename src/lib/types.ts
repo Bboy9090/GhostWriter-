@@ -14,6 +14,17 @@ export interface Card {
   usageTags: string[]
   notes: string
   sourceUrl?: string
+  createdAt?: number
+}
+
+export interface UsageEntry {
+  id: string
+  cardId: string
+  amount: number
+  merchant: string
+  category: string
+  date: number
+  notes?: string
 }
 
 export interface AppSettings {

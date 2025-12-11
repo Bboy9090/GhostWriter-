@@ -1,4 +1,4 @@
-import type { Card, AppSettings } from './types'
+import type { Card, AppSettings, UsageEntry } from './types'
 
 const NAMESPACE = 'cardCommandCenter'
 const KEYS = {
@@ -6,6 +6,7 @@ const KEYS = {
   SETTINGS: `${NAMESPACE}.settings`,
   FAILED_ATTEMPTS: `${NAMESPACE}.failedAttempts`,
   LAST_ACTIVITY: `${NAMESPACE}.lastActivity`,
+  USAGE: `${NAMESPACE}.usage`,
 }
 
 export const INACTIVITY_TIMEOUT = 5 * 60 * 1000
@@ -71,6 +72,7 @@ export const storage = {
         usageTags: ['shopping', 'primary'],
         notes: 'Use this for Amazon and general online orders',
         sourceUrl: 'https://chase.com/cards',
+        createdAt: Date.now() - 365 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'backup-mastercard',
@@ -83,6 +85,7 @@ export const storage = {
         status: 'active',
         usageTags: ['backup', 'travel'],
         notes: 'Keep for emergencies and international travel',
+        createdAt: Date.now() - 300 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'amex-rewards',
@@ -96,6 +99,7 @@ export const storage = {
         usageTags: ['rewards', 'dining'],
         notes: '4x points on dining and groceries',
         sourceUrl: 'https://americanexpress.com',
+        createdAt: Date.now() - 250 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'bills-visa',
@@ -108,6 +112,7 @@ export const storage = {
         status: 'active',
         usageTags: ['bills', 'subscriptions'],
         notes: 'All recurring payments: Netflix, Spotify, utilities',
+        createdAt: Date.now() - 200 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'frozen-discover',
@@ -120,6 +125,7 @@ export const storage = {
         status: 'frozen',
         usageTags: ['frozen'],
         notes: 'Suspicious activity detected, froze until I can call them',
+        createdAt: Date.now() - 180 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'old-visa',
@@ -132,6 +138,7 @@ export const storage = {
         status: 'closed',
         usageTags: [],
         notes: 'Closed this account after switching banks',
+        createdAt: Date.now() - 500 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'business-amex',
@@ -144,6 +151,7 @@ export const storage = {
         status: 'active',
         usageTags: ['business', 'primary'],
         notes: 'For all business expenses and client meetings',
+        createdAt: Date.now() - 150 * 24 * 60 * 60 * 1000,
       },
       {
         id: 'travel-mastercard',
@@ -156,11 +164,86 @@ export const storage = {
         status: 'active',
         usageTags: ['travel', 'rewards'],
         notes: 'No foreign transaction fees, use for all travel bookings',
+        createdAt: Date.now() - 120 * 24 * 60 * 60 * 1000,
       },
     ]
 
     this.saveCards(sampleCards)
+    this.initializeSampleUsageData()
     return sampleCards
+  },
+
+  loadUsage(): UsageEntry[] {
+    try {
+      const data = localStorage.getItem(KEYS.USAGE)
+      if (!data) return []
+      return JSON.parse(data)
+    } catch {
+      return []
+    }
+  },
+
+  saveUsage(usage: UsageEntry[]): void {
+    localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
+  },
+
+  initializeSampleUsageData(): void {
+    const now = Date.now()
+    const oneDay = 24 * 60 * 60 * 1000
+    
+    const categories = ['Dining', 'Groceries', 'Shopping', 'Travel', 'Entertainment', 'Bills', 'Gas', 'Healthcare', 'Other']
+    const merchants: Record<string, string> = {
+      'Dining': 'Restaurant',
+      'Groceries': 'Supermarket',
+      'Shopping': 'Online Store',
+      'Travel': 'Airline',
+      'Entertainment': 'Streaming Service',
+      'Bills': 'Utility Company',
+      'Gas': 'Gas Station',
+      'Healthcare': 'Pharmacy',
+      'Other': 'Various Merchant'
+    }
+    
+    const cardIds = [
+      'main-visa',
+      'backup-mastercard',
+      'amex-rewards',
+      'bills-visa',
+      'business-amex',
+      'travel-mastercard'
+    ]
+    
+    const sampleUsage: UsageEntry[] = []
+    
+    for (let i = 0; i < 90; i++) {
+      const numTransactions = Math.floor(Math.random() * 5) + 2
+      
+      for (let j = 0; j < numTransactions; j++) {
+        const category = categories[Math.floor(Math.random() * categories.length)]
+        const cardId = cardIds[Math.floor(Math.random() * cardIds.length)]
+        
+        let amount = 0
+        if (category === 'Dining') amount = Math.random() * 80 + 20
+        else if (category === 'Groceries') amount = Math.random() * 150 + 50
+        else if (category === 'Shopping') amount = Math.random() * 200 + 30
+        else if (category === 'Travel') amount = Math.random() * 500 + 100
+        else if (category === 'Bills') amount = Math.random() * 150 + 50
+        else if (category === 'Gas') amount = Math.random() * 60 + 30
+        else amount = Math.random() * 100 + 20
+        
+        sampleUsage.push({
+          id: `usage-${now}-${i}-${j}`,
+          cardId,
+          amount: Math.round(amount * 100) / 100,
+          merchant: merchants[category],
+          category,
+          date: now - (i * oneDay),
+          notes: ''
+        })
+      }
+    }
+    
+    this.saveUsage(sampleUsage)
   },
 
   performPanicWipe(): void {

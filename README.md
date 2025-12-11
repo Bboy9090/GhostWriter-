@@ -1,11 +1,12 @@
 # 🔒 Card Command Center
 
-A **local-only, security-focused** web application for managing payment card metadata without ever storing sensitive information like full card numbers or CVV codes.
+A **local-only, security-focused** web application for managing payment card metadata and tracking spending patterns without ever storing sensitive information like full card numbers or CVV codes.
 
 ## ⚠️ Security Philosophy
 
 **What This App Does:**
 - ✅ Stores safe metadata: nickname, bank, network, last 4 digits, expiry, tags, notes, and optional links
+- ✅ Tracks transaction history: amount, merchant, category, and date for spending insights
 - ✅ Uses SHA-256 hashed PIN authentication to protect access
 - ✅ Implements automatic session locking after 5 minutes of inactivity
 - ✅ Provides panic wipe functionality to instantly destroy all local data
@@ -18,7 +19,7 @@ A **local-only, security-focused** web application for managing payment card met
 - ❌ Never syncs data to the cloud
 - ❌ Never exports data (security by design)
 
-**Important:** This tool is designed for organizing card metadata only. Keep your actual full card numbers and CVVs in a proper password manager or secure vault.
+**Important:** This tool is designed for organizing card metadata and personal spending tracking only. Keep your actual full card numbers and CVVs in a proper password manager or secure vault.
 
 ---
 
@@ -110,6 +111,7 @@ export const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
 
 **What Gets Wiped:**
 - All card metadata
+- All transaction history
 - PIN hash
 - Failed attempt counter
 - All localStorage entries under the `cardCommandCenter.*` namespace
@@ -148,11 +150,39 @@ export const MAX_FAILED_ATTEMPTS = 5
 - Confirm deletion in the browser prompt
 - Deletion is permanent (cannot be undone)
 
+### Usage Tracking & Spending Insights
+
+**Add Transactions:**
+- Switch to the "Insights" tab
+- Click "Add Transaction" button
+- Select a card from your active cards
+- Enter amount, date, merchant, and category
+- Optional: Add notes about the transaction
+
+**View Analytics:**
+- **Overview Stats:** Total spending, transaction count, average transaction size, most used card
+- **By Card:** See spending breakdown per card with percentages and transaction counts
+- **By Category:** Analyze spending across categories (Dining, Groceries, Shopping, Travel, etc.)
+- **Timeline:** Visual daily spending chart for the last 30 days
+- **Insights:** AI-powered insights about your spending patterns and trends
+- **Trend Comparison:** Compare current 30-day period vs previous 30 days
+
+**Categories Supported:**
+- Dining
+- Groceries
+- Shopping
+- Travel
+- Entertainment
+- Bills
+- Gas
+- Healthcare
+- Other
+
 ### Search & Filtering
 
 **Search:**
 - Real-time text search across label, bank, network, last 4 digits, and notes
-- Type in the search box at the top of the page
+- Type in the search box at the top of the Cards tab
 
 **Filters:**
 - **Status Filter:** All | Active | Frozen | Closed
@@ -181,19 +211,38 @@ Each card stores the following information:
   status: "active",                    // active | frozen | closed
   usageTags: ["shopping", "primary"],  // Array of custom tags
   notes: "Use this for Amazon...",     // Free-form notes
-  sourceUrl: "https://..."             // Optional link to bank page
+  sourceUrl: "https://...",            // Optional link to bank page
+  createdAt: 1234567890                // Timestamp when card was added
+}
+```
+
+### Transaction Data Model
+
+Each transaction stores the following information:
+
+```typescript
+{
+  id: "unique-identifier",      // Auto-generated
+  cardId: "card-id",             // References a card in your collection
+  amount: 42.50,                 // Transaction amount in dollars
+  merchant: "Amazon",            // Merchant name
+  category: "Shopping",          // Spending category
+  date: 1234567890,              // Transaction timestamp
+  notes: "Optional notes..."     // Additional details
 }
 ```
 
 ### Sample Data
 
-On first run (or after a panic wipe), the app loads 8 sample cards demonstrating different:
-- Card networks (Visa, Mastercard, Amex, Discover)
-- Statuses (active, frozen, closed)
-- Usage tags (shopping, bills, travel, rewards, etc.)
-- Card types (personal, business, backup)
+On first run (or after a panic wipe), the app loads:
+- **8 sample cards** demonstrating different:
+  - Card networks (Visa, Mastercard, Amex, Discover)
+  - Statuses (active, frozen, closed)
+  - Usage tags (shopping, bills, travel, rewards, etc.)
+  - Card types (personal, business, backup)
+- **~300 sample transactions** spanning the last 90 days across various categories
 
-You can delete sample cards and add your own, or modify them as needed.
+You can delete sample data and add your own, or modify it as needed.
 
 ---
 
@@ -212,7 +261,9 @@ The codebase is modular and easy to customize:
 - `src/components/CardItem.tsx` - Individual card display component
 - `src/components/CardForm.tsx` - Add/edit card modal form
 - `src/components/PanicWipeDialog.tsx` - Confirmation dialog for manual wipe
-- `src/App.tsx` - Main app container with search, filters, and card list
+- `src/components/StatsDashboard.tsx` - Spending analytics and insights dashboard
+- `src/components/UsageForm.tsx` - Add/edit transaction modal form
+- `src/App.tsx` - Main app container with tabs, search, filters, and card list
 
 **Styling:**
 - `src/index.css` - Custom color theme, fonts, and animations
@@ -227,7 +278,7 @@ The codebase is modular and easy to customize:
 `src/lib/storage.ts` → `MAX_FAILED_ATTEMPTS`
 
 **Modify Sample Data:**
-`src/lib/storage.ts` → `resetToSampleData()` function
+`src/lib/storage.ts` → `resetToSampleData()` and `initializeSampleUsageData()` functions
 
 **Add New Card Networks:**
 `src/lib/types.ts` → `CardNetwork` type
@@ -321,11 +372,14 @@ This is a security-focused tool. If you find vulnerabilities or have security im
 |--------|-----|
 | **Unlock app** | Enter PIN on lock screen |
 | **Lock app manually** | Click "Lock" button in header |
-| **Add card** | Click "Add Card" button, fill form |
+| **Switch views** | Click "Cards" or "Insights" tabs |
+| **Add card** | Cards tab → Click "Add Card" button, fill form |
 | **Edit card** | Click pencil icon on card |
 | **Delete card** | Click trash icon on card |
-| **Search cards** | Type in search box at top |
+| **Search cards** | Type in search box at top of Cards tab |
 | **Filter cards** | Use dropdown filters (status, tags, sort) |
+| **Add transaction** | Insights tab → Click "Add Transaction" button |
+| **View analytics** | Navigate to Insights tab |
 | **Panic wipe** | Expand Danger Zone → Click "Panic Wipe" → Type DELETE → Confirm |
 | **Reset after lost PIN** | Manual panic wipe or clear browser data for this site |
 
