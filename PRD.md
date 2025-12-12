@@ -61,6 +61,13 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - Progression: User inactive → Timer counts down → 5 minutes elapsed → Lock screen appears → Data remains intact
 - Success criteria: Timer resets on any interaction; lock engages precisely at timeout; data preserved
 
+**Backup Export/Import**
+- Functionality: Export all card metadata and transactions to a JSON file, and import from previously exported backups
+- Purpose: Allow users to backup their data and restore it later, or transfer data between browsers/devices
+- Trigger: User clicks "Export Backup" or "Import Backup" button in Data Management section
+- Progression: Export: Click button → Confirmation dialog → JSON file downloads → Success toast; Import: Click button → Select file → Preview data → Choose merge or replace → Confirm → Data restored → Success toast
+- Success criteria: Export creates valid JSON with all cards and transactions; import validates file format; merge adds only new items; replace overwrites all data; corrupted files show error message
+
 ## Edge Case Handling
 
 - **First Run Setup**: If no PIN exists, redirect to PIN creation flow with confirmation field to prevent typos
@@ -70,7 +77,9 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
 - **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
 - **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
-- **Export/Import**: No export feature (security by design) - users must manually re-enter if switching browsers
+- **Backup Security**: Exported JSON files contain plain metadata; warn users to store securely and not share publicly
+- **Invalid Backup Files**: Show clear error messages for corrupted or invalid JSON files during import
+- **Backup File Conflicts**: During merge import, skip items with duplicate IDs; during replace, clear all existing data first
 - **Deleted Cards with Usage History**: Usage data for deleted cards remains for analytics continuity but shows as "Unknown Card"
 - **Future Dated Transactions**: Prevent adding transactions with dates in the future
 
@@ -164,6 +173,7 @@ Animations should reinforce security and precision - deliberate, not decorative.
 - Timer: `Timer` - for inactivity countdown
 - Analytics: `ChartLineUp`, `ChartBarHorizontal`, `TrendUp`, `Calendar`, `Receipt` - for insights dashboard
 - Trends: `ArrowUp` (increase), `ArrowDown` (decrease), `Minus` (neutral)
+- Backup: `DownloadSimple` (export), `UploadSimple` (import), `Database` - for data management
 
 **Spacing**:
 - Container padding: `p-6` (24px)

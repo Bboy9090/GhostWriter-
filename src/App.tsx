@@ -7,6 +7,7 @@ import { CardForm } from './components/CardForm'
 import { PanicWipeDialog } from './components/PanicWipeDialog'
 import { StatsDashboard } from './components/StatsDashboard'
 import { UsageForm } from './components/UsageForm'
+import { BackupManager } from './components/BackupManager'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
@@ -24,7 +25,8 @@ import {
   ShieldCheck,
   Info,
   ChartLineUp,
-  Receipt
+  Receipt,
+  Database
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -150,6 +152,29 @@ function App() {
     setUsage(updatedUsage)
     storage.saveUsage(updatedUsage)
     toast.success('Transaction added successfully')
+  }
+
+  const handleImportData = (importedCards: CardType[], importedUsage: UsageEntry[], merge: boolean) => {
+    if (merge) {
+      const existingCardIds = new Set(cards.map(c => c.id))
+      const existingUsageIds = new Set(usage.map(u => u.id))
+      
+      const newCards = importedCards.filter(c => !existingCardIds.has(c.id))
+      const newUsage = importedUsage.filter(u => !existingUsageIds.has(u.id))
+      
+      const mergedCards = [...cards, ...newCards]
+      const mergedUsage = [...usage, ...newUsage]
+      
+      setCards(mergedCards)
+      setUsage(mergedUsage)
+      storage.saveCards(mergedCards)
+      storage.saveUsage(mergedUsage)
+    } else {
+      setCards(importedCards)
+      setUsage(importedUsage)
+      storage.saveCards(importedCards)
+      storage.saveUsage(importedUsage)
+    }
   }
 
   const allTags = useMemo(() => {
@@ -378,40 +403,73 @@ function App() {
 
         <Separator className="my-12" />
 
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Danger Zone</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDangerZone(!showDangerZone)}
-            >
-              {showDangerZone ? 'Hide' : 'Show'}
-            </Button>
-          </div>
+        <div className="max-w-2xl mx-auto space-y-8">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Database size={24} weight="duotone" />
+                  Data Management
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Export or import your cards and transactions
+                </p>
+              </div>
+            </div>
 
-          {showDangerZone && (
-            <div className="border border-destructive/20 rounded-lg p-6 bg-destructive/5">
-              <div className="flex items-start gap-4">
-                <Warning size={24} className="text-destructive flex-shrink-0 mt-1" weight="fill" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-2">Panic Wipe (Clear Local Data)</h3>
+            <div className="border rounded-lg p-6 bg-card">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Backup & Restore</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Permanently erase all locally stored card metadata and app settings from this browser. 
-                    This action cannot be undone. Use this if you suspect your device has been compromised or 
-                    you need to quickly destroy all stored information.
+                    Create a backup file to save your data or restore from a previous backup. 
+                    Backups include all cards and transaction history.
                   </p>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setIsPanicDialogOpen(true)}
-                  >
-                    <Warning size={18} weight="fill" className="mr-2" />
-                    Panic Wipe
-                  </Button>
+                  <BackupManager 
+                    cards={cards} 
+                    usage={usage}
+                    onImport={handleImportData}
+                  />
                 </div>
               </div>
             </div>
-          )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Danger Zone</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDangerZone(!showDangerZone)}
+              >
+                {showDangerZone ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+
+            {showDangerZone && (
+              <div className="border border-destructive/20 rounded-lg p-6 bg-destructive/5">
+                <div className="flex items-start gap-4">
+                  <Warning size={24} className="text-destructive flex-shrink-0 mt-1" weight="fill" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">Panic Wipe (Clear Local Data)</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Permanently erase all locally stored card metadata and app settings from this browser. 
+                      This action cannot be undone. Use this if you suspect your device has been compromised or 
+                      you need to quickly destroy all stored information.
+                    </p>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setIsPanicDialogOpen(true)}
+                    >
+                      <Warning size={18} weight="fill" className="mr-2" />
+                      Panic Wipe
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
