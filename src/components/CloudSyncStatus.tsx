@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Cloud, CloudCheck, CloudWarning, ArrowsClockwise } from '@phosphor-icons/react'
+import { Cloud, CloudCheck, CloudWarning, ArrowsClockwise, Pause } from '@phosphor-icons/react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'
 import { offlineSyncManager } from '@/lib/offline-sync'
 import { toast } from 'sonner'
 
-type SyncStatus = 'synced' | 'syncing' | 'error' | 'offline'
+type SyncStatus = 'synced' | 'syncing' | 'error' | 'offline' | 'paused'
 
 interface CloudSyncStatusProps {
   lastSyncTime?: number
@@ -17,12 +17,15 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
   const [timeAgo, setTimeAgo] = useState<string>('')
   const [queueSize, setQueueSize] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
 
   useEffect(() => {
     const unsubscribe = offlineSyncManager.onStatusChange((online) => {
       if (!online) {
         setStatus('offline')
         updateQueueSize()
+      } else if (isPaused && queueSize > 0) {
+        setStatus('paused')
       } else if (queueSize > 0) {
         setStatus('syncing')
       } else {
@@ -40,14 +43,33 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
       }
     })
 
+    const unsubscribeProgress = offlineSyncManager.onProgressUpdate((progress) => {
+      setIsPaused(progress.isPaused)
+      setIsSyncing(progress.isProcessing)
+      
+      if (progress.isPaused && queueSize > 0) {
+        setStatus('paused')
+      } else if (progress.isProcessing) {
+        setStatus('syncing')
+      } else if (!offlineSyncManager.getOnlineStatus()) {
+        setStatus('offline')
+      } else if (queueSize > 0) {
+        setStatus('syncing')
+      } else {
+        setStatus('synced')
+      }
+    })
+
     if (!offlineSyncManager.getOnlineStatus()) {
       setStatus('offline')
     }
+    setIsPaused(offlineSyncManager.isPausedState())
     updateQueueSize()
 
     return () => {
       unsubscribe()
       unsubscribeSync()
+      unsubscribeProgress()
     }
   }, [])
 
@@ -93,6 +115,11 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
       return
     }
 
+    if (isPaused) {
+      toast.info('Sync is paused. Use the Batch Sync Control to resume.')
+      return
+    }
+
     if (isSyncing) {
       return
     }
@@ -120,6 +147,8 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
         return <CloudWarning size={16} weight="duotone" className="text-destructive" />
       case 'offline':
         return <CloudWarning size={16} weight="duotone" className="text-muted-foreground" />
+      case 'paused':
+        return <Pause size={16} weight="fill" className="text-muted-foreground" />
     }
   }
 
@@ -133,6 +162,8 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
         return 'Sync error'
       case 'offline':
         return queueSize > 0 ? `Offline (${queueSize} queued)` : 'Offline'
+      case 'paused':
+        return `Sync paused (${queueSize} queued)`
     }
   }
 
@@ -148,6 +179,8 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
         return queueSize > 0 
           ? `You're offline. ${queueSize} ${queueSize === 1 ? 'change' : 'changes'} will sync when reconnected.`
           : "You're offline. Changes will sync when reconnected."
+      case 'paused':
+        return `Sync is paused. ${queueSize} ${queueSize === 1 ? 'operation' : 'operations'} waiting to sync.`
     }
   }
 
@@ -161,12 +194,14 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
         return 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
       case 'offline':
         return 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+      case 'paused':
+        return 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
     }
   }
 
   return (
     <div className="flex items-center gap-2">
-      {queueSize > 0 && offlineSyncManager.getOnlineStatus() && (
+      {queueSize > 0 && offlineSyncManager.getOnlineStatus() && !isPaused && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -174,7 +209,7 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleManualSync}
-                disabled={isSyncing}
+                disabled={isSyncing || isPaused}
                 className="gap-2 h-9"
               >
                 <ArrowsClockwise 

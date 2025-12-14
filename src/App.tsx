@@ -11,6 +11,7 @@ import { UsageForm } from './components/UsageForm'
 import { BackupManager } from './components/BackupManager'
 import { CloudSyncStatus } from './components/CloudSyncStatus'
 import { OfflineIndicator } from './components/OfflineIndicator'
+import { BatchSyncControl } from './components/BatchSyncControl'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
@@ -285,6 +286,8 @@ function App() {
           </Alert>
 
           <OfflineIndicator />
+          
+          <BatchSyncControl />
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

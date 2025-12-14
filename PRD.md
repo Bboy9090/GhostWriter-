@@ -13,11 +13,11 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 ## Essential Features
 
 **Automatic Cloud Backup**
-- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time, with offline mode detection, queued sync when reconnected, and manual sync button to force immediate synchronization
-- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps, even when working offline, with user control to force sync on demand
-- Trigger: Any data modification (add/edit/delete card, add transaction, import data) OR when connection is restored after being offline OR user clicks "Sync Now" button
-- Progression: User makes change → Data saves to cloud (if online) or queues for sync (if offline) → Sync status updates → "Synced" indicator appears OR User goes offline → Changes queued → User reconnects → Queued changes sync automatically → Success notification OR User clicks "Sync Now" button → Manual sync initiates → Progress indicator shows → All queued changes sync → Success toast confirms completion
-- Success criteria: All changes persist immediately to cloud when online; offline changes queue and sync upon reconnection; sync status badge shows current connection state and queue size with count; manual sync button appears when changes are queued and online; manual sync processes entire queue and shows progress feedback; data accessible from any device
+- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time, with offline mode detection, queued sync when reconnected, manual sync button to force immediate synchronization, and batch sync controls with pause/resume functionality for fine-grained control over data synchronization
+- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps, even when working offline, with user control to force sync on demand and pause/resume syncing as needed during low-bandwidth situations or when needing to control when data uploads occur
+- Trigger: Any data modification (add/edit/delete card, add transaction, import data) OR when connection is restored after being offline OR user clicks "Sync Now" button OR user clicks pause/resume controls
+- Progression: User makes change → Data saves to cloud (if online and not paused) or queues for sync (if offline or paused) → Sync status updates → "Synced" indicator appears OR User goes offline → Changes queued → User reconnects → Queued changes sync automatically → Success notification OR User clicks "Sync Now" button → Manual sync initiates → Progress indicator shows → All queued changes sync → Success toast confirms completion OR User clicks pause → Syncing stops → Changes queue → User clicks resume → Syncing continues with queued operations OR Batch sync shows progress with current operation details and pause/resume controls
+- Success criteria: All changes persist immediately to cloud when online and not paused; offline changes queue and sync upon reconnection; paused changes queue and sync when resumed; sync status badge shows current connection state and queue size with count; manual sync button appears when changes are queued and online; manual sync processes entire queue and shows progress feedback; batch sync control shows detailed progress including current operation, total operations, and percentage complete; pause functionality immediately stops sync processing and allows user to queue more changes; resume functionality continues processing from where it left off; data accessible from any device
 
 **PIN Lock Screen**
 - Functionality: SHA-256 hashed PIN authentication that guards access to card metadata
@@ -46,6 +46,13 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - Trigger: User switches to "Insights" tab
 - Progression: Tab selection → Dashboard loads → Statistics calculate from usage data → Charts and metrics display
 - Success criteria: Analytics update instantly when transactions added; show accurate totals, percentages, and trends; compare current vs previous periods
+
+**Batch Sync with Pause/Resume Controls**
+- Functionality: Advanced sync control panel showing real-time progress of batch synchronization operations with ability to pause and resume syncing, view queued operations, and monitor detailed sync status
+- Purpose: Give users fine-grained control over when and how their data syncs, especially useful during low-bandwidth situations, metered connections, or when user wants to control data upload timing
+- Trigger: Component appears automatically when sync operations are queued or in progress; user interacts with pause/resume controls
+- Progression: Sync starts → Batch sync control appears showing progress → Real-time updates show current operation (e.g., "Syncing cards", "Syncing transactions") and progress bar → User clicks pause → Sync stops immediately → Operations remain queued → User clicks resume → Sync continues from where it left off → All operations complete → Control disappears OR User clicks "Details" → Expands to show list of all queued operations with icons and timestamps → User clicks "Clear Queue" → Confirmation → Queue cleared
+- Success criteria: Progress bar accurately reflects completion percentage; current operation label updates in real-time; pause immediately stops processing; resume continues without data loss; detailed view shows all queued operations with timestamps and types; clear queue removes all pending operations; batch delay between operations prevents overwhelming the sync system; sync state persists across page reloads
 
 **Search & Filter System**
 - Functionality: Real-time text search and multiple filter dropdowns (status, tags, sort order)
@@ -84,11 +91,14 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
 - **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
 - **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
-- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations; show "Offline" with queued changes count when disconnected; show "Sync Now" button when changes queued and online for manual synchronization
+- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations; show "Offline" with queued changes count when disconnected; show "Paused" when sync is manually paused; show "Sync Now" button when changes queued and online for manual synchronization
 - **Cloud Sync Failure**: If cloud save fails, queue changes for retry; show error toast but keep data in local memory; automatically retry sync on next operation or when connection restored; manual sync button allows user to retry immediately
 - **Offline Mode**: Automatically detect when offline and show appropriate messaging with alert banner; queue all changes for sync when connection restored; show queued changes count in status badge; manual sync button hidden while offline; process entire queue automatically upon reconnection
-- **Reconnection Handling**: When connection restored, show "Connection restored" toast; automatically sync all queued changes; show syncing progress; confirm successful sync with success toast; manual sync button becomes available if auto-sync fails
+- **Reconnection Handling**: When connection restored, show "Connection restored" toast; automatically sync all queued changes unless paused; show syncing progress in batch sync control; confirm successful sync with success toast; manual sync button becomes available if auto-sync fails
 - **Manual Sync**: When queued changes exist and online, "Sync Now" button appears next to status badge; clicking button triggers immediate sync of all queued changes; shows count of items being synced; button disabled while syncing in progress; success/error toasts provide feedback; attempting sync while offline shows error message
+- **Paused Sync State**: When user pauses sync, all sync operations stop immediately; new changes continue to queue; status badge shows "Paused" state; automatic sync does not process even when online; resume button becomes available; pause state persists across page reloads
+- **Batch Sync Progress**: Real-time progress indicator shows current operation number and total operations; progress bar shows percentage complete; current operation type displayed (e.g., "Syncing cards"); operations process with small delay between each to ensure data integrity; pause button available during processing
+- **Sync Queue Management**: Details view shows all queued operations with timestamps; each operation shows icon and label; current operation highlighted during sync; clear queue button allows removing all pending operations with confirmation; queue size always visible in status indicators
 - **Backup Security**: Exported JSON files contain plain metadata; warn users to store securely and not share publicly
 - **Invalid Backup Files**: Show clear error messages for corrupted or invalid JSON files during import
 - **Backup File Conflicts**: During merge import, skip items with duplicate IDs; during replace, clear all existing data first
@@ -188,6 +198,8 @@ Animations should reinforce security and precision - deliberate, not decorative.
 - Backup: `DownloadSimple` (export), `UploadSimple` (import), `Database` - for data management
 - Sync: `ArrowsClockwise` - for manual sync button, spins during sync operation
 - Cloud: `CloudCheck` (synced), `Cloud` (syncing), `CloudWarning` (offline/error) - for sync status indicators
+- Batch Controls: `Play` (resume), `Pause` (pause), `ListBullets` (details), `X` (clear queue) - for batch sync control panel
+- Progress: `CheckCircle` (completed), `Warning` (error state) - for operation status feedback
 
 **Spacing**:
 - Container padding: `p-6` (24px)

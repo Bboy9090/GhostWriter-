@@ -1,15 +1,26 @@
 import type { Card, UsageEntry } from './types'
 
 export type SyncOperation = 
-  | { type: 'SAVE_CARDS'; data: Card[]; timestamp: number }
-  | { type: 'SAVE_USAGE'; data: UsageEntry[]; timestamp: number }
+  | { type: 'SAVE_CARDS'; data: Card[]; timestamp: number; id: string }
+  | { type: 'SAVE_USAGE'; data: UsageEntry[]; timestamp: number; id: string }
 
 export interface SyncQueue {
   operations: SyncOperation[]
   lastProcessedTime: number
+  isPaused: boolean
+}
+
+export interface SyncProgress {
+  currentOperation: number
+  totalOperations: number
+  currentOperationType: string
+  isPaused: boolean
+  isProcessing: boolean
 }
 
 const SYNC_QUEUE_KEY = 'cardCommandCenter.syncQueue'
+const BATCH_SIZE = 1
+const BATCH_DELAY_MS = 500
 
 declare global {
   interface Window {
@@ -29,18 +40,36 @@ const spark = window.spark
 export class OfflineSyncManager {
   private isOnline: boolean = navigator.onLine
   private syncInProgress: boolean = false
+  private isPaused: boolean = false
+  private currentProgress: SyncProgress = {
+    currentOperation: 0,
+    totalOperations: 0,
+    currentOperationType: '',
+    isPaused: false,
+    isProcessing: false
+  }
   private listeners: Set<(isOnline: boolean) => void> = new Set()
   private syncListeners: Set<(success: boolean) => void> = new Set()
+  private progressListeners: Set<(progress: SyncProgress) => void> = new Set()
 
   constructor() {
     this.setupEventListeners()
+    this.loadPausedState()
+  }
+
+  private async loadPausedState() {
+    const queue = await this.loadQueue()
+    this.isPaused = queue.isPaused
+    this.currentProgress.isPaused = queue.isPaused
   }
 
   private setupEventListeners() {
     window.addEventListener('online', () => {
       this.isOnline = true
       this.notifyListeners()
-      this.processSyncQueue()
+      if (!this.isPaused) {
+        this.processSyncQueue()
+      }
     })
 
     window.addEventListener('offline', () => {
@@ -63,6 +92,12 @@ export class OfflineSyncManager {
     return () => this.syncListeners.delete(callback)
   }
 
+  onProgressUpdate(callback: (progress: SyncProgress) => void): () => void {
+    this.progressListeners.add(callback)
+    callback(this.currentProgress)
+    return () => this.progressListeners.delete(callback)
+  }
+
   private notifyListeners() {
     this.listeners.forEach(callback => callback(this.isOnline))
   }
@@ -71,50 +106,140 @@ export class OfflineSyncManager {
     this.syncListeners.forEach(callback => callback(success))
   }
 
-  async addToQueue(operation: SyncOperation): Promise<void> {
+  private notifyProgressListeners() {
+    this.progressListeners.forEach(callback => callback({ ...this.currentProgress }))
+  }
+
+  async addToQueue(operation: Omit<SyncOperation, 'id'>): Promise<void> {
     const queue = await this.loadQueue()
+    
+    const operationWithId = {
+      ...operation,
+      id: `${operation.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    } as SyncOperation
     
     const existingIndex = queue.operations.findIndex(
       op => op.type === operation.type
     )
     
     if (existingIndex !== -1) {
-      queue.operations[existingIndex] = operation
+      queue.operations[existingIndex] = operationWithId
     } else {
-      queue.operations.push(operation)
+      queue.operations.push(operationWithId)
     }
     
     await this.saveQueue(queue)
+    this.updateProgress()
+  }
+
+  async pauseSync(): Promise<void> {
+    this.isPaused = true
+    const queue = await this.loadQueue()
+    queue.isPaused = true
+    await this.saveQueue(queue)
+    this.currentProgress.isPaused = true
+    this.notifyProgressListeners()
+  }
+
+  async resumeSync(): Promise<void> {
+    this.isPaused = false
+    const queue = await this.loadQueue()
+    queue.isPaused = false
+    await this.saveQueue(queue)
+    this.currentProgress.isPaused = false
+    this.notifyProgressListeners()
+    
+    if (this.isOnline && !this.syncInProgress) {
+      await this.processSyncQueue()
+    }
+  }
+
+  isPausedState(): boolean {
+    return this.isPaused
+  }
+
+  getCurrentProgress(): SyncProgress {
+    return { ...this.currentProgress }
+  }
+
+  private updateProgress() {
+    this.notifyProgressListeners()
   }
 
   async processSyncQueue(): Promise<void> {
-    if (this.syncInProgress || !this.isOnline) {
+    if (this.syncInProgress || !this.isOnline || this.isPaused) {
       return
     }
 
     this.syncInProgress = true
+    this.currentProgress.isProcessing = true
     const queue = await this.loadQueue()
 
     if (queue.operations.length === 0) {
       this.syncInProgress = false
+      this.currentProgress.isProcessing = false
+      this.currentProgress.currentOperation = 0
+      this.currentProgress.totalOperations = 0
+      this.notifyProgressListeners()
       return
     }
 
+    this.currentProgress.totalOperations = queue.operations.length
+    this.currentProgress.currentOperation = 0
+    this.notifyProgressListeners()
+
     try {
-      for (const operation of queue.operations) {
+      const operations = [...queue.operations]
+      
+      for (let i = 0; i < operations.length; i++) {
+        if (this.isPaused) {
+          this.syncInProgress = false
+          this.currentProgress.isProcessing = false
+          this.notifyProgressListeners()
+          return
+        }
+
+        const operation = operations[i]
+        this.currentProgress.currentOperation = i + 1
+        this.currentProgress.currentOperationType = this.getOperationLabel(operation.type)
+        this.notifyProgressListeners()
+
         await this.executeOperation(operation)
+        
+        queue.operations = queue.operations.filter(op => op.id !== operation.id)
+        await this.saveQueue(queue)
+
+        if (i < operations.length - 1 && BATCH_DELAY_MS > 0) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS))
+        }
       }
 
-      queue.operations = []
       queue.lastProcessedTime = Date.now()
       await this.saveQueue(queue)
       
+      this.currentProgress.currentOperation = 0
+      this.currentProgress.totalOperations = 0
+      this.currentProgress.currentOperationType = ''
+      this.notifyProgressListeners()
       this.notifySyncListeners(true)
     } catch (error) {
       console.error('Failed to process sync queue:', error)
       this.notifySyncListeners(false)
     } finally {
       this.syncInProgress = false
+      this.currentProgress.isProcessing = false
+      this.notifyProgressListeners()
+    }
+  }
+
+  private getOperationLabel(type: string): string {
+    switch (type) {
+      case 'SAVE_CARDS':
+        return 'Syncing cards'
+      case 'SAVE_USAGE':
+        return 'Syncing transactions'
+      default:
+        return 'Syncing data'
     }
   }
 
@@ -136,19 +261,29 @@ export class OfflineSyncManager {
     return queue.operations.length
   }
 
+  async getQueueOperations(): Promise<SyncOperation[]> {
+    const queue = await this.loadQueue()
+    return queue.operations
+  }
+
   async clearQueue(): Promise<void> {
-    await this.saveQueue({ operations: [], lastProcessedTime: Date.now() })
+    await this.saveQueue({ operations: [], lastProcessedTime: Date.now(), isPaused: false })
+    this.isPaused = false
+    this.currentProgress.isPaused = false
+    this.currentProgress.currentOperation = 0
+    this.currentProgress.totalOperations = 0
+    this.notifyProgressListeners()
   }
 
   private async loadQueue(): Promise<SyncQueue> {
     try {
       const queue = await spark.kv.get<SyncQueue>(SYNC_QUEUE_KEY)
       if (!queue) {
-        return { operations: [], lastProcessedTime: Date.now() }
+        return { operations: [], lastProcessedTime: Date.now(), isPaused: false }
       }
       return queue
     } catch {
-      return { operations: [], lastProcessedTime: Date.now() }
+      return { operations: [], lastProcessedTime: Date.now(), isPaused: false }
     }
   }
 
