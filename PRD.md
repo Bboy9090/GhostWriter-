@@ -1,16 +1,23 @@
 # Planning Guide
 
-A local-only, security-focused payment card metadata manager with spending insights that helps users organize and track their cards and transactions without ever storing sensitive data like full card numbers or CVVs.
+A security-focused payment card metadata manager with automatic cloud backup and spending insights that helps users organize and track their cards and transactions without ever storing sensitive data like full card numbers or CVVs.
 
 **Experience Qualities**:
 1. **Secure** - Every interaction reinforces that sensitive data is protected, with visual cues and clear messaging about what is and isn't stored
-2. **Reassuring** - The PIN lock, panic wipe, and security warnings create confidence that the tool prioritizes user safety
+2. **Reassuring** - The PIN lock, automatic cloud backup, panic wipe, and security warnings create confidence that the tool prioritizes user safety and data persistence
 3. **Efficient** - Powerful search, filtering, and sorting capabilities make finding the right card instantaneous, while analytics provide actionable spending insights
 
 **Complexity Level**: Light Application (multiple features with basic state)
-This is a focused tool with several interconnected features (card CRUD, authentication, security measures, usage tracking, analytics dashboard) but maintains a tabbed single-view paradigm with modals for interactions.
+This is a focused tool with several interconnected features (card CRUD, authentication, security measures, cloud sync, usage tracking, analytics dashboard) but maintains a tabbed single-view paradigm with modals for interactions.
 
 ## Essential Features
+
+**Automatic Cloud Backup**
+- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time
+- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps
+- Trigger: Any data modification (add/edit/delete card, add transaction, import data)
+- Progression: User makes change → Data saves to cloud → Sync status updates → "Synced" indicator appears
+- Success criteria: All changes persist immediately to cloud; sync status badge shows last sync time; data accessible from any device
 
 **PIN Lock Screen**
 - Functionality: SHA-256 hashed PIN authentication that guards access to card metadata
@@ -23,15 +30,15 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - Functionality: CRUD operations for card metadata (nickname, bank, network, last 4 digits, expiry, tags, notes, source link)
 - Purpose: Organize and track payment cards without storing sensitive information
 - Trigger: User clicks "Add Card" button or clicks edit icon on existing card
-- Progression: Click action → Modal opens with form → User fills metadata → Save → Card appears in list → Data persists to localStorage
-- Success criteria: Cards persist across sessions, display all metadata clearly, and can be edited or deleted
+- Progression: Click action → Modal opens with form → User fills metadata → Save → Card appears in list → Data syncs to cloud
+- Success criteria: Cards persist across sessions and devices, display all metadata clearly, and can be edited or deleted
 
 **Usage Tracking & Transaction Logging**
 - Functionality: Record transaction details (amount, merchant, category, date) associated with specific cards
 - Purpose: Enable spending insights and usage analytics without storing sensitive payment information
 - Trigger: User clicks "Add Transaction" button in Insights tab
-- Progression: Click action → Modal opens → User selects card and enters transaction details → Save → Transaction persists and appears in analytics
-- Success criteria: Transactions persist across sessions, link correctly to cards, and update analytics in real-time
+- Progression: Click action → Modal opens → User selects card and enters transaction details → Save → Transaction syncs to cloud and appears in analytics
+- Success criteria: Transactions persist across sessions and devices, link correctly to cards, and update analytics in real-time
 
 **Spending Insights Dashboard**
 - Functionality: Visual analytics showing spending by card, category, and time period with trend analysis
@@ -63,10 +70,10 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 
 **Backup Export/Import**
 - Functionality: Export all card metadata and transactions to a JSON file, and import from previously exported backups
-- Purpose: Allow users to backup their data and restore it later, or transfer data between browsers/devices
+- Purpose: Allow users to create portable offline backups in addition to automatic cloud sync, or transfer data between different systems
 - Trigger: User clicks "Export Backup" or "Import Backup" button in Data Management section
 - Progression: Export: Click button → Confirmation dialog → JSON file downloads → Success toast; Import: Click button → Select file → Preview data → Choose merge or replace → Confirm → Data restored → Success toast
-- Success criteria: Export creates valid JSON with all cards and transactions; import validates file format; merge adds only new items; replace overwrites all data; corrupted files show error message
+- Success criteria: Export creates valid JSON with all cards and transactions; import validates file format; merge adds only new items; replace overwrites all data; corrupted files show error message; all imports sync to cloud after completion
 
 ## Edge Case Handling
 
@@ -77,6 +84,9 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
 - **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
 - **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
+- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations
+- **Cloud Sync Failure**: If cloud save fails, show error toast but keep data in local memory; retry sync on next operation
+- **Offline Mode**: Detect when offline and show appropriate messaging; queue changes for sync when connection restored
 - **Backup Security**: Exported JSON files contain plain metadata; warn users to store securely and not share publicly
 - **Invalid Backup Files**: Show clear error messages for corrupted or invalid JSON files during import
 - **Backup File Conflicts**: During merge import, skip items with duplicate IDs; during replace, clear all existing data first
@@ -85,7 +95,7 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 
 ## Design Direction
 
-The design should evoke feelings of **security**, **control**, and **clarity**. Visual language should communicate protection and organization - like a digital security vault meets a modern command center with financial intelligence. The interface should feel authoritative yet approachable, with clear hierarchies that make security features obvious, operational features efficient, and insights actionable.
+The design should evoke feelings of **security**, **reliability**, and **clarity**. Visual language should communicate both protection and seamless synchronization - like a digital security vault with cloud intelligence. The interface should feel authoritative yet approachable, with clear hierarchies that make security features obvious, operational features efficient, cloud sync status transparent, and insights actionable.
 
 ## Color Selection
 

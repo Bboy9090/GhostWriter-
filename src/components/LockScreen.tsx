@@ -20,12 +20,16 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
   const [shake, setShake] = useState(false)
 
   useEffect(() => {
-    const settings = storage.loadSettings()
-    setFailedAttempts(settings.failedAttempts)
-    
-    if (!settings.pinHash) {
-      setIsSettingPin(true)
+    const loadSettings = async () => {
+      const settings = await storage.loadSettings()
+      setFailedAttempts(settings.failedAttempts)
+      
+      if (!settings.pinHash) {
+        setIsSettingPin(true)
+      }
     }
+    
+    loadSettings()
   }, [])
 
   const handleSetPin = async () => {
@@ -48,9 +52,9 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
 
     setIsLoading(true)
     const hash = await hashPin(pin)
-    storage.savePinHash(hash)
-    storage.saveFailedAttempts(0)
-    storage.saveLastActivity(Date.now())
+    await storage.savePinHash(hash)
+    await storage.saveFailedAttempts(0)
+    await storage.saveLastActivity(Date.now())
     setIsLoading(false)
     onUnlock()
   }
@@ -63,16 +67,16 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
 
     setIsLoading(true)
     const hash = await hashPin(pin)
-    const settings = storage.loadSettings()
+    const settings = await storage.loadSettings()
 
     if (hash === settings.pinHash) {
-      storage.saveFailedAttempts(0)
-      storage.saveLastActivity(Date.now())
+      await storage.saveFailedAttempts(0)
+      await storage.saveLastActivity(Date.now())
       setIsLoading(false)
       onUnlock()
     } else {
       const newFailedCount = settings.failedAttempts + 1
-      storage.saveFailedAttempts(newFailedCount)
+      await storage.saveFailedAttempts(newFailedCount)
       setFailedAttempts(newFailedCount)
 
       if (newFailedCount >= MAX_FAILED_ATTEMPTS) {

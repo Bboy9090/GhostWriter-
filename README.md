@@ -1,6 +1,6 @@
 # 🔒 Card Command Center
 
-A **local-only, security-focused** web application for managing payment card metadata and tracking spending patterns without ever storing sensitive information like full card numbers or CVV codes.
+A **security-focused** web application with **automatic cloud backup** for managing payment card metadata and tracking spending patterns without ever storing sensitive information like full card numbers or CVV codes.
 
 ## ⚠️ Security Philosophy
 
@@ -9,15 +9,16 @@ A **local-only, security-focused** web application for managing payment card met
 - ✅ Tracks transaction history: amount, merchant, category, and date for spending insights
 - ✅ Uses SHA-256 hashed PIN authentication to protect access
 - ✅ Implements automatic session locking after 5 minutes of inactivity
-- ✅ Provides panic wipe functionality to instantly destroy all local data
+- ✅ Provides panic wipe functionality to instantly destroy all cloud data
 - ✅ Tracks failed login attempts and auto-wipes after 5 failures
+- ✅ **Automatically syncs all data to secure cloud storage in real-time**
+- ✅ **Accessible from any device with your PIN**
 
 **What This App Does NOT Do:**
 - ❌ Never stores or handles full card numbers
 - ❌ Never stores or handles CVV/CVC codes
-- ❌ Never communicates with any backend or external APIs
-- ❌ Never syncs data to the cloud
-- ❌ Never exports data (security by design)
+- ❌ Never shares your data with third parties
+- ❌ Never makes your data publicly accessible
 
 **Important:** This tool is designed for organizing card metadata and personal spending tracking only. Keep your actual full card numbers and CVVs in a proper password manager or secure vault.
 
@@ -107,14 +108,14 @@ export const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
 2. Scroll to the bottom and expand the "Danger Zone" section
 3. Click "Panic Wipe"
 4. Type `DELETE` to confirm
-5. All data is immediately erased
+5. All data is immediately erased from cloud storage
 
 **What Gets Wiped:**
 - All card metadata
 - All transaction history
 - PIN hash
 - Failed attempt counter
-- All localStorage entries under the `cardCommandCenter.*` namespace
+- All cloud storage entries under the `cardCommandCenter.*` namespace
 
 **After Wipe:**
 - The app reloads in first-run state
@@ -130,6 +131,46 @@ export const MAX_FAILED_ATTEMPTS = 5
 
 ---
 
+## ☁️ Cloud Backup & Sync
+
+### Automatic Cloud Backup
+
+**Real-Time Sync:**
+- Every card you add, edit, or delete is automatically saved to secure cloud storage
+- Every transaction is instantly synced to the cloud
+- No manual backup steps required
+
+**Cross-Device Access:**
+- Access your cards and transactions from any device
+- Simply log in with your PIN
+- All your data syncs automatically
+
+**Sync Status:**
+- A badge in the header shows your current sync status
+- "Synced just now" appears after successful saves
+- Hover over the badge for more details
+
+**Data Security:**
+- Your data is encrypted and securely stored
+- Only you can access your data with your PIN
+- No one else, including administrators, can see your card metadata
+
+### Manual Export (Optional)
+
+**Export Local Copy:**
+- Navigate to the Data Management section
+- Click "Export Backup" to download a JSON file
+- Use for offline storage or importing to other systems
+- Exported files contain plain JSON (store securely)
+
+**Import from File:**
+- Click "Import Backup" and select a JSON file
+- Preview the data before importing
+- Choose to merge with existing data or replace all data
+- Imported data automatically syncs to cloud after import
+
+---
+
 ## 💳 Features
 
 ### Card Management
@@ -139,16 +180,17 @@ export const MAX_FAILED_ATTEMPTS = 5
 - Fill in metadata fields (all fields except full card number/CVV)
 - Required: label, bank, network, last 4 digits, expiration
 - Optional: tags, notes, source URL
+- Card automatically syncs to cloud
 
 **Edit Cards:**
 - Click the pencil icon on any card
 - Modify any field
-- Changes save immediately to localStorage
+- Changes save immediately and sync to cloud
 
 **Delete Cards:**
 - Click the trash icon on any card
 - Confirm deletion in the browser prompt
-- Deletion is permanent (cannot be undone)
+- Deletion is permanent and syncs to cloud (cannot be undone)
 
 ### Usage Tracking & Spending Insights
 
@@ -253,16 +295,18 @@ The codebase is modular and easy to customize:
 ### Key Files
 
 **Storage & Security:**
-- `src/lib/storage.ts` - All localStorage operations, PIN hashing, panic wipe logic
+- `src/lib/storage.ts` - All cloud storage operations, PIN hashing, panic wipe logic
 - `src/lib/types.ts` - TypeScript interfaces for Card and AppSettings
 
 **Components:**
 - `src/components/LockScreen.tsx` - PIN entry, hash validation, failed attempt tracking
+- `src/components/CloudSyncStatus.tsx` - Real-time cloud sync status indicator
 - `src/components/CardItem.tsx` - Individual card display component
 - `src/components/CardForm.tsx` - Add/edit card modal form
 - `src/components/PanicWipeDialog.tsx` - Confirmation dialog for manual wipe
 - `src/components/StatsDashboard.tsx` - Spending analytics and insights dashboard
 - `src/components/UsageForm.tsx` - Add/edit transaction modal form
+- `src/components/BackupManager.tsx` - Export/import functionality for manual backups
 - `src/App.tsx` - Main app container with tabs, search, filters, and card list
 
 **Styling:**
@@ -314,28 +358,34 @@ The codebase is modular and easy to customize:
 ## 🛡️ Privacy & Data Storage
 
 **Where Data Lives:**
-- All data is stored in your browser's `localStorage`
-- Keys are namespaced under `cardCommandCenter.*`
-- Nothing is ever sent over the network
-- Data persists only in this browser on this device
+- All data is stored in secure cloud storage provided by the Spark platform
+- Data is encrypted and only accessible with your PIN
+- Syncs automatically across all your devices
+- No third-party access to your data
 
 **Clearing Data:**
 - Manual: Use the Panic Wipe feature in the Danger Zone
 - Automatic: Triggered after 5 failed PIN attempts
-- Browser: Clear browser data for this site in browser settings
+- Both methods permanently delete all cloud data
 
 **Switching Browsers/Devices:**
-- Data does NOT sync across browsers or devices
-- You must manually re-enter cards on each browser/device
-- This is intentional for security
+- Data automatically syncs across all browsers and devices
+- Simply enter your PIN on any device to access your cards
+- Changes on one device instantly appear on all others
+
+**Export for Offline Backup:**
+- Use the Export Backup feature in Data Management
+- Download a JSON file of all your cards and transactions
+- Store this file securely offline as an additional backup
+- Import back anytime if needed
 
 ---
 
 ## 🚨 Limitations & Important Notes
 
-1. **No Cloud Sync:** Data only exists in this browser. If you clear browser data or switch devices, your cards are gone.
+1. **Cloud Storage:** Data is backed up to secure cloud storage and syncs across devices. Your PIN is required to access data.
 
-2. **No Export:** There is no export feature. This prevents accidental data leaks but means you must manually transfer cards if needed.
+2. **Manual Export Available:** You can export your data to JSON files for offline backup or to import into other systems.
 
 3. **PIN Recovery:** If you forget your PIN, the only option is a panic wipe. Write down your PIN and store it securely offline.
 
@@ -343,7 +393,7 @@ The codebase is modular and easy to customize:
 
 5. **Not a Password Manager:** This tool is for organizing card metadata only. Store actual sensitive data in a proper password manager like 1Password, Bitwarden, or similar.
 
-6. **Local Only:** No backend means no remote wipe capability if your device is stolen (but the PIN lock provides protection).
+6. **Cloud-Based:** Data syncs to the cloud for convenience. If you need fully offline operation, this may not be the right tool for you.
 
 ---
 
@@ -359,8 +409,8 @@ This is a security-focused tool. If you find vulnerabilities or have security im
 
 **Security Principles to Maintain:**
 - Never add features that store full card numbers or CVVs
-- Never add network communication features
-- Never add export features without strong encryption
+- Never share user data with third parties
+- Keep cloud storage encrypted and secure
 - Keep the panic wipe and auto-lock mechanisms intact
 - Maintain the failed attempt counter and auto-wipe logic
 
@@ -372,6 +422,7 @@ This is a security-focused tool. If you find vulnerabilities or have security im
 |--------|-----|
 | **Unlock app** | Enter PIN on lock screen |
 | **Lock app manually** | Click "Lock" button in header |
+| **View sync status** | Check badge in header (shows "Synced just now") |
 | **Switch views** | Click "Cards" or "Insights" tabs |
 | **Add card** | Cards tab → Click "Add Card" button, fill form |
 | **Edit card** | Click pencil icon on card |
@@ -380,9 +431,11 @@ This is a security-focused tool. If you find vulnerabilities or have security im
 | **Filter cards** | Use dropdown filters (status, tags, sort) |
 | **Add transaction** | Insights tab → Click "Add Transaction" button |
 | **View analytics** | Navigate to Insights tab |
+| **Export backup** | Data Management → Click "Export Backup" |
+| **Import backup** | Data Management → Click "Import Backup" → Select file |
 | **Panic wipe** | Expand Danger Zone → Click "Panic Wipe" → Type DELETE → Confirm |
-| **Reset after lost PIN** | Manual panic wipe or clear browser data for this site |
+| **Reset after lost PIN** | Manual panic wipe (all cloud data will be erased) |
 
 ---
 
-**Remember:** This tool helps you organize card metadata, but never replaces proper security practices. Keep your full card details in a secure password manager and enable fraud alerts with your banks.
+**Remember:** This tool helps you organize card metadata with automatic cloud backup, but never replaces proper security practices. Keep your full card details in a secure password manager and enable fraud alerts with your banks.

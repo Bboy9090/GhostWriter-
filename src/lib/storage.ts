@@ -1,5 +1,20 @@
 import type { Card, AppSettings, UsageEntry } from './types'
 
+declare global {
+  interface Window {
+    spark: {
+      kv: {
+        keys: () => Promise<string[]>
+        get: <T>(key: string) => Promise<T | undefined>
+        set: <T>(key: string, value: T) => Promise<void>
+        delete: (key: string) => Promise<void>
+      }
+    }
+  }
+}
+
+const spark = window.spark
+
 const NAMESPACE = 'cardCommandCenter'
 const KEYS = {
   CARDS: `${NAMESPACE}.cards`,
@@ -13,25 +28,25 @@ export const INACTIVITY_TIMEOUT = 5 * 60 * 1000
 export const MAX_FAILED_ATTEMPTS = 5
 
 export const storage = {
-  loadCards(): Card[] {
+  async loadCards(): Promise<Card[]> {
     try {
-      const data = localStorage.getItem(KEYS.CARDS)
+      const data = await spark.kv.get<Card[]>(KEYS.CARDS)
       if (!data) return []
-      return JSON.parse(data)
+      return data
     } catch {
       return []
     }
   },
 
-  saveCards(cards: Card[]): void {
-    localStorage.setItem(KEYS.CARDS, JSON.stringify(cards))
+  async saveCards(cards: Card[]): Promise<void> {
+    await spark.kv.set(KEYS.CARDS, cards)
   },
 
-  loadSettings(): AppSettings {
+  async loadSettings(): Promise<AppSettings> {
     try {
-      const pinHash = localStorage.getItem(KEYS.SETTINGS)
-      const failedAttempts = parseInt(localStorage.getItem(KEYS.FAILED_ATTEMPTS) || '0', 10)
-      const lastActivity = parseInt(localStorage.getItem(KEYS.LAST_ACTIVITY) || Date.now().toString(), 10)
+      const pinHash = await spark.kv.get<string>(KEYS.SETTINGS)
+      const failedAttempts = await spark.kv.get<number>(KEYS.FAILED_ATTEMPTS) || 0
+      const lastActivity = await spark.kv.get<number>(KEYS.LAST_ACTIVITY) || Date.now()
       
       return {
         pinHash: pinHash || undefined,
@@ -46,19 +61,19 @@ export const storage = {
     }
   },
 
-  savePinHash(hash: string): void {
-    localStorage.setItem(KEYS.SETTINGS, hash)
+  async savePinHash(hash: string): Promise<void> {
+    await spark.kv.set(KEYS.SETTINGS, hash)
   },
 
-  saveFailedAttempts(count: number): void {
-    localStorage.setItem(KEYS.FAILED_ATTEMPTS, count.toString())
+  async saveFailedAttempts(count: number): Promise<void> {
+    await spark.kv.set(KEYS.FAILED_ATTEMPTS, count)
   },
 
-  saveLastActivity(timestamp: number): void {
-    localStorage.setItem(KEYS.LAST_ACTIVITY, timestamp.toString())
+  async saveLastActivity(timestamp: number): Promise<void> {
+    await spark.kv.set(KEYS.LAST_ACTIVITY, timestamp)
   },
 
-  resetToSampleData(): Card[] {
+  async resetToSampleData(): Promise<Card[]> {
     const sampleCards: Card[] = [
       {
         id: 'main-visa',
@@ -168,26 +183,26 @@ export const storage = {
       },
     ]
 
-    this.saveCards(sampleCards)
-    this.initializeSampleUsageData()
+    await this.saveCards(sampleCards)
+    await this.initializeSampleUsageData()
     return sampleCards
   },
 
-  loadUsage(): UsageEntry[] {
+  async loadUsage(): Promise<UsageEntry[]> {
     try {
-      const data = localStorage.getItem(KEYS.USAGE)
+      const data = await spark.kv.get<UsageEntry[]>(KEYS.USAGE)
       if (!data) return []
-      return JSON.parse(data)
+      return data
     } catch {
       return []
     }
   },
 
-  saveUsage(usage: UsageEntry[]): void {
-    localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
+  async saveUsage(usage: UsageEntry[]): Promise<void> {
+    await spark.kv.set(KEYS.USAGE, usage)
   },
 
-  initializeSampleUsageData(): void {
+  async initializeSampleUsageData(): Promise<void> {
     const now = Date.now()
     const oneDay = 24 * 60 * 60 * 1000
     
@@ -243,24 +258,18 @@ export const storage = {
       }
     }
     
-    this.saveUsage(sampleUsage)
+    await this.saveUsage(sampleUsage)
   },
 
-  performPanicWipe(): void {
-    Object.values(KEYS).forEach((key) => {
-      localStorage.removeItem(key)
-    })
+  async performPanicWipe(): Promise<void> {
+    const allKeys = await spark.kv.keys()
+    const appKeys = allKeys.filter(key => key.startsWith(NAMESPACE))
+    await Promise.all(appKeys.map(key => spark.kv.delete(key)))
   },
 
-  getAllKeys(): string[] {
-    const keys: string[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith(NAMESPACE)) {
-        keys.push(key)
-      }
-    }
-    return keys
+  async getAllKeys(): Promise<string[]> {
+    const allKeys = await spark.kv.keys()
+    return allKeys.filter(key => key.startsWith(NAMESPACE))
   },
 }
 

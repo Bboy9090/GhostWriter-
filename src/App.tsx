@@ -8,6 +8,7 @@ import { PanicWipeDialog } from './components/PanicWipeDialog'
 import { StatsDashboard } from './components/StatsDashboard'
 import { UsageForm } from './components/UsageForm'
 import { BackupManager } from './components/BackupManager'
+import { CloudSyncStatus } from './components/CloudSyncStatus'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
@@ -26,7 +27,8 @@ import {
   Info,
   ChartLineUp,
   Receipt,
-  Database
+  Database,
+  CloudCheck
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -47,19 +49,24 @@ function App() {
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null)
   const [isUsageFormOpen, setIsUsageFormOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('cards')
+  const [lastSyncTime, setLastSyncTime] = useState<number>(Date.now())
 
   useEffect(() => {
-    const loadedCards = storage.loadCards()
-    const loadedUsage = storage.loadUsage()
-    
-    if (loadedCards.length === 0) {
-      const sampleCards = storage.resetToSampleData()
-      setCards(sampleCards)
-    } else {
-      setCards(loadedCards)
+    const loadData = async () => {
+      const loadedCards = await storage.loadCards()
+      const loadedUsage = await storage.loadUsage()
+      
+      if (loadedCards.length === 0) {
+        const sampleCards = await storage.resetToSampleData()
+        setCards(sampleCards)
+      } else {
+        setCards(loadedCards)
+      }
+      
+      setUsage(loadedUsage)
     }
     
-    setUsage(loadedUsage)
+    loadData()
   }, [])
 
   useEffect(() => {
@@ -67,7 +74,7 @@ function App() {
       resetInactivityTimer()
       
       const handleActivity = () => {
-        storage.saveLastActivity(Date.now())
+        storage.saveLastActivity(Date.now()).catch(console.error)
         resetInactivityTimer()
       }
 
@@ -102,8 +109,8 @@ function App() {
     toast.success('Welcome back! Vault unlocked.')
   }
 
-  const handlePanicWipe = () => {
-    storage.performPanicWipe()
+  const handlePanicWipe = async () => {
+    await storage.performPanicWipe()
     setCards([])
     setUsage([])
     setIsLocked(true)
@@ -114,7 +121,7 @@ function App() {
     }, 1000)
   }
 
-  const handleSaveCard = (card: CardType) => {
+  const handleSaveCard = async (card: CardType) => {
     let updatedCards: CardType[]
     
     if (editingCard) {
@@ -126,7 +133,8 @@ function App() {
     }
     
     setCards(updatedCards)
-    storage.saveCards(updatedCards)
+    await storage.saveCards(updatedCards)
+    setLastSyncTime(Date.now())
     setEditingCard(null)
   }
 
@@ -135,26 +143,28 @@ function App() {
     setIsFormOpen(true)
   }
 
-  const handleDeleteCard = (id: string) => {
+  const handleDeleteCard = async (id: string) => {
     const card = cards.find(c => c.id === id)
     if (!card) return
 
     if (confirm(`Delete "${card.label}"? This cannot be undone.`)) {
       const updatedCards = cards.filter(c => c.id !== id)
       setCards(updatedCards)
-      storage.saveCards(updatedCards)
+      await storage.saveCards(updatedCards)
+      setLastSyncTime(Date.now())
       toast.success('Card deleted')
     }
   }
 
-  const handleSaveUsage = (usageEntry: UsageEntry) => {
+  const handleSaveUsage = async (usageEntry: UsageEntry) => {
     const updatedUsage = [...usage, usageEntry]
     setUsage(updatedUsage)
-    storage.saveUsage(updatedUsage)
+    await storage.saveUsage(updatedUsage)
+    setLastSyncTime(Date.now())
     toast.success('Transaction added successfully')
   }
 
-  const handleImportData = (importedCards: CardType[], importedUsage: UsageEntry[], merge: boolean) => {
+  const handleImportData = async (importedCards: CardType[], importedUsage: UsageEntry[], merge: boolean) => {
     if (merge) {
       const existingCardIds = new Set(cards.map(c => c.id))
       const existingUsageIds = new Set(usage.map(u => u.id))
@@ -167,13 +177,15 @@ function App() {
       
       setCards(mergedCards)
       setUsage(mergedUsage)
-      storage.saveCards(mergedCards)
-      storage.saveUsage(mergedUsage)
+      await storage.saveCards(mergedCards)
+      await storage.saveUsage(mergedUsage)
+      setLastSyncTime(Date.now())
     } else {
       setCards(importedCards)
       setUsage(importedUsage)
-      storage.saveCards(importedCards)
-      storage.saveUsage(importedUsage)
+      await storage.saveCards(importedCards)
+      await storage.saveUsage(importedUsage)
+      setLastSyncTime(Date.now())
     }
   }
 
@@ -233,6 +245,7 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <CloudSyncStatus lastSyncTime={lastSyncTime} />
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-success/10 text-success border border-success/20">
                 <LockOpen size={20} weight="duotone" />
                 <span className="text-sm font-semibold">Unlocked</span>
@@ -251,7 +264,7 @@ function App() {
           <Alert className="bg-accent/5 border-accent/20">
             <Info size={18} className="text-accent" />
             <AlertDescription className="text-sm">
-              This tool only stores card metadata (no full numbers or CVVs). Keep real card details in a secure vault.
+              This tool only stores card metadata (no full numbers or CVVs). All data is automatically backed up to secure cloud storage and kept in sync across your devices.
             </AlertDescription>
           </Alert>
         </header>
@@ -412,25 +425,42 @@ function App() {
                   Data Management
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Export or import your cards and transactions
+                  Your data is automatically backed up to the cloud. Export to download a local copy.
                 </p>
               </div>
             </div>
 
-            <div className="border rounded-lg p-6 bg-card">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Backup & Restore</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Create a backup file to save your data or restore from a previous backup. 
-                    Backups include all cards and transaction history.
-                  </p>
-                  <BackupManager 
-                    cards={cards} 
-                    usage={usage}
-                    onImport={handleImportData}
-                  />
-                </div>
+            <div className="border rounded-lg p-6 bg-card space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <CloudCheck size={20} weight="duotone" className="text-success" />
+                  Automatic Cloud Backup
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  All your cards and transactions are automatically saved to secure cloud storage. 
+                  Your data syncs instantly whenever you make changes and is available across all your devices.
+                </p>
+                <Alert className="bg-success/5 border-success/20">
+                  <Info size={18} className="text-success" />
+                  <AlertDescription className="text-sm">
+                    <strong>Cloud backup is active.</strong> Your data is encrypted and securely stored. 
+                    No action needed - everything syncs automatically!
+                  </AlertDescription>
+                </Alert>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <h3 className="font-semibold mb-2">Export Local Copy</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Download a JSON file backup for offline storage or to import into another system.
+                </p>
+                <BackupManager 
+                  cards={cards} 
+                  usage={usage}
+                  onImport={handleImportData}
+                />
               </div>
             </div>
           </div>
