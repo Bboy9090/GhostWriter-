@@ -12,6 +12,7 @@ A **security-focused** web application with **automatic cloud backup** for manag
 - ✅ Provides panic wipe functionality to instantly destroy all cloud data
 - ✅ Tracks failed login attempts and auto-wipes after 5 failures
 - ✅ **Automatically syncs all data to secure cloud storage in real-time**
+- ✅ **Works offline with automatic sync queue when reconnected**
 - ✅ **Accessible from any device with your PIN**
 
 **What This App Does NOT Do:**
@@ -139,15 +140,34 @@ export const MAX_FAILED_ATTEMPTS = 5
 - Every card you add, edit, or delete is automatically saved to secure cloud storage
 - Every transaction is instantly synced to the cloud
 - No manual backup steps required
+- **Works offline** - changes are queued and automatically synced when you reconnect
+
+**Offline Mode:**
+- App automatically detects when you're offline
+- All changes are saved locally and queued for sync
+- Orange "Offline" badge shows in header with queued changes count
+- When you reconnect, all queued changes sync automatically
+- Toast notifications inform you of offline/online status changes
+
+**Reconnection Process:**
+1. Connection is restored (you'll see a "Connection restored" toast)
+2. App automatically syncs all queued changes
+3. Status badge shows "Syncing..." with animated cloud icon
+4. After completion, "All changes synced!" confirmation appears
+5. Badge returns to normal "Synced" state
 
 **Cross-Device Access:**
 - Access your cards and transactions from any device
 - Simply log in with your PIN
 - All your data syncs automatically
+- Offline changes on one device sync when that device reconnects
 
 **Sync Status:**
-- A badge in the header shows your current sync status
-- "Synced just now" appears after successful saves
+- A badge in the header shows your current sync status:
+  - **Online**: Normal operation, changes sync immediately
+  - **Offline**: Changes queued for later sync (shows queue count)
+  - **Syncing**: Processing queued changes
+  - **Synced**: All data up to date (shows time since last sync)
 - Hover over the badge for more details
 
 **Data Security:**
@@ -296,11 +316,13 @@ The codebase is modular and easy to customize:
 
 **Storage & Security:**
 - `src/lib/storage.ts` - All cloud storage operations, PIN hashing, panic wipe logic
+- `src/lib/offline-sync.ts` - Offline detection and queued sync management
 - `src/lib/types.ts` - TypeScript interfaces for Card and AppSettings
 
 **Components:**
 - `src/components/LockScreen.tsx` - PIN entry, hash validation, failed attempt tracking
 - `src/components/CloudSyncStatus.tsx` - Real-time cloud sync status indicator
+- `src/components/OfflineIndicator.tsx` - Offline mode detection and queue status display
 - `src/components/CardItem.tsx` - Individual card display component
 - `src/components/CardForm.tsx` - Add/edit card modal form
 - `src/components/PanicWipeDialog.tsx` - Confirmation dialog for manual wipe
@@ -308,6 +330,10 @@ The codebase is modular and easy to customize:
 - `src/components/UsageForm.tsx` - Add/edit transaction modal form
 - `src/components/BackupManager.tsx` - Export/import functionality for manual backups
 - `src/App.tsx` - Main app container with tabs, search, filters, and card list
+
+**Hooks:**
+- `src/hooks/use-offline-sync.ts` - React hook for offline sync status and operations
+- `src/hooks/use-mobile.ts` - Mobile device detection
 
 **Styling:**
 - `src/index.css` - Custom color theme, fonts, and animations
@@ -422,7 +448,8 @@ This is a security-focused tool. If you find vulnerabilities or have security im
 |--------|-----|
 | **Unlock app** | Enter PIN on lock screen |
 | **Lock app manually** | Click "Lock" button in header |
-| **View sync status** | Check badge in header (shows "Synced just now") |
+| **View sync status** | Check badge in header (shows connection and sync status) |
+| **Check offline status** | Look for orange "Offline" badge or alert banner |
 | **Switch views** | Click "Cards" or "Insights" tabs |
 | **Add card** | Cards tab → Click "Add Card" button, fill form |
 | **Edit card** | Click pencil icon on card |

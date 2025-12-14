@@ -1,4 +1,5 @@
 import type { Card, AppSettings, UsageEntry } from './types'
+import { offlineSyncManager } from './offline-sync'
 
 declare global {
   interface Window {
@@ -31,15 +32,44 @@ export const storage = {
   async loadCards(): Promise<Card[]> {
     try {
       const data = await spark.kv.get<Card[]>(KEYS.CARDS)
-      if (!data) return []
+      if (!data) {
+        const localData = localStorage.getItem(KEYS.CARDS)
+        if (localData) {
+          return JSON.parse(localData)
+        }
+        return []
+      }
       return data
     } catch {
+      const localData = localStorage.getItem(KEYS.CARDS)
+      if (localData) {
+        return JSON.parse(localData)
+      }
       return []
     }
   },
 
   async saveCards(cards: Card[]): Promise<void> {
-    await spark.kv.set(KEYS.CARDS, cards)
+    if (offlineSyncManager.getOnlineStatus()) {
+      try {
+        await spark.kv.set(KEYS.CARDS, cards)
+      } catch (error) {
+        console.error('Failed to save cards to cloud, queueing for later:', error)
+        await offlineSyncManager.addToQueue({
+          type: 'SAVE_CARDS',
+          data: cards,
+          timestamp: Date.now()
+        })
+        localStorage.setItem(KEYS.CARDS, JSON.stringify(cards))
+      }
+    } else {
+      await offlineSyncManager.addToQueue({
+        type: 'SAVE_CARDS',
+        data: cards,
+        timestamp: Date.now()
+      })
+      localStorage.setItem(KEYS.CARDS, JSON.stringify(cards))
+    }
   },
 
   async loadSettings(): Promise<AppSettings> {
@@ -191,15 +221,44 @@ export const storage = {
   async loadUsage(): Promise<UsageEntry[]> {
     try {
       const data = await spark.kv.get<UsageEntry[]>(KEYS.USAGE)
-      if (!data) return []
+      if (!data) {
+        const localData = localStorage.getItem(KEYS.USAGE)
+        if (localData) {
+          return JSON.parse(localData)
+        }
+        return []
+      }
       return data
     } catch {
+      const localData = localStorage.getItem(KEYS.USAGE)
+      if (localData) {
+        return JSON.parse(localData)
+      }
       return []
     }
   },
 
   async saveUsage(usage: UsageEntry[]): Promise<void> {
-    await spark.kv.set(KEYS.USAGE, usage)
+    if (offlineSyncManager.getOnlineStatus()) {
+      try {
+        await spark.kv.set(KEYS.USAGE, usage)
+      } catch (error) {
+        console.error('Failed to save usage to cloud, queueing for later:', error)
+        await offlineSyncManager.addToQueue({
+          type: 'SAVE_USAGE',
+          data: usage,
+          timestamp: Date.now()
+        })
+        localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
+      }
+    } else {
+      await offlineSyncManager.addToQueue({
+        type: 'SAVE_USAGE',
+        data: usage,
+        timestamp: Date.now()
+      })
+      localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
+    }
   },
 
   async initializeSampleUsageData(): Promise<void> {

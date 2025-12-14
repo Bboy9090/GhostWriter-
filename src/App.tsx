@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card as CardType, UsageEntry } from './lib/types'
 import { storage, INACTIVITY_TIMEOUT } from './lib/storage'
+import { offlineSyncManager } from './lib/offline-sync'
 import { LockScreen } from './components/LockScreen'
 import { CardItem } from './components/CardItem'
 import { CardForm } from './components/CardForm'
@@ -9,6 +10,7 @@ import { StatsDashboard } from './components/StatsDashboard'
 import { UsageForm } from './components/UsageForm'
 import { BackupManager } from './components/BackupManager'
 import { CloudSyncStatus } from './components/CloudSyncStatus'
+import { OfflineIndicator } from './components/OfflineIndicator'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
@@ -50,6 +52,20 @@ function App() {
   const [isUsageFormOpen, setIsUsageFormOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('cards')
   const [lastSyncTime, setLastSyncTime] = useState<number>(Date.now())
+  const [isOnline, setIsOnline] = useState(offlineSyncManager.getOnlineStatus())
+
+  useEffect(() => {
+    const unsubscribe = offlineSyncManager.onStatusChange((online) => {
+      setIsOnline(online)
+      if (online) {
+        toast.info('Connection restored. Syncing changes...')
+      } else {
+        toast.info('You\'re offline. Changes will sync when reconnected.')
+      }
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -267,6 +283,8 @@ function App() {
               This tool only stores card metadata (no full numbers or CVVs). All data is automatically backed up to secure cloud storage and kept in sync across your devices.
             </AlertDescription>
           </Alert>
+
+          <OfflineIndicator />
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

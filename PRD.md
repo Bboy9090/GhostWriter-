@@ -13,11 +13,11 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 ## Essential Features
 
 **Automatic Cloud Backup**
-- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time
-- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps
-- Trigger: Any data modification (add/edit/delete card, add transaction, import data)
-- Progression: User makes change → Data saves to cloud → Sync status updates → "Synced" indicator appears
-- Success criteria: All changes persist immediately to cloud; sync status badge shows last sync time; data accessible from any device
+- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time, with offline mode detection and queued sync when reconnected
+- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps, even when working offline
+- Trigger: Any data modification (add/edit/delete card, add transaction, import data) OR when connection is restored after being offline
+- Progression: User makes change → Data saves to cloud (if online) or queues for sync (if offline) → Sync status updates → "Synced" indicator appears OR User goes offline → Changes queued → User reconnects → Queued changes sync automatically → Success notification
+- Success criteria: All changes persist immediately to cloud when online; offline changes queue and sync upon reconnection; sync status badge shows current connection state and queue size; data accessible from any device
 
 **PIN Lock Screen**
 - Functionality: SHA-256 hashed PIN authentication that guards access to card metadata
@@ -84,9 +84,10 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
 - **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
 - **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
-- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations
-- **Cloud Sync Failure**: If cloud save fails, show error toast but keep data in local memory; retry sync on next operation
-- **Offline Mode**: Detect when offline and show appropriate messaging; queue changes for sync when connection restored
+- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations; show "Offline" with queued changes count when disconnected
+- **Cloud Sync Failure**: If cloud save fails, queue changes for retry; show error toast but keep data in local memory; automatically retry sync on next operation or when connection restored
+- **Offline Mode**: Automatically detect when offline and show appropriate messaging with alert banner; queue all changes for sync when connection restored; show queued changes count in status badge; process entire queue automatically upon reconnection
+- **Reconnection Handling**: When connection restored, show "Connection restored" toast; automatically sync all queued changes; show syncing progress; confirm successful sync with success toast
 - **Backup Security**: Exported JSON files contain plain metadata; warn users to store securely and not share publicly
 - **Invalid Backup Files**: Show clear error messages for corrupted or invalid JSON files during import
 - **Backup File Conflicts**: During merge import, skip items with duplicate IDs; during replace, clear all existing data first
