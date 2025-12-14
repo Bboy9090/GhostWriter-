@@ -13,11 +13,11 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 ## Essential Features
 
 **Automatic Cloud Backup**
-- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time, with offline mode detection and queued sync when reconnected
-- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps, even when working offline
-- Trigger: Any data modification (add/edit/delete card, add transaction, import data) OR when connection is restored after being offline
-- Progression: User makes change → Data saves to cloud (if online) or queues for sync (if offline) → Sync status updates → "Synced" indicator appears OR User goes offline → Changes queued → User reconnects → Queued changes sync automatically → Success notification
-- Success criteria: All changes persist immediately to cloud when online; offline changes queue and sync upon reconnection; sync status badge shows current connection state and queue size; data accessible from any device
+- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time, with offline mode detection, queued sync when reconnected, and manual sync button to force immediate synchronization
+- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps, even when working offline, with user control to force sync on demand
+- Trigger: Any data modification (add/edit/delete card, add transaction, import data) OR when connection is restored after being offline OR user clicks "Sync Now" button
+- Progression: User makes change → Data saves to cloud (if online) or queues for sync (if offline) → Sync status updates → "Synced" indicator appears OR User goes offline → Changes queued → User reconnects → Queued changes sync automatically → Success notification OR User clicks "Sync Now" button → Manual sync initiates → Progress indicator shows → All queued changes sync → Success toast confirms completion
+- Success criteria: All changes persist immediately to cloud when online; offline changes queue and sync upon reconnection; sync status badge shows current connection state and queue size with count; manual sync button appears when changes are queued and online; manual sync processes entire queue and shows progress feedback; data accessible from any device
 
 **PIN Lock Screen**
 - Functionality: SHA-256 hashed PIN authentication that guards access to card metadata
@@ -84,10 +84,11 @@ This is a focused tool with several interconnected features (card CRUD, authenti
 - **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
 - **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
 - **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
-- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations; show "Offline" with queued changes count when disconnected
-- **Cloud Sync Failure**: If cloud save fails, queue changes for retry; show error toast but keep data in local memory; automatically retry sync on next operation or when connection restored
-- **Offline Mode**: Automatically detect when offline and show appropriate messaging with alert banner; queue all changes for sync when connection restored; show queued changes count in status badge; process entire queue automatically upon reconnection
-- **Reconnection Handling**: When connection restored, show "Connection restored" toast; automatically sync all queued changes; show syncing progress; confirm successful sync with success toast
+- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations; show "Offline" with queued changes count when disconnected; show "Sync Now" button when changes queued and online for manual synchronization
+- **Cloud Sync Failure**: If cloud save fails, queue changes for retry; show error toast but keep data in local memory; automatically retry sync on next operation or when connection restored; manual sync button allows user to retry immediately
+- **Offline Mode**: Automatically detect when offline and show appropriate messaging with alert banner; queue all changes for sync when connection restored; show queued changes count in status badge; manual sync button hidden while offline; process entire queue automatically upon reconnection
+- **Reconnection Handling**: When connection restored, show "Connection restored" toast; automatically sync all queued changes; show syncing progress; confirm successful sync with success toast; manual sync button becomes available if auto-sync fails
+- **Manual Sync**: When queued changes exist and online, "Sync Now" button appears next to status badge; clicking button triggers immediate sync of all queued changes; shows count of items being synced; button disabled while syncing in progress; success/error toasts provide feedback; attempting sync while offline shows error message
 - **Backup Security**: Exported JSON files contain plain metadata; warn users to store securely and not share publicly
 - **Invalid Backup Files**: Show clear error messages for corrupted or invalid JSON files during import
 - **Backup File Conflicts**: During merge import, skip items with duplicate IDs; during replace, clear all existing data first
@@ -185,6 +186,8 @@ Animations should reinforce security and precision - deliberate, not decorative.
 - Analytics: `ChartLineUp`, `ChartBarHorizontal`, `TrendUp`, `Calendar`, `Receipt` - for insights dashboard
 - Trends: `ArrowUp` (increase), `ArrowDown` (decrease), `Minus` (neutral)
 - Backup: `DownloadSimple` (export), `UploadSimple` (import), `Database` - for data management
+- Sync: `ArrowsClockwise` - for manual sync button, spins during sync operation
+- Cloud: `CloudCheck` (synced), `Cloud` (syncing), `CloudWarning` (offline/error) - for sync status indicators
 
 **Spacing**:
 - Container padding: `p-6` (24px)

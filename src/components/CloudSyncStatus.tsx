@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Cloud, CloudCheck, CloudWarning } from '@phosphor-icons/react'
+import { Cloud, CloudCheck, CloudWarning, ArrowsClockwise } from '@phosphor-icons/react'
 import { Badge } from './ui/badge'
+import { Button } from './ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'
 import { offlineSyncManager } from '@/lib/offline-sync'
+import { toast } from 'sonner'
 
 type SyncStatus = 'synced' | 'syncing' | 'error' | 'offline'
 
@@ -14,6 +16,7 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
   const [status, setStatus] = useState<SyncStatus>('synced')
   const [timeAgo, setTimeAgo] = useState<string>('')
   const [queueSize, setQueueSize] = useState(0)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
     const unsubscribe = offlineSyncManager.onStatusChange((online) => {
@@ -28,6 +31,7 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
     })
 
     const unsubscribeSync = offlineSyncManager.onSyncComplete((success) => {
+      setIsSyncing(false)
       if (success) {
         setStatus('synced')
         setQueueSize(0)
@@ -76,6 +80,34 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
   const updateQueueSize = async () => {
     const size = await offlineSyncManager.getQueueSize()
     setQueueSize(size)
+  }
+
+  const handleManualSync = async () => {
+    if (!offlineSyncManager.getOnlineStatus()) {
+      toast.error("Can't sync while offline")
+      return
+    }
+
+    if (queueSize === 0) {
+      toast.info('No changes to sync')
+      return
+    }
+
+    if (isSyncing) {
+      return
+    }
+
+    setIsSyncing(true)
+    setStatus('syncing')
+    toast.info(`Syncing ${queueSize} ${queueSize === 1 ? 'change' : 'changes'}...`)
+    
+    try {
+      await offlineSyncManager.processSyncQueue()
+      toast.success('All changes synced successfully')
+    } catch (error) {
+      toast.error('Failed to sync changes')
+      console.error('Manual sync error:', error)
+    }
   }
 
   const getIcon = () => {
@@ -133,21 +165,53 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge 
-            variant="outline" 
-            className={`gap-2 px-3 py-1.5 cursor-help ${getVariantClasses()}`}
-          >
-            {getIcon()}
-            <span className="text-xs font-medium">{getLabel()}</span>
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="text-sm">{getTooltip()}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="flex items-center gap-2">
+      {queueSize > 0 && offlineSyncManager.getOnlineStatus() && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className="gap-2 h-9"
+              >
+                <ArrowsClockwise 
+                  size={16} 
+                  weight="bold" 
+                  className={isSyncing ? 'animate-spin' : ''} 
+                />
+                <span className="text-xs font-medium">
+                  Sync Now {queueSize > 0 && `(${queueSize})`}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-sm">
+                Force immediate sync of {queueSize} queued {queueSize === 1 ? 'change' : 'changes'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge 
+              variant="outline" 
+              className={`gap-2 px-3 py-1.5 cursor-help ${getVariantClasses()}`}
+            >
+              {getIcon()}
+              <span className="text-xs font-medium">{getLabel()}</span>
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-sm">{getTooltip()}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   )
 }
