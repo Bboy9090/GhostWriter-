@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { Card as CardType, UsageEntry } from './lib/types'
 import { storage, INACTIVITY_TIMEOUT } from './lib/storage'
 import { offlineSyncManager } from './lib/offline-sync'
+import { soundSystem } from './lib/sounds'
+import { SplashScreen } from './components/SplashScreen'
 import { LockScreen } from './components/LockScreen'
+import { Logo } from './components/Logo'
 import { CardItem } from './components/CardItem'
 import { CardForm } from './components/CardForm'
 import { PanicWipeDialog } from './components/PanicWipeDialog'
@@ -31,13 +34,16 @@ import {
   ChartLineUp,
   Receipt,
   Database,
-  CloudCheck
+  CloudCheck,
+  SpeakerHigh,
+  SpeakerSlash
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 type SortBy = 'label' | 'bank' | 'expiry'
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true)
   const [isLocked, setIsLocked] = useState(true)
   const [cards, setCards] = useState<CardType[]>([])
   const [usage, setUsage] = useState<UsageEntry[]>([])
@@ -54,6 +60,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('cards')
   const [lastSyncTime, setLastSyncTime] = useState<number>(Date.now())
   const [isOnline, setIsOnline] = useState(offlineSyncManager.getOnlineStatus())
+  const [soundEnabled, setSoundEnabled] = useState(soundSystem.isEnabled())
 
   useEffect(() => {
     const unsubscribe = offlineSyncManager.onStatusChange((online) => {
@@ -123,6 +130,7 @@ function App() {
 
   const handleUnlock = () => {
     setIsLocked(false)
+    soundSystem.playSuccess()
     toast.success('Welcome back! Vault unlocked.')
   }
 
@@ -143,9 +151,11 @@ function App() {
     
     if (editingCard) {
       updatedCards = cards.map(c => c.id === card.id ? card : c)
+      soundSystem.playSuccess()
       toast.success('Card updated successfully')
     } else {
       updatedCards = [...cards, { ...card, createdAt: Date.now() }]
+      soundSystem.playSuccess()
       toast.success('Card added successfully')
     }
     
@@ -169,6 +179,7 @@ function App() {
       setCards(updatedCards)
       await storage.saveCards(updatedCards)
       setLastSyncTime(Date.now())
+      soundSystem.playDelete()
       toast.success('Card deleted')
     }
   }
@@ -178,6 +189,7 @@ function App() {
     setUsage(updatedUsage)
     await storage.saveUsage(updatedUsage)
     setLastSyncTime(Date.now())
+    soundSystem.playSuccess()
     toast.success('Transaction added successfully')
   }
 
@@ -243,25 +255,51 @@ function App() {
     return filtered
   }, [cards, searchQuery, statusFilter, tagFilter, sortBy])
 
+  const toggleSound = () => {
+    const newState = !soundEnabled
+    setSoundEnabled(newState)
+    soundSystem.setEnabled(newState)
+    if (newState) {
+      soundSystem.playClick()
+      toast.success('Sound effects enabled')
+    } else {
+      toast.info('Sound effects disabled')
+    }
+  }
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />
+  }
+
   if (isLocked) {
     return <LockScreen onUnlock={handleUnlock} onPanicWipe={handlePanicWipe} />
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 animate-fade-in">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <header className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary text-primary-foreground">
-                <ShieldCheck size={32} weight="duotone" />
-              </div>
+              <Logo size={48} />
               <div>
                 <h1 className="text-4xl font-bold tracking-tight">Card Command Center</h1>
                 <p className="text-muted-foreground text-sm">Secure metadata management</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSound}
+                title={soundEnabled ? 'Disable sound effects' : 'Enable sound effects'}
+              >
+                {soundEnabled ? (
+                  <SpeakerHigh size={20} weight="duotone" />
+                ) : (
+                  <SpeakerSlash size={20} weight="duotone" />
+                )}
+              </Button>
               <CloudSyncStatus lastSyncTime={lastSyncTime} />
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-success/10 text-success border border-success/20">
                 <LockOpen size={20} weight="duotone" />
@@ -270,7 +308,11 @@ function App() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsLocked(true)}
+                onClick={() => {
+                  setIsLocked(true)
+                  soundSystem.playLock()
+                  toast.info('Vault locked')
+                }}
               >
                 <Lock size={18} className="mr-2" />
                 Lock
