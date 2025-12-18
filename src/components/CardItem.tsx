@@ -2,7 +2,9 @@ import { Card as CardType } from '@/lib/types'
 import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
-import { PencilSimple, Trash, Link, CreditCard, CheckCircle, Snowflake, XCircle } from '@phosphor-icons/react'
+import { PencilSimple, Trash, Link, CreditCard, CheckCircle, Snowflake, XCircle, Copy, Check } from '@phosphor-icons/react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface CardItemProps {
   card: CardType
@@ -25,10 +27,23 @@ const statusConfig: Record<CardType['status'], { icon: typeof CheckCircle; color
 }
 
 export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
+  const [copied, setCopied] = useState(false)
+
   const isExpired = () => {
     const now = new Date()
     const expiry = new Date(parseInt(card.expYear), parseInt(card.expMonth) - 1)
     return now > expiry
+  }
+
+  const handleCopyCardNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(card.last4)
+      setCopied(true)
+      toast.success('Card number copied to clipboard')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      toast.error('Failed to copy card number')
+    }
   }
 
   const StatusIcon = statusConfig[card.status].icon
@@ -73,10 +88,19 @@ export function CardItem({ card, onEdit, onDelete }: CardItemProps) {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <div className="text-xs text-muted-foreground mb-1">Card Number</div>
-              <div className="font-mono text-lg font-medium tracking-wider">
-                •••• {card.last4}
+              <div 
+                className="font-mono text-lg font-medium tracking-wider flex items-center gap-2 cursor-pointer hover:text-primary transition-colors group"
+                onClick={handleCopyCardNumber}
+                title="Click to copy last 4 digits"
+              >
+                <span>•••• {card.last4}</span>
+                {copied ? (
+                  <Check size={16} weight="bold" className="text-success" />
+                ) : (
+                  <Copy size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
               </div>
             </div>
             <div className="text-right">
