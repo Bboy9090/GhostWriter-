@@ -4,13 +4,30 @@ class SoundSystem {
   private enabled: boolean = true
 
   constructor() {
-    if (typeof window !== 'undefined' && 'AudioContext' in window) {
-      this.audioContext = new AudioContext()
+    // Load preference immediately in constructor
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('soundEnabled')
+      this.enabled = saved === null ? true : saved === 'true'
+    }
+  }
+
+  // Lazy initialization of AudioContext on first use (respects browser autoplay policies)
+  private initAudioContext() {
+    if (!this.audioContext && typeof window !== 'undefined' && 'AudioContext' in window) {
+      try {
+        this.audioContext = new AudioContext()
+      } catch (e) {
+        console.warn('Failed to initialize AudioContext:', e)
+      }
     }
   }
 
   private createOscillator(frequency: number, duration: number, type: OscillatorType = 'sine') {
-    if (!this.audioContext || !this.enabled) return
+    if (!this.enabled) return
+    
+    // Initialize AudioContext on first use
+    this.initAudioContext()
+    if (!this.audioContext) return
 
     const oscillator = this.audioContext.createOscillator()
     const gainNode = this.audioContext.createGain()
@@ -33,6 +50,7 @@ class SoundSystem {
 
   // Unlock success sound - ascending two-tone
   playUnlock() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     this.createOscillator(523.25, 0.1, 'sine') // C5
@@ -41,6 +59,7 @@ class SoundSystem {
 
   // Lock sound - descending tone
   playLock() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     this.createOscillator(659.25, 0.1, 'sine') // E5
@@ -49,6 +68,7 @@ class SoundSystem {
 
   // Success sound - pleasant ascending progression
   playSuccess() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     this.createOscillator(523.25, 0.08, 'sine') // C5
@@ -58,6 +78,7 @@ class SoundSystem {
 
   // Error sound - dissonant low tone
   playError() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     this.createOscillator(220, 0.15, 'square')
@@ -66,6 +87,7 @@ class SoundSystem {
 
   // Click sound - subtle tick
   playClick() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     this.createOscillator(800, 0.03, 'sine')
@@ -73,6 +95,7 @@ class SoundSystem {
 
   // Delete sound - whoosh down
   playDelete() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     const oscillator = this.audioContext.createOscillator()
@@ -96,6 +119,7 @@ class SoundSystem {
 
   // Notification sound - gentle bell
   playNotification() {
+    this.initAudioContext()
     if (!this.audioContext) return
     
     this.createOscillator(880, 0.1, 'sine') // A5
@@ -113,15 +137,6 @@ class SoundSystem {
   isEnabled(): boolean {
     return this.enabled
   }
-
-  // Load sound preference from localStorage
-  loadPreference() {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('soundEnabled')
-      this.enabled = saved === null ? true : saved === 'true'
-    }
-  }
 }
 
 export const soundSystem = new SoundSystem()
-soundSystem.loadPreference()

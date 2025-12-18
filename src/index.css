@@ -166,3 +166,15 @@ body {
 .animation-delay-400 {
   animation-delay: 0.4s;
 }
+
+.animation-delay-0 {
+  animation-delay: 0ms;
+}
+
+.animation-delay-150 {
+  animation-delay: 0.15s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}

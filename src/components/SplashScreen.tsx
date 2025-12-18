@@ -6,13 +6,15 @@ interface SplashScreenProps {
   minDuration?: number
 }
 
+const FADE_OUT_DURATION = 500 // ms
+
 export function SplashScreen({ onComplete, minDuration = 2000 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false)
-      setTimeout(onComplete, 500) // Allow fade-out animation to complete
+      setTimeout(onComplete, FADE_OUT_DURATION) // Allow fade-out animation to complete
     }, minDuration)
 
     return () => clearTimeout(timer)
@@ -42,9 +44,9 @@ export function SplashScreen({ onComplete, minDuration = 2000 }: SplashScreenPro
 
         {/* Loading indicator */}
         <div className="flex space-x-2 animate-fade-in-up animation-delay-400">
-          <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="w-2 h-2 bg-accent rounded-full animate-bounce animation-delay-0" />
+          <div className="w-2 h-2 bg-accent rounded-full animate-bounce animation-delay-150" />
+          <div className="w-2 h-2 bg-accent rounded-full animate-bounce animation-delay-300" />
         </div>
       </div>
     </div>
