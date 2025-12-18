@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Alert, AlertDescription } from './components/ui/alert'
 import { Separator } from './components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
+import { Toaster } from './components/ui/sonner'
 import { 
   Lock, 
   LockOpen, 
@@ -244,11 +245,18 @@ function App() {
   }, [cards, searchQuery, statusFilter, tagFilter, sortBy])
 
   if (isLocked) {
-    return <LockScreen onUnlock={handleUnlock} onPanicWipe={handlePanicWipe} />
+    return (
+      <>
+        <LockScreen onUnlock={handleUnlock} onPanicWipe={handlePanicWipe} />
+        <Toaster />
+      </>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <>
+      <Toaster />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <header className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -546,7 +554,8 @@ function App() {
         onClose={() => setIsPanicDialogOpen(false)}
         onConfirm={handlePanicWipe}
       />
-    </div>
+      </div>
+    </>
   )
 }
 
