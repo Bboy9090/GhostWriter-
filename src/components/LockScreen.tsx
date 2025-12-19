@@ -3,7 +3,9 @@ import { Lock, LockOpen, Warning } from '@phosphor-icons/react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Alert, AlertDescription } from './ui/alert'
+import { Logo } from './Logo'
 import { hashPin, storage, MAX_FAILED_ATTEMPTS } from '@/lib/storage'
+import { soundSystem } from '@/lib/sounds'
 
 interface LockScreenProps {
   onUnlock: () => void
@@ -35,16 +37,19 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
   const handleSetPin = async () => {
     if (pin.length < 4 || pin.length > 8) {
       setError('PIN must be between 4-8 digits')
+      soundSystem.playError()
       return
     }
 
     if (!/^\d+$/.test(pin)) {
       setError('PIN must contain only numbers')
+      soundSystem.playError()
       return
     }
 
     if (pin !== confirmPin) {
       setError('PINs do not match')
+      soundSystem.playError()
       setShake(true)
       setTimeout(() => setShake(false), 400)
       return
@@ -56,6 +61,7 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
     await storage.saveFailedAttempts(0)
     await storage.saveLastActivity(Date.now())
     setIsLoading(false)
+    soundSystem.playUnlock()
     onUnlock()
   }
 
@@ -73,6 +79,7 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
       await storage.saveFailedAttempts(0)
       await storage.saveLastActivity(Date.now())
       setIsLoading(false)
+      soundSystem.playUnlock()
       onUnlock()
     } else {
       const newFailedCount = settings.failedAttempts + 1
@@ -81,11 +88,13 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
 
       if (newFailedCount >= MAX_FAILED_ATTEMPTS) {
         setError('Too many failed attempts. Local data will now be wiped for security.')
+        soundSystem.playError()
         setTimeout(() => {
           onPanicWipe()
         }, 2000)
       } else {
         setError(`Incorrect PIN. ${MAX_FAILED_ATTEMPTS - newFailedCount} attempts remaining.`)
+        soundSystem.playError()
         setShake(true)
         setTimeout(() => setShake(false), 400)
       }
@@ -106,15 +115,17 @@ export function LockScreen({ onUnlock, onPanicWipe }: LockScreenProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-primary via-primary/95 to-secondary flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="fixed inset-0 bg-gradient-to-br from-primary via-primary/95 to-secondary flex items-center justify-center p-4 animate-fade-in">
+      <div className="w-full max-w-md animate-scale-in">
         <div className="bg-background rounded-2xl shadow-2xl p-8 space-y-6">
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-accent/10 mb-2">
+            <div className="flex justify-center mb-2">
               {isSettingPin ? (
-                <LockOpen size={40} className="text-accent" weight="duotone" />
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-accent/10">
+                  <LockOpen size={40} className="text-accent" weight="duotone" />
+                </div>
               ) : (
-                <Lock size={40} className="text-accent" weight="duotone" />
+                <Logo size={80} />
               )}
             </div>
             <h1 className="text-3xl font-bold tracking-tight">
