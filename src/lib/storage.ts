@@ -1,4 +1,9 @@
-import type { Card, AppSettings, UsageEntry } from './types'
+import type { 
+  CartItem, Collection, Friend, Message, Conversation, 
+  FeedPost, UserProfile, Notification, PriceAlert, QuickCapture,
+  AppSettings, StoreType
+} from './types'
+import { STORE_METADATA } from './types'
 import { offlineSyncManager } from './offline-sync'
 
 declare global {
@@ -16,65 +21,303 @@ declare global {
 
 const spark = window.spark
 
-const NAMESPACE = 'cardCommandCenter'
+const NAMESPACE = 'universalCart'
 const KEYS = {
-  CARDS: `${NAMESPACE}.cards`,
+  // Cart & Items
+  ITEMS: `${NAMESPACE}.items`,
+  COLLECTIONS: `${NAMESPACE}.collections`,
+  QUICK_CAPTURES: `${NAMESPACE}.quickCaptures`,
+  PRICE_ALERTS: `${NAMESPACE}.priceAlerts`,
+  
+  // Social
+  FRIENDS: `${NAMESPACE}.friends`,
+  CONVERSATIONS: `${NAMESPACE}.conversations`,
+  MESSAGES: `${NAMESPACE}.messages`,
+  FEED: `${NAMESPACE}.feed`,
+  NOTIFICATIONS: `${NAMESPACE}.notifications`,
+  
+  // User
+  PROFILE: `${NAMESPACE}.profile`,
   SETTINGS: `${NAMESPACE}.settings`,
+  
+  // Auth & Security
+  PIN_HASH: `${NAMESPACE}.pinHash`,
   FAILED_ATTEMPTS: `${NAMESPACE}.failedAttempts`,
   LAST_ACTIVITY: `${NAMESPACE}.lastActivity`,
-  USAGE: `${NAMESPACE}.usage`,
+  
+  // Legacy (for backward compatibility)
+  LEGACY_CARDS: 'cardCommandCenter.cards',
+  LEGACY_USAGE: 'cardCommandCenter.usage',
 }
 
-export const INACTIVITY_TIMEOUT = 5 * 60 * 1000
+export const INACTIVITY_TIMEOUT = 10 * 60 * 1000 // 10 minutes for universal cart
 export const MAX_FAILED_ATTEMPTS = 5
 
-export const storage = {
-  async loadCards(): Promise<Card[]> {
-    try {
-      const data = await spark.kv.get<Card[]>(KEYS.CARDS)
-      if (!data) {
-        const localData = localStorage.getItem(KEYS.CARDS)
-        if (localData) {
-          return JSON.parse(localData)
-        }
-        return []
-      }
-      return data
-    } catch {
-      const localData = localStorage.getItem(KEYS.CARDS)
-      if (localData) {
-        return JSON.parse(localData)
-      }
-      return []
-    }
-  },
+// Helper function for storage operations
+async function safeGet<T>(key: string, defaultValue: T): Promise<T> {
+  try {
+    const data = await spark.kv.get<T>(key)
+    if (data !== undefined) return data
+    
+    const localData = localStorage.getItem(key)
+    if (localData) return JSON.parse(localData)
+    
+    return defaultValue
+  } catch {
+    const localData = localStorage.getItem(key)
+    if (localData) return JSON.parse(localData)
+    return defaultValue
+  }
+}
 
-  async saveCards(cards: Card[]): Promise<void> {
-    if (offlineSyncManager.getOnlineStatus()) {
-      try {
-        await spark.kv.set(KEYS.CARDS, cards)
-      } catch (error) {
-        console.error('Failed to save cards to cloud, queueing for later:', error)
-        await offlineSyncManager.addToQueue({
-          type: 'SAVE_CARDS',
-          data: cards,
-          timestamp: Date.now()
-        })
-        localStorage.setItem(KEYS.CARDS, JSON.stringify(cards))
-      }
-    } else {
+async function safeSave<T>(key: string, data: T, queueType: string): Promise<void> {
+  if (offlineSyncManager.getOnlineStatus()) {
+    try {
+      await spark.kv.set(key, data)
+    } catch (error) {
+      console.error(`Failed to save ${queueType} to cloud, queueing:`, error)
       await offlineSyncManager.addToQueue({
-        type: 'SAVE_CARDS',
-        data: cards,
+        type: queueType,
+        data,
         timestamp: Date.now()
       })
-      localStorage.setItem(KEYS.CARDS, JSON.stringify(cards))
+      localStorage.setItem(key, JSON.stringify(data))
     }
+  } else {
+    await offlineSyncManager.addToQueue({
+      type: queueType,
+      data,
+      timestamp: Date.now()
+    })
+    localStorage.setItem(key, JSON.stringify(data))
+  }
+}
+
+export const storage = {
+  // =========================================
+  // CART ITEMS
+  // =========================================
+  async loadItems(): Promise<CartItem[]> {
+    return safeGet<CartItem[]>(KEYS.ITEMS, [])
   },
 
+  async saveItems(items: CartItem[]): Promise<void> {
+    await safeSave(KEYS.ITEMS, items, 'SAVE_ITEMS')
+  },
+
+  async addItem(item: CartItem): Promise<CartItem[]> {
+    const items = await this.loadItems()
+    const updated = [...items, item]
+    await this.saveItems(updated)
+    return updated
+  },
+
+  async updateItem(id: string, updates: Partial<CartItem>): Promise<CartItem[]> {
+    const items = await this.loadItems()
+    const updated = items.map(item => 
+      item.id === id ? { ...item, ...updates, updatedAt: Date.now() } : item
+    )
+    await this.saveItems(updated)
+    return updated
+  },
+
+  async deleteItem(id: string): Promise<CartItem[]> {
+    const items = await this.loadItems()
+    const updated = items.filter(item => item.id !== id)
+    await this.saveItems(updated)
+    return updated
+  },
+
+  // =========================================
+  // COLLECTIONS
+  // =========================================
+  async loadCollections(): Promise<Collection[]> {
+    return safeGet<Collection[]>(KEYS.COLLECTIONS, [])
+  },
+
+  async saveCollections(collections: Collection[]): Promise<void> {
+    await safeSave(KEYS.COLLECTIONS, collections, 'SAVE_COLLECTIONS')
+  },
+
+  async addCollection(collection: Collection): Promise<Collection[]> {
+    const collections = await this.loadCollections()
+    const updated = [...collections, collection]
+    await this.saveCollections(updated)
+    return updated
+  },
+
+  async updateCollection(id: string, updates: Partial<Collection>): Promise<Collection[]> {
+    const collections = await this.loadCollections()
+    const updated = collections.map(col => 
+      col.id === id ? { ...col, ...updates, updatedAt: Date.now() } : col
+    )
+    await this.saveCollections(updated)
+    return updated
+  },
+
+  async deleteCollection(id: string): Promise<Collection[]> {
+    const collections = await this.loadCollections()
+    const updated = collections.filter(col => col.id !== id)
+    await this.saveCollections(updated)
+    return updated
+  },
+
+  // =========================================
+  // FRIENDS
+  // =========================================
+  async loadFriends(): Promise<Friend[]> {
+    return safeGet<Friend[]>(KEYS.FRIENDS, [])
+  },
+
+  async saveFriends(friends: Friend[]): Promise<void> {
+    await safeSave(KEYS.FRIENDS, friends, 'SAVE_FRIENDS')
+  },
+
+  async addFriend(friend: Friend): Promise<Friend[]> {
+    const friends = await this.loadFriends()
+    const updated = [...friends, friend]
+    await this.saveFriends(updated)
+    return updated
+  },
+
+  async updateFriend(id: string, updates: Partial<Friend>): Promise<Friend[]> {
+    const friends = await this.loadFriends()
+    const updated = friends.map(f => f.id === id ? { ...f, ...updates } : f)
+    await this.saveFriends(updated)
+    return updated
+  },
+
+  async removeFriend(id: string): Promise<Friend[]> {
+    const friends = await this.loadFriends()
+    const updated = friends.filter(f => f.id !== id)
+    await this.saveFriends(updated)
+    return updated
+  },
+
+  // =========================================
+  // CONVERSATIONS & MESSAGES
+  // =========================================
+  async loadConversations(): Promise<Conversation[]> {
+    return safeGet<Conversation[]>(KEYS.CONVERSATIONS, [])
+  },
+
+  async saveConversations(conversations: Conversation[]): Promise<void> {
+    await safeSave(KEYS.CONVERSATIONS, conversations, 'SAVE_CONVERSATIONS')
+  },
+
+  async loadMessages(conversationId?: string): Promise<Message[]> {
+    const allMessages = await safeGet<Message[]>(KEYS.MESSAGES, [])
+    if (conversationId) {
+      return allMessages.filter(m => m.conversationId === conversationId)
+    }
+    return allMessages
+  },
+
+  async saveMessages(messages: Message[]): Promise<void> {
+    await safeSave(KEYS.MESSAGES, messages, 'SAVE_MESSAGES')
+  },
+
+  async addMessage(message: Message): Promise<Message[]> {
+    const messages = await this.loadMessages()
+    const updated = [...messages, message]
+    await this.saveMessages(updated)
+    return updated
+  },
+
+  // =========================================
+  // FEED
+  // =========================================
+  async loadFeed(): Promise<FeedPost[]> {
+    return safeGet<FeedPost[]>(KEYS.FEED, [])
+  },
+
+  async saveFeed(feed: FeedPost[]): Promise<void> {
+    await safeSave(KEYS.FEED, feed, 'SAVE_FEED')
+  },
+
+  async addFeedPost(post: FeedPost): Promise<FeedPost[]> {
+    const feed = await this.loadFeed()
+    const updated = [post, ...feed].slice(0, 100) // Keep last 100 posts
+    await this.saveFeed(updated)
+    return updated
+  },
+
+  // =========================================
+  // NOTIFICATIONS
+  // =========================================
+  async loadNotifications(): Promise<Notification[]> {
+    return safeGet<Notification[]>(KEYS.NOTIFICATIONS, [])
+  },
+
+  async saveNotifications(notifications: Notification[]): Promise<void> {
+    await safeSave(KEYS.NOTIFICATIONS, notifications, 'SAVE_NOTIFICATIONS')
+  },
+
+  async addNotification(notification: Notification): Promise<Notification[]> {
+    const notifications = await this.loadNotifications()
+    const updated = [notification, ...notifications].slice(0, 50)
+    await this.saveNotifications(updated)
+    return updated
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    const notifications = await this.loadNotifications()
+    const updated = notifications.map(n => 
+      n.id === id ? { ...n, isRead: true } : n
+    )
+    await this.saveNotifications(updated)
+  },
+
+  async clearNotifications(): Promise<void> {
+    await this.saveNotifications([])
+  },
+
+  // =========================================
+  // PRICE ALERTS
+  // =========================================
+  async loadPriceAlerts(): Promise<PriceAlert[]> {
+    return safeGet<PriceAlert[]>(KEYS.PRICE_ALERTS, [])
+  },
+
+  async savePriceAlerts(alerts: PriceAlert[]): Promise<void> {
+    await safeSave(KEYS.PRICE_ALERTS, alerts, 'SAVE_PRICE_ALERTS')
+  },
+
+  // =========================================
+  // QUICK CAPTURES
+  // =========================================
+  async loadQuickCaptures(): Promise<QuickCapture[]> {
+    return safeGet<QuickCapture[]>(KEYS.QUICK_CAPTURES, [])
+  },
+
+  async saveQuickCaptures(captures: QuickCapture[]): Promise<void> {
+    await safeSave(KEYS.QUICK_CAPTURES, captures, 'SAVE_QUICK_CAPTURES')
+  },
+
+  async addQuickCapture(capture: QuickCapture): Promise<QuickCapture[]> {
+    const captures = await this.loadQuickCaptures()
+    const updated = [...captures, capture]
+    await this.saveQuickCaptures(updated)
+    return updated
+  },
+
+  // =========================================
+  // USER PROFILE
+  // =========================================
+  async loadProfile(): Promise<UserProfile | null> {
+    return safeGet<UserProfile | null>(KEYS.PROFILE, null)
+  },
+
+  async saveProfile(profile: UserProfile): Promise<void> {
+    await safeSave(KEYS.PROFILE, profile, 'SAVE_PROFILE')
+  },
+
+  // =========================================
+  // SETTINGS & AUTH
+  // =========================================
   async loadSettings(): Promise<AppSettings> {
     try {
-      const pinHash = await spark.kv.get<string>(KEYS.SETTINGS)
+      const pinHash = await spark.kv.get<string>(KEYS.PIN_HASH)
       const failedAttempts = await spark.kv.get<number>(KEYS.FAILED_ATTEMPTS) || 0
       const lastActivity = await spark.kv.get<number>(KEYS.LAST_ACTIVITY) || Date.now()
       
@@ -92,7 +335,7 @@ export const storage = {
   },
 
   async savePinHash(hash: string): Promise<void> {
-    await spark.kv.set(KEYS.SETTINGS, hash)
+    await spark.kv.set(KEYS.PIN_HASH, hash)
   },
 
   async saveFailedAttempts(count: number): Promise<void> {
@@ -103,233 +346,325 @@ export const storage = {
     await spark.kv.set(KEYS.LAST_ACTIVITY, timestamp)
   },
 
-  async resetToSampleData(): Promise<Card[]> {
-    const sampleCards: Card[] = [
+  // =========================================
+  // SAMPLE DATA
+  // =========================================
+  async resetToSampleData(): Promise<CartItem[]> {
+    const sampleItems: CartItem[] = [
       {
-        id: 'main-visa',
-        label: 'Main Visa – Online Shopping',
-        bank: 'Chase',
-        network: 'Visa',
-        last4: '1234',
-        expMonth: '12',
-        expYear: '2028',
+        id: 'item-1',
+        name: 'Sony WH-1000XM5 Wireless Headphones',
+        description: 'Industry-leading noise canceling with Auto NC Optimizer',
+        price: 349.99,
+        originalPrice: 399.99,
+        currency: 'USD',
+        imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
+        productUrl: 'https://amazon.com/dp/example',
+        store: 'amazon',
+        storeName: 'Amazon',
+        category: 'Electronics',
+        tags: ['headphones', 'audio', 'wireless'],
+        priority: 'want',
         status: 'active',
-        usageTags: ['shopping', 'primary'],
-        notes: 'Use this for Amazon and general online orders',
-        sourceUrl: 'https://chase.com/cards',
-        createdAt: Date.now() - 365 * 24 * 60 * 60 * 1000,
+        quantity: 1,
+        notes: 'Great reviews, perfect for work from home',
+        priceHistory: [
+          { price: 399.99, date: Date.now() - 30 * 24 * 60 * 60 * 1000, currency: 'USD' },
+          { price: 349.99, date: Date.now(), currency: 'USD' }
+        ],
+        addedAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now(),
+        addedFrom: 'manual',
+        collectionIds: ['col-tech']
       },
       {
-        id: 'backup-mastercard',
-        label: 'Backup Mastercard',
-        bank: 'Capital One',
-        network: 'Mastercard',
-        last4: '5678',
-        expMonth: '06',
-        expYear: '2027',
+        id: 'item-2',
+        name: 'Nike Air Jordan 1 Retro High OG',
+        description: 'Classic colorway, limited edition',
+        price: 180.00,
+        currency: 'USD',
+        imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+        productUrl: 'https://nike.com/example',
+        store: 'nike',
+        storeName: 'Nike',
+        category: 'Fashion',
+        tags: ['sneakers', 'jordan', 'shoes'],
+        priority: 'dream',
         status: 'active',
-        usageTags: ['backup', 'travel'],
-        notes: 'Keep for emergencies and international travel',
-        createdAt: Date.now() - 300 * 24 * 60 * 60 * 1000,
+        quantity: 1,
+        notes: 'Been wanting these for months!',
+        priceHistory: [],
+        addedAt: Date.now() - 14 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now(),
+        addedFrom: 'extension',
+        collectionIds: ['col-fashion']
       },
       {
-        id: 'amex-rewards',
-        label: 'Amex Gold – Rewards',
-        bank: 'American Express',
-        network: 'Amex',
-        last4: '9012',
-        expMonth: '03',
-        expYear: '2029',
+        id: 'item-3',
+        name: 'LEGO Star Wars Millennium Falcon',
+        description: 'Ultimate Collector Series - 7541 pieces',
+        price: 849.99,
+        currency: 'USD',
+        imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
+        productUrl: 'https://target.com/example',
+        store: 'target',
+        storeName: 'Target',
+        category: 'Toys & Games',
+        tags: ['lego', 'starwars', 'collectible'],
+        priority: 'dream',
         status: 'active',
-        usageTags: ['rewards', 'dining'],
-        notes: '4x points on dining and groceries',
-        sourceUrl: 'https://americanexpress.com',
-        createdAt: Date.now() - 250 * 24 * 60 * 60 * 1000,
+        quantity: 1,
+        notes: 'Ultimate dream collectible',
+        priceHistory: [],
+        addedAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now(),
+        addedFrom: 'manual',
+        collectionIds: ['col-gifts']
       },
       {
-        id: 'bills-visa',
-        label: 'Visa – Subscriptions & Bills',
-        bank: 'Bank of America',
-        network: 'Visa',
-        last4: '3456',
-        expMonth: '09',
-        expYear: '2026',
+        id: 'item-4',
+        name: 'Apple MacBook Pro 14"',
+        description: 'M3 Pro chip, 18GB RAM, 512GB SSD',
+        price: 1999.00,
+        currency: 'USD',
+        imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400',
+        productUrl: 'https://apple.com/macbook-pro',
+        store: 'apple',
+        storeName: 'Apple',
+        category: 'Electronics',
+        tags: ['laptop', 'apple', 'work'],
+        priority: 'need',
         status: 'active',
-        usageTags: ['bills', 'subscriptions'],
-        notes: 'All recurring payments: Netflix, Spotify, utilities',
-        createdAt: Date.now() - 200 * 24 * 60 * 60 * 1000,
+        quantity: 1,
+        notes: 'Need for development work',
+        priceHistory: [],
+        addedAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now(),
+        addedFrom: 'manual',
+        collectionIds: ['col-tech']
       },
       {
-        id: 'frozen-discover',
-        label: 'Discover – Temporarily Frozen',
-        bank: 'Discover',
-        network: 'Discover',
-        last4: '7890',
-        expMonth: '01',
-        expYear: '2025',
-        status: 'frozen',
-        usageTags: ['frozen'],
-        notes: 'Suspicious activity detected, froze until I can call them',
-        createdAt: Date.now() - 180 * 24 * 60 * 60 * 1000,
-      },
-      {
-        id: 'old-visa',
-        label: 'Old Visa – Closed Account',
-        bank: 'Wells Fargo',
-        network: 'Visa',
-        last4: '2468',
-        expMonth: '11',
-        expYear: '2024',
-        status: 'closed',
-        usageTags: [],
-        notes: 'Closed this account after switching banks',
-        createdAt: Date.now() - 500 * 24 * 60 * 60 * 1000,
-      },
-      {
-        id: 'business-amex',
-        label: 'Amex Business Card',
-        bank: 'American Express',
-        network: 'Amex',
-        last4: '1357',
-        expMonth: '08',
-        expYear: '2028',
+        id: 'item-5',
+        name: 'Dyson V15 Detect Vacuum',
+        description: 'Cordless vacuum with laser dust detection',
+        price: 749.99,
+        originalPrice: 849.99,
+        currency: 'USD',
+        imageUrl: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400',
+        productUrl: 'https://bestbuy.com/example',
+        store: 'bestbuy',
+        storeName: 'Best Buy',
+        category: 'Home & Garden',
+        tags: ['vacuum', 'cleaning', 'home'],
+        priority: 'want',
         status: 'active',
-        usageTags: ['business', 'primary'],
-        notes: 'For all business expenses and client meetings',
-        createdAt: Date.now() - 150 * 24 * 60 * 60 * 1000,
+        quantity: 1,
+        notes: 'On sale! Should grab this soon',
+        priceHistory: [
+          { price: 849.99, date: Date.now() - 7 * 24 * 60 * 60 * 1000, currency: 'USD' }
+        ],
+        priceAlertThreshold: 600,
+        addedAt: Date.now() - 5 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now(),
+        addedFrom: 'extension',
+        collectionIds: ['col-home']
       },
       {
-        id: 'travel-mastercard',
-        label: 'Travel Rewards Mastercard',
-        bank: 'Citi',
-        network: 'Mastercard',
-        last4: '8642',
-        expMonth: '04',
-        expYear: '2027',
+        id: 'item-6',
+        name: 'Birthday Gift for Mom - Spa Set',
+        description: 'Luxury bath bombs and aromatherapy kit',
+        price: 59.99,
+        currency: 'USD',
+        imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400',
+        productUrl: 'https://etsy.com/example',
+        store: 'etsy',
+        storeName: 'Etsy',
+        category: 'Beauty & Health',
+        tags: ['gift', 'mom', 'spa'],
+        priority: 'gift',
         status: 'active',
-        usageTags: ['travel', 'rewards'],
-        notes: 'No foreign transaction fees, use for all travel bookings',
-        createdAt: Date.now() - 120 * 24 * 60 * 60 * 1000,
-      },
+        quantity: 1,
+        notes: 'Mom\'s birthday is in 2 weeks!',
+        priceHistory: [],
+        addedAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now(),
+        addedFrom: 'manual',
+        collectionIds: ['col-gifts']
+      }
     ]
 
-    await this.saveCards(sampleCards)
-    await this.initializeSampleUsageData()
-    return sampleCards
-  },
-
-  async loadUsage(): Promise<UsageEntry[]> {
-    try {
-      const data = await spark.kv.get<UsageEntry[]>(KEYS.USAGE)
-      if (!data) {
-        const localData = localStorage.getItem(KEYS.USAGE)
-        if (localData) {
-          return JSON.parse(localData)
-        }
-        return []
+    const sampleCollections: Collection[] = [
+      {
+        id: 'col-tech',
+        name: 'Tech & Gadgets',
+        description: 'All my tech wishlist items',
+        emoji: '💻',
+        color: '#3B82F6',
+        isPublic: false,
+        sharedWith: [],
+        itemCount: 2,
+        createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now()
+      },
+      {
+        id: 'col-fashion',
+        name: 'Fashion & Style',
+        description: 'Clothes and accessories I want',
+        emoji: '👟',
+        color: '#EC4899',
+        isPublic: true,
+        sharedWith: [],
+        itemCount: 1,
+        createdAt: Date.now() - 25 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now()
+      },
+      {
+        id: 'col-home',
+        name: 'Home Upgrades',
+        description: 'Things for the house',
+        emoji: '🏠',
+        color: '#10B981',
+        isPublic: false,
+        sharedWith: [],
+        itemCount: 1,
+        createdAt: Date.now() - 20 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now()
+      },
+      {
+        id: 'col-gifts',
+        name: 'Gift Ideas',
+        description: 'Gift ideas for friends and family',
+        emoji: '🎁',
+        color: '#F59E0B',
+        isPublic: false,
+        sharedWith: [],
+        itemCount: 2,
+        createdAt: Date.now() - 15 * 24 * 60 * 60 * 1000,
+        updatedAt: Date.now()
       }
-      return data
-    } catch {
-      const localData = localStorage.getItem(KEYS.USAGE)
-      if (localData) {
-        return JSON.parse(localData)
-      }
-      return []
-    }
-  },
-
-  async saveUsage(usage: UsageEntry[]): Promise<void> {
-    if (offlineSyncManager.getOnlineStatus()) {
-      try {
-        await spark.kv.set(KEYS.USAGE, usage)
-      } catch (error) {
-        console.error('Failed to save usage to cloud, queueing for later:', error)
-        await offlineSyncManager.addToQueue({
-          type: 'SAVE_USAGE',
-          data: usage,
-          timestamp: Date.now()
-        })
-        localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
-      }
-    } else {
-      await offlineSyncManager.addToQueue({
-        type: 'SAVE_USAGE',
-        data: usage,
-        timestamp: Date.now()
-      })
-      localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
-    }
-  },
-
-  async initializeSampleUsageData(): Promise<void> {
-    const now = Date.now()
-    const oneDay = 24 * 60 * 60 * 1000
-    
-    const categories = ['Dining', 'Groceries', 'Shopping', 'Travel', 'Entertainment', 'Bills', 'Gas', 'Healthcare', 'Other']
-    const merchants: Record<string, string> = {
-      'Dining': 'Restaurant',
-      'Groceries': 'Supermarket',
-      'Shopping': 'Online Store',
-      'Travel': 'Airline',
-      'Entertainment': 'Streaming Service',
-      'Bills': 'Utility Company',
-      'Gas': 'Gas Station',
-      'Healthcare': 'Pharmacy',
-      'Other': 'Various Merchant'
-    }
-    
-    const cardIds = [
-      'main-visa',
-      'backup-mastercard',
-      'amex-rewards',
-      'bills-visa',
-      'business-amex',
-      'travel-mastercard'
     ]
-    
-    const sampleUsage: UsageEntry[] = []
-    
-    for (let i = 0; i < 90; i++) {
-      const numTransactions = Math.floor(Math.random() * 5) + 2
-      
-      for (let j = 0; j < numTransactions; j++) {
-        const category = categories[Math.floor(Math.random() * categories.length)]
-        const cardId = cardIds[Math.floor(Math.random() * cardIds.length)]
-        
-        let amount = 0
-        if (category === 'Dining') amount = Math.random() * 80 + 20
-        else if (category === 'Groceries') amount = Math.random() * 150 + 50
-        else if (category === 'Shopping') amount = Math.random() * 200 + 30
-        else if (category === 'Travel') amount = Math.random() * 500 + 100
-        else if (category === 'Bills') amount = Math.random() * 150 + 50
-        else if (category === 'Gas') amount = Math.random() * 60 + 30
-        else amount = Math.random() * 100 + 20
-        
-        sampleUsage.push({
-          id: `usage-${now}-${i}-${j}`,
-          cardId,
-          amount: Math.round(amount * 100) / 100,
-          merchant: merchants[category],
-          category,
-          date: now - (i * oneDay),
-          notes: ''
-        })
+
+    const sampleFriends: Friend[] = [
+      {
+        id: 'friend-1',
+        username: 'sarah_shops',
+        displayName: 'Sarah Chen',
+        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
+        bio: 'Shopping enthusiast 🛍️',
+        status: 'accepted',
+        addedAt: Date.now() - 60 * 24 * 60 * 60 * 1000,
+        lastActive: Date.now() - 2 * 60 * 60 * 1000,
+        sharedCollections: ['col-fashion'],
+        mutualFriends: 3
+      },
+      {
+        id: 'friend-2',
+        username: 'tech_mike',
+        displayName: 'Mike Johnson',
+        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        bio: 'Tech reviewer & deal hunter',
+        status: 'accepted',
+        addedAt: Date.now() - 45 * 24 * 60 * 60 * 1000,
+        lastActive: Date.now() - 30 * 60 * 1000,
+        sharedCollections: ['col-tech'],
+        mutualFriends: 5
+      },
+      {
+        id: 'friend-3',
+        username: 'emma_style',
+        displayName: 'Emma Wilson',
+        bio: 'Fashion blogger',
+        status: 'pending',
+        addedAt: Date.now() - 1 * 24 * 60 * 60 * 1000,
+        sharedCollections: [],
+        mutualFriends: 2
       }
-    }
-    
-    await this.saveUsage(sampleUsage)
+    ]
+
+    const sampleFeed: FeedPost[] = [
+      {
+        id: 'post-1',
+        userId: 'friend-1',
+        userName: 'Sarah Chen',
+        userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
+        type: 'wishlist_add',
+        content: 'Just added this to my wishlist! Been eyeing it for months 👀',
+        itemId: 'shared-item-1',
+        likes: ['friend-2'],
+        comments: [
+          {
+            id: 'comment-1',
+            userId: 'friend-2',
+            userName: 'Mike Johnson',
+            userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+            content: 'Great choice! I have those and they\'re amazing',
+            timestamp: Date.now() - 2 * 60 * 60 * 1000,
+            likes: []
+          }
+        ],
+        timestamp: Date.now() - 4 * 60 * 60 * 1000,
+        isPublic: true
+      },
+      {
+        id: 'post-2',
+        userId: 'friend-2',
+        userName: 'Mike Johnson',
+        userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        type: 'price_drop',
+        content: '🚨 Price drop alert! This just went on sale',
+        itemId: 'shared-item-2',
+        likes: ['friend-1', 'user'],
+        comments: [],
+        timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
+        isPublic: true
+      }
+    ]
+
+    await this.saveItems(sampleItems)
+    await this.saveCollections(sampleCollections)
+    await this.saveFriends(sampleFriends)
+    await this.saveFeed(sampleFeed)
+
+    return sampleItems
   },
 
+  // =========================================
+  // PANIC WIPE
+  // =========================================
   async performPanicWipe(): Promise<void> {
     const allKeys = await spark.kv.keys()
-    const appKeys = allKeys.filter(key => key.startsWith(NAMESPACE))
+    const appKeys = allKeys.filter(key => key.startsWith(NAMESPACE) || key.startsWith('cardCommandCenter'))
     await Promise.all(appKeys.map(key => spark.kv.delete(key)))
+    
+    // Clear localStorage too
+    Object.values(KEYS).forEach(key => localStorage.removeItem(key))
   },
 
   async getAllKeys(): Promise<string[]> {
     const allKeys = await spark.kv.keys()
     return allKeys.filter(key => key.startsWith(NAMESPACE))
   },
+
+  // Legacy methods for backward compatibility
+  async loadCards(): Promise<any[]> {
+    return safeGet<any[]>(KEYS.LEGACY_CARDS, [])
+  },
+
+  async saveCards(cards: any[]): Promise<void> {
+    await safeSave(KEYS.LEGACY_CARDS, cards, 'SAVE_CARDS')
+  },
+
+  async loadUsage(): Promise<any[]> {
+    return safeGet<any[]>(KEYS.LEGACY_USAGE, [])
+  },
+
+  async saveUsage(usage: any[]): Promise<void> {
+    await safeSave(KEYS.LEGACY_USAGE, usage, 'SAVE_USAGE')
+  },
+
+  async initializeSampleUsageData(): Promise<void> {
+    // No-op for backward compatibility
+  }
 }
 
 export async function hashPin(pin: string): Promise<string> {
@@ -341,5 +676,35 @@ export async function hashPin(pin: string): Promise<string> {
 }
 
 export function generateId(): string {
-  return `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+// URL parser for detecting stores
+export function detectStore(url: string): { store: StoreType; storeName: string } {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    
+    for (const [storeType, meta] of Object.entries(STORE_METADATA)) {
+      if (meta.domain.some((d: string) => hostname.includes(d))) {
+        return { store: storeType as StoreType, storeName: meta.name }
+      }
+    }
+  } catch {
+    // Invalid URL
+  }
+  
+  return { store: 'other', storeName: 'Other Store' }
+}
+
+// Format currency
+export function formatPrice(price: number, currency: string = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency
+  }).format(price)
+}
+
+// Calculate savings
+export function calculateSavings(originalPrice: number, currentPrice: number): number {
+  return Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
 }
