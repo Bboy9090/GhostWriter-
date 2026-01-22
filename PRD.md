@@ -1,189 +1,187 @@
-# Universal Cart - Product Requirements Document
+# GhostWriter - Product Requirements Document
 
-> **Shop Anywhere. Save Everything. Share with Anyone.**
+> **Portal text from any mobile screen into an AI-powered semantic vault.**
 
-A revolutionary universal shopping companion that lets you save items from ANY store on the web (and in real life), organize them into collections, share with friends and family, track prices, and never lose a great find again.
+GhostWriter is a world-class, real-time contextual data pipeline designed to capture text from mobile screens and store it in a searchable semantic vault for future retrieval.
 
 ## 🎯 Vision
 
-Universal Cart is the **ultimate wishlist aggregator** - combining the power of a universal shopping cart with social features that make finding, saving, and sharing products a delightful experience. Whether you're browsing Amazon, scrolling Instagram, walking through Target, or discovering a local boutique, Universal Cart captures it all in one beautiful, organized place.
+GhostWriter creates a **universal memory system** - capturing everything you see on your mobile screen and making it instantly searchable through AI-powered semantic understanding. Never lose important information you scrolled past again.
 
 ## ✨ Experience Qualities
 
-1. **Universal** - Works with any store, any product, anywhere in the world. One cart to rule them all.
-2. **Social** - Share wishlists with friends, chat about finds, discover what others love.
-3. **Organized** - Collections, tags, priorities, and smart filters keep your cart manageable.
-4. **Secure** - PIN-protected access, encrypted sync, and panic wipe for ultimate privacy.
-5. **Delightful** - Beautiful animations, satisfying sounds, and a UI that sparks joy.
+1. **Universal** - Captures text from any app, any screen, anywhere on your device.
+2. **Intelligent** - On-device OCR and LLM text reconstruction for perfect accuracy.
+3. **Private** - Zero-knowledge storage, on-device processing keeps data secure.
+4. **Searchable** - AI-powered semantic search finds content by meaning, not just keywords.
+5. **Real-time** - Low-latency streaming ensures your vault is always up-to-date.
+
+## 🏗 System Architecture Overview
+
+GhostWriter is built on a distributed intelligence model, moving from high-speed local capture to long-term cloud-native memory.
+
+| Layer | Component | Technology | Role |
+|---|---|---|---|
+| Edge | Mobile Portal | Kotlin / MediaProjection | Real-time buffer capture at 5-10 FPS. |
+| Intelligence | The Healer | ML Kit + MediaPipe | On-device OCR and LLM text reconstruction. |
+| Transport | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data sync. |
+| Storage | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent storage. |
+| Search | The Oracle | Hybrid RRF Search | AI-driven "meaning-based" retrieval. |
 
 ## 🚀 Core Features
 
-### 1. Right-Click to Add (Browser Extension)
-- **Functionality**: Right-click on any product on any website to instantly add it to Universal Cart
-- **Auto-Detection**: Automatically captures product name, price, image, and store information
-- **Supported Stores**: Amazon, Walmart, Target, Best Buy, Nike, Etsy, eBay, Shopify stores, and 1000+ more
-- **Fallback**: Manual entry for any product that can't be auto-detected
+### 1. Mobile Portal (Screen Capture)
+- **Real-time Capture**: Continuous screen capture at 5-10 FPS
+- **Visual Delta Check**: Only processes frames when layout changes by >2%
+- **Battery Optimization**: Smart frame skipping to preserve battery life
+- **Universal Compatibility**: Works with any app, including protected content (with optional FLAG_SECURE bypass)
 
-### 2. Universal Cart Dashboard
-- **Grid/List Views**: Toggle between card grid and compact list views
-- **Smart Filters**: Filter by store, priority, collection, price range, or tags
-- **Search**: Full-text search across all items, notes, and tags
-- **Sort Options**: Newest, price (low/high), name, priority
-- **Price Tracking**: Visual indicators for price drops and sale items
-- **Quick Actions**: One-click purchase links, share, edit, or remove
+### 2. The Healer (Text Reconstruction)
+- **On-Device OCR**: ML Kit for fast, accurate text extraction
+- **LLM Enhancement**: MediaPipe/Gemma 2B for text reconstruction and context understanding
+- **NPU Acceleration**: Leverages dedicated neural processing for maximum performance
+- **Privacy First**: All processing happens on-device before cloud sync
 
-### 3. Collections System
-- **Custom Collections**: Create themed collections (Wishlist, Gift Ideas, Tech Gadgets, etc.)
-- **Visual Customization**: Choose emoji icons and colors for each collection
-- **Privacy Controls**: Public or private collections, share with specific friends
-- **Smart Counts**: Real-time item counts per collection
+### 3. Ghost-Stream (Data Transport)
+- **WebSocket Communication**: Low-latency bi-directional streaming
+- **Optimistic Updates**: Immediate local confirmation with background sync
+- **Offline Support**: Queue changes when offline, sync when connected
+- **Compression**: Efficient data transfer to minimize bandwidth
 
-### 4. Priority Levels
-- 💭 **Want**: Nice to have, not urgent
-- ✅ **Need**: Essential items to purchase soon
-- ✨ **Dream**: Aspirational items, someday purchases
-- 🎁 **Gift**: Gift ideas for others
+### 4. The Vault (Storage)
+- **Vector Embeddings**: High-dimensional semantic representations via pgvector
+- **Dual Indexing**: Both keyword-based (BM25) and semantic (cosine similarity) search
+- **Scalable Storage**: Postgres-backed for reliability and performance
+- **Version History**: Track changes over time
 
-### 5. Social Features
+### 5. The Oracle (Search)
+- **Zero-Keyword Search**: Find content by meaning, not exact matches
+- **Hybrid Retrieval**: Reciprocal Rank Fusion (RRF) combines BM25 and semantic search
+- **Context Awareness**: Understands intent behind queries
+- **Real-time Results**: Instant search across all captured content
 
-#### Friends & Sharing
-- Add friends by username
-- View friends' public wishlists
-- Share specific items or entire collections
-- Friend request system with pending/accepted states
+## 🔒 Security & Privacy
 
-#### In-App Chat
-- Real-time messaging with friends
-- Share cart items directly in chat
-- Item preview cards in messages
-- Conversation history
+### Zero-Knowledge Architecture
+- Server never sees raw images, only processed text and embeddings
+- End-to-end encryption for data in transit
+- Optional local-only mode for maximum privacy
 
-#### Activity Feed
-- See when friends add items
-- Price drop alerts from friend's wishlists
-- Like and comment on posts
-- Collection creation announcements
+### On-Device Processing
+- OCR and LLM inference happen entirely on NPU
+- Data stays on device until explicitly synced
+- User controls what gets uploaded to vault
 
-### 6. Quick Capture (Real-Life Mode)
-- **Photo Capture**: Take photos of products in physical stores
-- **Barcode Scanner**: Scan barcodes for instant product lookup
-- **Manual Entry**: Quick form for in-store finds
-- **Location Tagging**: Remember which aisle/store for later
-- **Convert to Cart Item**: Easily upgrade captures to full cart items
-
-### 7. Price Tracking
-- **Price History**: Track price changes over time
-- **Sale Detection**: Visual badges for items on sale
-- **Savings Calculator**: See how much you've saved
-- **Alerts**: Set target prices for notifications (coming soon)
-
-### 8. Security Features
-- **PIN Lock**: 4-digit PIN protection
-- **Auto-Lock**: Lock after 10 minutes of inactivity
-- **Panic Wipe**: Emergency data deletion
-- **Cloud Sync**: Encrypted backup across devices
-- **Offline Mode**: Full functionality without internet
+### Optional Enhancements
+- FLAG_SECURE Bypass: LSPosed hooks for universal capture capability
+- Secure Element Storage: Hardware-backed key storage for enterprise deployments
+- Audit Logs: Track all data access for compliance
 
 ## 🎨 Design Direction
 
 ### Visual Language
-- **Vibrant & Modern**: Purple-to-pink gradient primary colors with teal accents
-- **Dark Mode First**: Rich, deep backgrounds with glowing accents
-- **Playful Yet Professional**: Rounded corners, smooth animations, emoji icons
-- **Store Branding**: Visual cues (colors, logos) for recognized stores
+- **Minimal & Fast**: Focus on speed and efficiency
+- **Dark Mode Native**: Optimized for OLED displays
+- **Transparency**: Clear indication of capture status
+- **Ghost UI**: Subtle overlay that stays out of the way
 
 ### Color Palette
-- **Primary**: Vibrant Purple `oklch(0.65 0.22 300)`
-- **Accent**: Teal/Cyan `oklch(0.70 0.15 190)`
-- **Success**: Green `oklch(0.65 0.18 145)`
-- **Warning**: Amber `oklch(0.75 0.18 75)`
-- **Destructive**: Red `oklch(0.60 0.22 25)`
+- **Primary**: Ghost White `oklch(0.98 0.01 270)`
+- **Accent**: Ethereal Purple `oklch(0.70 0.18 290)`
+- **Active**: Bright Cyan `oklch(0.75 0.20 200)`
+- **Background**: Deep Black `oklch(0.15 0.01 270)`
 
-### Typography
-- **Primary**: Inter - Modern, clean, highly readable
-- **Monospace**: JetBrains Mono - For prices and codes
+## 📱 Mobile Implementation
 
-### Animations
-- **Micro-interactions**: Satisfying hover states, button presses
-- **Page Transitions**: Smooth tab switching, modal slides
-- **Loading States**: Skeleton screens, subtle spinners
-- **Celebration**: Confetti for milestones, sparkles for price drops
+### Android Portal
+- MediaProjection API for screen capture
+- Foreground service for continuous operation
+- Notification controls for quick access
+- Gesture shortcuts for manual capture
 
-## 📱 Mobile Considerations
+### Capture Modes
+- **Always-On**: Continuous capture with smart filtering
+- **Manual**: User-triggered capture of current screen
+- **Smart**: AI-detected important screens only
+- **Scheduled**: Capture during specific time windows
 
-- **Responsive Grid**: 1 column on mobile, 2 on tablet, 3 on desktop
-- **Bottom Navigation**: Easy thumb access on mobile
-- **Swipe Actions**: Swipe to delete, share, or mark as purchased
-- **Full-Screen Dialogs**: Forms become sheets on mobile
-- **Touch Targets**: Minimum 44px for all interactive elements
+## 🛠 Project Structure
+
+```
+ghostwriter/
+├── mobile-android/           # Kotlin/Jetpack Compose Portal
+│   ├── features/portal/      # Screen capture & Frame management
+│   ├── features/ocr/         # ML Kit integration
+│   └── features/healer/      # MediaPipe/Gemma 2B local inference
+├── backend-go/               # High-concurrency Go API
+│   ├── internal/vault/       # pgvector & SQL logic
+│   ├── internal/stream/      # WebSocket & Pub/Sub management
+│   └── cmd/api/              # Entry point
+└── infra/                    # Deployment configurations
+    ├── docker-compose.yml    # Full-stack local environment
+    └── k8s/                  # Production orchestration
+```
+
+## 🚀 Execution Guide
+
+1. **Deploy the Vault**: `docker-compose up -d` to spin up Postgres and the Go API
+2. **Initialize the Portal**: Compile the Android app and grant permissions
+3. **Start Scrolling**: Activate GhostWriter overlay and watch your vault populate
 
 ## 🔮 Future Features (Roadmap)
 
-### Phase 2: Smart Features
-- AI-powered product recommendations
-- Automatic duplicate detection
-- Price prediction (best time to buy)
-- Browser extension for all major browsers
+### Phase 2: Enhanced Intelligence
+- Multi-modal capture (screenshots + voice)
+- Automatic tagging and categorization
+- Smart summaries of captured content
+- Cross-reference detection
 
-### Phase 3: Enhanced Social
-- Public profiles and follow system
-- Group wishlists for events/weddings
-- Gift registry mode
-- Social shopping challenges
+### Phase 3: Advanced Search
+- Natural language queries
+- Temporal search (find what I saw "last Tuesday")
+- Visual similarity search
+- Context-aware suggestions
 
-### Phase 4: Commerce Integration
-- One-click checkout across stores
-- Price comparison engine
-- Cashback and coupon integration
-- Affiliate earnings for sharing
+### Phase 4: Multi-Platform
+- iOS support
+- Desktop capture clients
+- Browser extension for web capture
+- API for third-party integrations
 
-### Phase 5: Real-Life Bridge
-- AR product visualization
-- Store inventory checking
-- In-store navigation
-- Receipt scanning
-
-## 🛡️ Edge Cases
-
-- **First Run**: Guided onboarding with sample data
-- **Empty States**: Friendly illustrations with clear CTAs
-- **Offline Mode**: Queue all changes, sync when online
-- **Store Not Detected**: Easy manual store selection
-- **Image Load Failures**: Beautiful fallback with store emoji
-- **Price Not Found**: Manual price entry option
-- **Duplicate Items**: Warning with option to increment quantity
-- **Deleted Items**: Soft delete with 30-day recovery
+### Phase 5: Team Features
+- Shared vaults for collaboration
+- Permission management
+- Team search and discovery
+- Export and compliance tools
 
 ## 📊 Success Metrics
 
-- **Engagement**: Items added per user per week
-- **Retention**: Weekly active users
-- **Social**: Friend connections, shares per user
-- **Conversion**: Click-throughs to purchase
-- **Satisfaction**: App store rating, NPS score
+- **Capture Rate**: Frames processed per second
+- **Accuracy**: OCR quality and text reconstruction
+- **Latency**: Time from capture to searchable
+- **Search Quality**: Relevance of search results
+- **Battery Impact**: Power consumption per hour
 
-## 🏗️ Technical Architecture
+## 🏗️ Technical Stack
 
-### Frontend
-- React 19 with TypeScript
-- Vite for blazing-fast builds
-- Tailwind CSS v4 with custom theme
-- Framer Motion for animations
-- Radix UI primitives (via shadcn/ui)
-- Phosphor Icons
+### Mobile (Android)
+- Kotlin with Jetpack Compose
+- MediaProjection API
+- ML Kit for OCR
+- MediaPipe/Gemma 2B for inference
 
-### State & Data
-- React hooks for local state
-- Spark KV for cloud persistence
-- LocalStorage for offline backup
-- Optimistic updates with sync queue
+### Backend (Go)
+- Go 1.21+ for high-concurrency
+- WebSocket for real-time streaming
+- Postgres 16+ with pgvector extension
+- Redis for caching and pub/sub
 
-### Security
-- SHA-256 PIN hashing
-- No sensitive data stored
-- Encrypted cloud sync
-- Panic wipe capability
+### Infrastructure
+- Docker for local development
+- Kubernetes for production
+- Cloud-native scaling
+- Monitoring and observability
 
 ---
 
-**Universal Cart** - *Your shopping companion across the entire internet and beyond.* 🛒✨
+**GhostWriter** - *Your digital memory, captured and searchable.* 👻✨
