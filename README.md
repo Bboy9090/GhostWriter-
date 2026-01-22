@@ -142,3 +142,5 @@ Pro tips:
 - Add a session name so the exported note is easy to find later.
 - Enable noise filtering to drop UI chrome like "Regenerate response."
 - If your thread includes speaker labels, enable role normalization.
+- Markdown output adds headings and bold speaker labels.
+- JSON output is ready to sync into your vault.

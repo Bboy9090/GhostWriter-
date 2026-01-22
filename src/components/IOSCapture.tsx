@@ -29,6 +29,14 @@ type CaptureResult = {
 
 type InputMode = 'images' | 'video'
 type SortMode = 'auto' | 'timestamp' | 'filename'
+type OutputFormat = 'plain' | 'markdown' | 'json'
+
+type Segment = {
+  id: string
+  title?: string
+  capturedAt?: string
+  paragraphs: string[]
+}
 
 const DEDUPE_WINDOW = 8
 const MOTION_SCALE = 8
@@ -115,6 +123,95 @@ function normalizeRolePrefix(
   }
 
   return paragraph
+}
+
+function buildHeading(paragraph: string, wordCount: number) {
+  const tokens = tokenize(paragraph)
+  if (tokens.length === 0) return 'Session'
+  return tokens.slice(0, Math.max(3, wordCount)).join(' ')
+}
+
+function formatParagraph(paragraph: string, format: OutputFormat) {
+  if (format !== 'markdown') return paragraph
+  if (paragraph.startsWith('User:')) {
+    return paragraph.replace(/^User:\s*/, '**User:** ')
+  }
+  if (paragraph.startsWith('Assistant:')) {
+    return paragraph.replace(/^Assistant:\s*/, '**Assistant:** ')
+  }
+  return paragraph
+}
+
+function formatOutput({
+  segments,
+  outputFormat,
+  includeHeader,
+  sessionName,
+  sourceApp,
+  includeSegmentTimestamps,
+  autoHeadingEnabled,
+  headingWordCount
+}: {
+  segments: Segment[]
+  outputFormat: OutputFormat
+  includeHeader: boolean
+  sessionName: string
+  sourceApp: string
+  includeSegmentTimestamps: boolean
+  autoHeadingEnabled: boolean
+  headingWordCount: number
+}) {
+  if (outputFormat === 'json') {
+    return JSON.stringify(
+      {
+        sessionName: sessionName.trim() || null,
+        sourceApp: sourceApp.trim() || null,
+        generatedAt: new Date().toISOString(),
+        segments: segments.map((segment, index) => ({
+          id: segment.id,
+          title: segment.title ?? (autoHeadingEnabled && segment.paragraphs[0]
+            ? buildHeading(segment.paragraphs[0], headingWordCount)
+            : `Segment ${index + 1}`),
+          capturedAt: segment.capturedAt ?? null,
+          paragraphs: segment.paragraphs
+        }))
+      },
+      null,
+      2
+    )
+  }
+
+  const lines: string[] = []
+  if (includeHeader) {
+    if (sessionName.trim()) {
+      lines.push(outputFormat === 'markdown' ? `# ${sessionName.trim()}` : `Session: ${sessionName.trim()}`)
+    }
+    if (sourceApp.trim()) {
+      lines.push(`Source: ${sourceApp.trim()}`)
+    }
+    lines.push(`Captured: ${new Date().toLocaleString()}`)
+    lines.push('')
+  }
+
+  segments.forEach((segment, index) => {
+    const segmentTitle = segment.title ?? (autoHeadingEnabled && segment.paragraphs[0]
+      ? buildHeading(segment.paragraphs[0], headingWordCount)
+      : `Segment ${index + 1}`)
+    if (segments.length > 1) {
+      lines.push(outputFormat === 'markdown' ? `## ${segmentTitle}` : `=== ${segmentTitle} ===`)
+      if (includeSegmentTimestamps && segment.capturedAt) {
+        lines.push(`Captured: ${segment.capturedAt}`)
+      }
+      lines.push('')
+    }
+
+    segment.paragraphs.forEach((paragraph) => {
+      lines.push(formatParagraph(paragraph, outputFormat))
+      lines.push('')
+    })
+  })
+
+  return lines.join('\n').trim()
 }
 
 function sortImageEntries(
@@ -209,6 +306,10 @@ export function IOSCapture() {
   const [assistantPatternInput, setAssistantPatternInput] = useState(
     DEFAULT_ASSISTANT_PATTERNS.join(', ')
   )
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>('plain')
+  const [autoHeadingEnabled, setAutoHeadingEnabled] = useState(true)
+  const [headingWordCount, setHeadingWordCount] = useState(8)
+  const [includeSegmentTimestamps, setIncludeSegmentTimestamps] = useState(true)
   const [summary, setSummary] = useState({
     processed: 0,
     emitted: 0,
@@ -216,7 +317,8 @@ export function IOSCapture() {
     skippedText: 0,
     skippedDuplicate: 0,
     skippedNoise: 0,
-    roleTagged: 0
+    roleTagged: 0,
+    segments: 1
   })
   const abortRef = useRef(false)
 
@@ -242,7 +344,8 @@ export function IOSCapture() {
       skippedText: 0,
       skippedDuplicate: 0,
       skippedNoise: 0,
-      roleTagged: 0
+      roleTagged: 0,
+      segments: 1
     })
   }
 
@@ -389,6 +492,28 @@ export function IOSCapture() {
     const nextResults: CaptureResult[] = []
     let localImageEntries = sortedFiles
     let lastCaptureTimestamp: number | null = null
+    const segments: Segment[] = []
+    let activeSegment: Segment | null = null
+
+    const ensureSegment = (capturedAt?: string) => {
+      if (!activeSegment) {
+        activeSegment = {
+          id: `segment-${segments.length + 1}`,
+          capturedAt,
+          paragraphs: []
+        }
+        segments.push(activeSegment)
+      }
+    }
+
+    const startSegment = (capturedAt?: string) => {
+      activeSegment = {
+        id: `segment-${segments.length + 1}`,
+        capturedAt,
+        paragraphs: []
+      }
+      segments.push(activeSegment)
+    }
 
     const ingestParagraphs = (
       rawText: string,
@@ -445,6 +570,8 @@ export function IOSCapture() {
         }
 
         consolidatedParagraphs.push(normalized)
+        ensureSegment(capturedAt)
+        activeSegment?.paragraphs.push(normalized)
         recentParagraphs.unshift(normalized)
         if (recentParagraphs.length > dedupeWindow) {
           recentParagraphs.pop()
@@ -489,16 +616,17 @@ export function IOSCapture() {
             ? new Date(entry.timestamp).toLocaleString()
             : new Date(file.lastModified).toLocaleString()
 
-            if (autoSegmentEnabled && entry.timestamp && lastCaptureTimestamp !== null) {
+          if (autoSegmentEnabled && entry.timestamp && lastCaptureTimestamp !== null) {
               const gapMinutes = (entry.timestamp - lastCaptureTimestamp) / 60000
               if (gapMinutes >= segmentGapMinutes) {
-                consolidatedParagraphs.push(`--- Session break (${capturedAt}) ---`)
+              startSegment(capturedAt)
               }
             }
 
             if (entry.timestamp) {
               lastCaptureTimestamp = entry.timestamp
             }
+          ensureSegment(capturedAt)
           ingestParagraphs(
             rawText,
             file.name,
@@ -576,6 +704,7 @@ export function IOSCapture() {
 
           const { data } = await createdWorker.recognize(canvas)
           const rawText = (data.text ?? '').trim()
+          ensureSegment(formatTimestamp(time))
           ingestParagraphs(
             rawText,
             `Frame ${index + 1} (${formatTimestamp(time)})`,
@@ -589,19 +718,23 @@ export function IOSCapture() {
         URL.revokeObjectURL(url)
       }
 
-      const headerLines: string[] = []
-      if (includeHeader && sessionName.trim()) {
-        headerLines.push(`Session: ${sessionName.trim()}`)
-      }
-      if (includeHeader && sourceApp.trim()) {
-        headerLines.push(`Source: ${sourceApp.trim()}`)
-      }
-      if (includeHeader) {
-        headerLines.push(`Captured: ${new Date().toLocaleString()}`)
-      }
-      const headerText = headerLines.length > 0 ? `${headerLines.join('\n')}\n\n` : ''
+      const finalSegments = segments.length ? segments : [{
+        id: 'segment-1',
+        paragraphs: consolidatedParagraphs
+      }]
+      const outputText = formatOutput({
+        segments: finalSegments,
+        outputFormat,
+        includeHeader,
+        sessionName,
+        sourceApp,
+        includeSegmentTimestamps,
+        autoHeadingEnabled,
+        headingWordCount
+      })
+
       setResults(nextResults)
-      setConsolidated(headerText + consolidatedParagraphs.join('\n\n'))
+      setConsolidated(outputText)
       setSummary({
         processed,
         emitted: consolidatedParagraphs.length,
@@ -609,7 +742,8 @@ export function IOSCapture() {
         skippedText,
         skippedDuplicate,
         skippedNoise,
-        roleTagged
+        roleTagged,
+        segments: finalSegments.length
       })
 
       if (abortRef.current) {
@@ -657,7 +791,11 @@ export function IOSCapture() {
     noisePhraseInput,
     roleNormalizeEnabled,
     userPatternInput,
-    assistantPatternInput
+    assistantPatternInput,
+    outputFormat,
+    autoHeadingEnabled,
+    headingWordCount,
+    includeSegmentTimestamps
   ])
 
   return (
@@ -981,6 +1119,55 @@ export function IOSCapture() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Output format</p>
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(['plain', 'markdown', 'json'] as OutputFormat[]).map((format) => (
+                  <Button
+                    key={format}
+                    size="sm"
+                    variant={outputFormat === format ? 'secondary' : 'outline'}
+                    onClick={() => setOutputFormat(format)}
+                  >
+                    {format.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Auto headings</p>
+                <p className="text-xs text-muted-foreground">Generate section titles</p>
+              </div>
+              <Switch checked={autoHeadingEnabled} onCheckedChange={setAutoHeadingEnabled} />
+            </div>
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Heading words</p>
+              <Input
+                type="number"
+                min={3}
+                max={16}
+                value={headingWordCount}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setHeadingWordCount(Number.isFinite(next) ? Math.max(3, next) : 8)
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Segment timestamps</p>
+              <p className="text-xs text-muted-foreground">Show capture time per segment</p>
+            </div>
+            <Switch
+              checked={includeSegmentTimestamps}
+              onCheckedChange={setIncludeSegmentTimestamps}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Auto segment</p>
@@ -1078,6 +1265,7 @@ export function IOSCapture() {
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <Badge variant="secondary">Processed {summary.processed}</Badge>
             <Badge variant="secondary">Emitted {summary.emitted}</Badge>
+            <Badge variant="secondary">Segments {summary.segments}</Badge>
             <Badge variant="outline">Skipped motion {summary.skippedMotion}</Badge>
             <Badge variant="outline">Skipped text {summary.skippedText}</Badge>
             <Badge variant="outline">Duplicates {summary.skippedDuplicate}</Badge>
