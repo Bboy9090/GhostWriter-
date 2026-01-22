@@ -97,6 +97,12 @@ npm run ocr:capture -- --id OCR-001 --name "Portal sample"
 
 Populate the expected text file that was created, then re-run the harness.
 
+For real-time OCR from a connected device:
+
+```bash
+npm run ocr:live -- --interval 750 --duration 30000 --output ./ocr-live-log.txt
+```
+
 To plug in another real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
 
 ```bash

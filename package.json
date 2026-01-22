@@ -12,6 +12,7 @@
         "ocr:test": "node scripts/ocr-harness.mjs --adapter tesseract",
         "ocr:test:adapter": "node scripts/ocr-harness.mjs",
         "ocr:capture": "node scripts/ocr-capture.mjs",
+        "ocr:live": "node scripts/ocr-live.mjs",
         "optimize": "vite optimize",
         "preview": "vite preview"
     },
