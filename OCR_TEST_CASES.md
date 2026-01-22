@@ -23,6 +23,14 @@ Metrics
 - Dedup hit rate >= 85 percent during slow scroll.
 - OCR p95 latency <= 100ms on-device.
 
+Automation Harness
+- Test definitions live in tests/ocr/cases.json.
+- Fixtures are in tests/ocr/fixtures and expected output in tests/ocr/expected.
+- Run the harness with:
+  node scripts/ocr-harness.mjs --adapter mock
+- Use a real adapter with:
+  node scripts/ocr-harness.mjs --adapter <name>
+
 Test Cases
 
 OCR-001: Single paragraph capture

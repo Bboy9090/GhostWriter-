@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500">
+  <rect width="100%" height="100%" fill="white"/>
+  <text x="40" y="90" font-family="Arial" font-size="22" fill="black">
+    Left column heading
+  </text>
+  <text x="40" y="130" font-family="Arial" font-size="22" fill="black">
+    Left column line one.
+  </text>
+  <text x="40" y="170" font-family="Arial" font-size="22" fill="black">
+    Left column line two.
+  </text>
+
+  <text x="500" y="90" font-family="Arial" font-size="22" fill="black">
+    Right column heading
+  </text>
+  <text x="500" y="130" font-family="Arial" font-size="22" fill="black">
+    Right column line one.
+  </text>
+  <text x="500" y="170" font-family="Arial" font-size="22" fill="black">
+    Right column line two.
+  </text>
+</svg>

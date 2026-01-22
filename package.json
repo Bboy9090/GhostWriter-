@@ -9,6 +9,8 @@
         "kill": "fuser -k 5000/tcp",
         "build": "tsc -b --noCheck && vite build",
         "lint": "eslint .",
+        "ocr:test": "node scripts/ocr-harness.mjs --adapter mock",
+        "ocr:test:adapter": "node scripts/ocr-harness.mjs",
         "optimize": "vite optimize",
         "preview": "vite preview"
     },

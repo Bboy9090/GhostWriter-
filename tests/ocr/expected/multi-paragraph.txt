@@ -1,0 +1,5 @@
+GhostWriter runs a portal overlay and captures text locally.
+It preserves paragraph breaks while you scroll.
+
+The healer pass fixes line breaks and merges sentences.
+No raw frames are stored in the vault.

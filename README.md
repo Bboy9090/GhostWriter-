@@ -79,3 +79,17 @@ This initializes the Postgres database with the pgvector extension and starts th
 Open any app (browser, social media, PDF) and start scrolling. The text teleports into your Vault in real time.
 
 Built for modders, makers, and reflectors. GhostWriter turns digital consumption into a permanent, searchable intelligence asset.
+
+## OCR Test Harness
+
+The repository includes a lightweight OCR harness to validate expected text output against fixtures.
+
+```bash
+npm run ocr:test
+```
+
+To plug in a real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
+
+```bash
+node scripts/ocr-harness.mjs --adapter <name>
+```

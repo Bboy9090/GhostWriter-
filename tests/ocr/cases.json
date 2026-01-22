@@ -1,0 +1,26 @@
+[
+  {
+    "id": "OCR-001",
+    "name": "Basic paragraph",
+    "fixture": "tests/ocr/fixtures/basic-paragraph.svg",
+    "expected": "tests/ocr/expected/basic-paragraph.txt",
+    "minWordAccuracy": 0.95,
+    "minParagraphMatchRate": 1
+  },
+  {
+    "id": "OCR-002",
+    "name": "Multi-paragraph block",
+    "fixture": "tests/ocr/fixtures/multi-paragraph.svg",
+    "expected": "tests/ocr/expected/multi-paragraph.txt",
+    "minWordAccuracy": 0.95,
+    "minParagraphMatchRate": 1
+  },
+  {
+    "id": "OCR-003",
+    "name": "Two column ordering",
+    "fixture": "tests/ocr/fixtures/two-column.svg",
+    "expected": "tests/ocr/expected/two-column.txt",
+    "minWordAccuracy": 0.9,
+    "minParagraphMatchRate": 0.8
+  }
+]
