@@ -9,10 +9,12 @@ import { Separator } from './components/ui/separator'
 import { Switch } from './components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Toaster } from './components/ui/sonner'
+import { IOSCapture } from './components/IOSCapture'
 import { toast } from 'sonner'
 import {
   Browser,
   Camera,
+  DeviceMobile,
   Lightning,
   Lock,
   LockOpen,
@@ -305,11 +307,15 @@ function App() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5">
+            <TabsList className="grid w-full max-w-4xl grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="portal">Portal</TabsTrigger>
               <TabsTrigger value="vault">Vault</TabsTrigger>
               <TabsTrigger value="search">Search</TabsTrigger>
+              <TabsTrigger value="ios" className="gap-1.5">
+                <DeviceMobile size={16} />
+                iOS
+              </TabsTrigger>
               <TabsTrigger value="ops">Ops</TabsTrigger>
             </TabsList>
 
@@ -587,6 +593,10 @@ function App() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="ios" className="mt-6 space-y-6">
+              <IOSCapture />
             </TabsContent>
 
             <TabsContent value="ops" className="mt-6 space-y-6">
