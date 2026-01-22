@@ -12,8 +12,11 @@ Arguments:
 Expected return value:
   { text: string }
 
+Available adapters:
+- tesseract: Runs on-device OCR using tesseract.js (real OCR).
+
 Example usage:
-  node scripts/ocr-harness.mjs --adapter mock
+  node scripts/ocr-harness.mjs --adapter tesseract
 
 Provide a custom adapter by creating scripts/ocr-adapters/<name>.mjs
 and running:

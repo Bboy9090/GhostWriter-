@@ -1,2 +1,0 @@
-GhostWriter captures text from your screen without saving frames.
-This is a single paragraph used for OCR verification.

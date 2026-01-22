@@ -7,7 +7,7 @@ Scope: OCR + dedup gate + healer handoff. Excludes any protected/secure
 content (FLAG_SECURE) and bypass tooling.
 
 Test Data
-- Synthetic screenshots (licensed docs, public domain text).
+- Real screenshots captured from connected devices.
 - Mixed typography (headings, body, captions, code blocks).
 - Paragraph sets with known ground truth.
 - Multi-column layouts and tables.
@@ -25,11 +25,11 @@ Metrics
 
 Automation Harness
 - Test definitions live in tests/ocr/cases.json.
-- Fixtures are in tests/ocr/fixtures and expected output in tests/ocr/expected.
+- Live captures go in tests/ocr/live and expected output in tests/ocr/expected.
+- Capture a frame with:
+  node scripts/ocr-capture.mjs --id OCR-001 --name "Portal sample"
 - Run the harness with:
-  node scripts/ocr-harness.mjs --adapter mock
-- Use a real adapter with:
-  node scripts/ocr-harness.mjs --adapter <name>
+  node scripts/ocr-harness.mjs --adapter tesseract
 
 Test Cases
 

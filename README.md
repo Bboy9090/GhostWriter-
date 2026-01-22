@@ -82,13 +82,22 @@ Built for modders, makers, and reflectors. GhostWriter turns digital consumption
 
 ## OCR Test Harness
 
-The repository includes a lightweight OCR harness to validate expected text output against fixtures.
+The repository includes a real OCR harness to validate captured text output against
+ground truth from live device frames.
 
 ```bash
 npm run ocr:test
 ```
 
-To plug in a real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
+Capture a real frame from a connected device:
+
+```bash
+npm run ocr:capture -- --id OCR-001 --name "Portal sample"
+```
+
+Populate the expected text file that was created, then re-run the harness.
+
+To plug in another real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
 
 ```bash
 node scripts/ocr-harness.mjs --adapter <name>

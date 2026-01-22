@@ -96,8 +96,8 @@ async function loadAdapter(adapterName) {
 function printHelp() {
   console.log('GhostWriter OCR harness')
   console.log('Usage:')
-  console.log('  node scripts/ocr-harness.mjs --adapter mock')
-  console.log('  node scripts/ocr-harness.mjs --adapter device --case OCR-001')
+  console.log('  node scripts/ocr-harness.mjs --adapter tesseract')
+  console.log('  node scripts/ocr-harness.mjs --adapter tesseract --case OCR-001')
   console.log('Options:')
   console.log('  --adapter <name>  Adapter module name (default: mock)')
   console.log('  --case <id>       Run a single case id')
@@ -120,10 +120,7 @@ if (args.list) {
   process.exit(0)
 }
 
-const adapterName = args.adapter || process.env.GHOSTWRITER_OCR_ADAPTER || 'mock'
-if (adapterName === 'mock') {
-  console.warn('WARNING: Using mock adapter. Results do not reflect OCR accuracy.')
-}
+const adapterName = args.adapter || process.env.GHOSTWRITER_OCR_ADAPTER || 'tesseract'
 
 const adapter = await loadAdapter(adapterName)
 const selectedCases = args.case
@@ -131,7 +128,8 @@ const selectedCases = args.case
   : cases
 
 if (selectedCases.length === 0) {
-  console.error('No test cases selected.')
+  console.error('No OCR cases defined. Capture real frames with:')
+  console.error('  node scripts/ocr-capture.mjs --id OCR-001 --name "Portal sample"')
   process.exit(1)
 }
 
