@@ -109,6 +109,14 @@ Scrolling detection flags:
 - `--dedupe` similarity threshold for duplicate suppression (default 0.88)
 - `--min-chars` minimum characters to log (default 20)
 - `--window` recent entries considered for dedupe (default 5)
+- `--region` crop region as x,y,width,height (optional)
+- `--json` emit structured logs
+
+WebSocket streaming (real-time vault sync):
+- `--ws` WebSocket URL (e.g. ws://localhost:8080/portal/sync)
+- `--token` bearer token if required
+- `--device` device identifier for the payload
+- `--source` source app label
 
 To plug in another real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
 
