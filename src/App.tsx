@@ -299,7 +299,7 @@ function App() {
                 <CardContent>
                   <p className="text-gray-400">
                     OCR and LLM inference happen entirely on the NPU, leveraging 
-                    2026 hardware for maximum performance. Your data stays local 
+                    modern NPU-enabled hardware for maximum performance. Your data stays local 
                     until ready for the vault.
                   </p>
                 </CardContent>
@@ -391,8 +391,8 @@ function App() {
             <div className="bg-black/60 p-6 rounded-lg text-left">
               <pre className="text-sm text-gray-300">
 {`# Clone the repository
-git clone https://github.com/Bboy9090/card-command-center.git
-cd card-command-center
+git clone https://github.com/Bboy9090/ghostwriter.git
+cd ghostwriter
 
 # Deploy the vault (Postgres + Go API)
 docker-compose up -d
@@ -422,7 +422,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
       {/* Footer */}
       <footer className="border-t border-white/10 py-8">
         <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>GhostWriter - Built for 2026 hardware with NPU-accelerated inference</p>
+          <p>GhostWriter - Built for modern NPU-enabled hardware with accelerated inference</p>
           <p className="mt-2">Your digital memory, captured and searchable. 👻✨</p>
         </div>
       </footer>
