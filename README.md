@@ -1,46 +1,81 @@
-GhostWriter | The Enterprise-Grade Stealth Extraction Stack
-This documentation outlines the architecture for GhostWriter, a world-class, real-time contextual data pipeline designed to "portal" text from a mobile screen directly into an AI-powered semantic vault.
-🏗 System Architecture Overview
-GhostWriter is built on a distributed intelligence model, moving from high-speed local capture to long-term cloud-native memory.
+# GhostWriter | The Enterprise-Grade Stealth Extraction Stack
+
+GhostWriter is a world-class, real-time contextual data pipeline designed to portal text from a mobile screen directly into an AI-powered semantic vault. Built for the 2026 tech landscape, it leverages on-device NPUs for OCR and LLM healing, ensuring that what you see is what you remember, word for word and paragraph for paragraph.
+
+## 🏗 System Architecture
+
+GhostWriter follows a distributed intelligence model, prioritizing low-latency extraction and high-fidelity storage.
+
 | Layer | Component | Technology | Role |
 |---|---|---|---|
-| Edge | Mobile Portal | Kotlin / MediaProjection | Real-time buffer capture at 5-10 FPS. |
-| Intelligence | The Healer | ML Kit + MediaPipe | On-device OCR and LLM text reconstruction. |
-| Transport | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data sync. |
-| Storage | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent storage. |
-| Search | The Oracle | Hybrid RRF Search | AI-driven "meaning-based" retrieval. |
-🛠 Project Structure (The File Tree)
+| Edge | Mobile Portal | Kotlin / MediaProjection | Real-time screen buffer capture (5-10 FPS). |
+| Intelligence | The Healer | ML Kit + MediaPipe | On-device OCR and Gemma 2B text reconstruction. |
+| Transport | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data synchronization. |
+| Storage | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent memory. |
+| Search | The Oracle | Hybrid RRF Search | AI-driven concept-based retrieval. |
+
+## 📂 Project Structure
+
+```text
 ghostwriter/
 ├── mobile-android/           # Kotlin/Jetpack Compose Portal
-│   ├── features/portal/      # Screen capture & Frame management
-│   ├── features/ocr/         # ML Kit integration
-│   └── features/healer/      # MediaPipe/Gemma 2B local inference
+│   ├── features/portal/      # MediaProjection & Foreground Service
+│   ├── features/ocr/         # ML Kit Text Recognition Engine
+│   └── features/healer/      # MediaPipe/Gemma 2B Local Inference
 ├── backend-go/               # High-concurrency Go API
-│   ├── internal/vault/       # pgvector & SQL logic
-│   ├── internal/stream/      # WebSocket & Pub/Sub management
-│   └── cmd/api/              # Entry point
-└── infra/                    # Deployment configurations
-    ├── docker-compose.yml    # Full-stack local environment
-    └── k8s/                  # Production orchestration
+│   ├── internal/vault/       # pgvector & SQL Repository
+│   ├── internal/stream/      # WebSocket & Redis Pub/Sub
+│   └── cmd/api/              # Service Entry Point
+└── infra/                    # Deployment & Orchestration
+    ├── docker-compose.yml    # Full-stack Local Dev Environment
+    └── k8s/                  # Kubernetes Production Manifests
+```
 
-⚡ Core Logic: The "Phase-Shift" Pipeline
-1. Frame Intelligence (Deduplication)
-To save battery and prevent data bloat, GhostWriter uses a Visual Delta Check. It only processes frames when the screen layout changes by >2%, ensuring scrolling is captured smoothly without repeating static content.
-2. The Semantic Vault (pgvector)
-Text is stored as high-dimensional vectors. This allows for Zero-Keyword Search.
-> Example: Searching for "How to fix that old black MacBook" will find the text you scrolled past on a forum, even if the word "fix" was never explicitly captured, because the AI understands the intent.
-> 
-3. Hybrid Retrieval
-The system uses Reciprocal Rank Fusion (RRF) to merge:
- * BM25: For exact matches (Part numbers, specific names).
- * Cosine Similarity: For abstract concepts (Memories, ideas, general context).
-🔒 Security & Privacy (The Stealth Protocol)
- * Zero-Knowledge Storage: The server never sees raw images; it only receives processed text and embeddings.
- * On-Device Processing: The OCR and LLM "Healing" happen entirely on the NPU, keeping your data off the public internet until it’s ready for the vault.
- * FLAG_SECURE Bypass: (Optional / Modded) Utilizes LSPosed hooks to allow extraction from protected windows, ensuring the portal is truly universal.
-🚀 Execution Guide
- * Deploy the Vault: docker-compose up -d to spin up Postgres and the Go API.
- * Initialize the Portal: Compile the Android app and grant System Alert Window and Media Projection permissions.
- * Start Scrolling: Open any app, activate the GhostWriter overlay, and watch your digital memory populate in real-time.
-> Note: This stack is built for maximum performance on 2026 hardware, leveraging NPU-accelerated inference and high-speed vector indexing.
-> 
+Note: This repository currently focuses on the GhostWriter portal UI and product specification. The mobile and backend folders above describe the target stack layout. A starter docker-compose.yml is included at the repo root for local vault services.
+
+## ⚡ Key Features
+
+### 1. Visual Delta Deduplication
+
+GhostWriter does not waste resources. It uses a Visual Delta Check to monitor screen movement. It only triggers the OCR engine when the screen layout changes by more than 2 percent, allowing for perfectly deduplicated captures during slow scrolls.
+
+### 2. Semantic Memory Vault
+
+Utilizing pgvector, the Vault stores data as high-dimensional vectors. This enables zero-keyword search.
+
+Query: "That time I was looking at repair parts for a 2006 black MacBook."
+
+Result: GhostWriter finds the specific forum post you scrolled past, even if the exact phrase "repair parts" was never captured, because the AI understands intent.
+
+### 3. Hybrid RRF Search
+
+The search engine merges BM25 lexical search (exact part numbers or names) with vector similarity (concepts and intent) using Reciprocal Rank Fusion, providing a single best list.
+
+## 🔒 Security & Stealth Protocol
+
+- Privacy First: Raw screen images are processed in RAM and discarded instantly. No screenshots are saved to the device gallery.
+- On-Device Healing: Text cleanup happens locally on the phone NPU.
+- Encrypted Sync: Data is transmitted via TLS-encrypted WebSockets to your private vault.
+- Unchained Mode: Optional root/LSPosed module to strip FLAG_SECURE, allowing extraction from restricted apps.
+
+## 🚀 Quick Start
+
+### 1. Spin up the Vault
+
+```bash
+docker-compose up -d
+```
+
+This initializes the Postgres database with the pgvector extension and starts the Go ingestion API.
+
+### 2. Initialize the Portal
+
+1. Build the `mobile-android` project.
+2. Grant System Alert Window (Overlay) and Media Projection permissions.
+3. Tap the floating Ghost icon to open the portal.
+
+### 3. Scroll & Sync
+
+Open any app (browser, social media, PDF) and start scrolling. The text teleports into your Vault in real time.
+
+Built for modders, makers, and reflectors. GhostWriter turns digital consumption into a permanent, searchable intelligence asset.

@@ -3,36 +3,24 @@ import { motion } from 'framer-motion'
 interface LogoProps {
   size?: number
   animated?: boolean
-  variant?: 'full' | 'icon'
 }
 
-export function Logo({ size = 48, animated = true, variant = 'icon' }: LogoProps) {
-  const cartVariants = {
+export function Logo({ size = 48, animated = true }: LogoProps) {
+  const portalVariants = {
     initial: { scale: 1, rotate: 0 },
-    hover: { scale: 1.1, rotate: -5 },
-    tap: { scale: 0.95 }
+    hover: { scale: 1.05, rotate: 2 },
+    tap: { scale: 0.97 }
   }
 
-  const sparkleVariants = {
-    initial: { opacity: 0, scale: 0 },
-    animate: { 
-      opacity: [0, 1, 0], 
-      scale: [0, 1, 0],
-      transition: { 
-        repeat: Infinity, 
-        duration: 2,
-        repeatDelay: 1
-      }
-    }
-  }
-
-  const globeVariants = {
+  const shimmerVariants = {
+    initial: { opacity: 0.2, scale: 0.9 },
     animate: {
-      rotate: 360,
+      opacity: [0.2, 0.9, 0.2],
+      scale: [0.9, 1.02, 0.9],
       transition: {
         repeat: Infinity,
-        duration: 20,
-        ease: 'linear'
+        duration: 2.4,
+        ease: 'easeInOut'
       }
     }
   }
@@ -41,7 +29,7 @@ export function Logo({ size = 48, animated = true, variant = 'icon' }: LogoProps
     <motion.div 
       className="relative inline-flex items-center justify-center"
       style={{ width: size, height: size }}
-      variants={cartVariants}
+      variants={portalVariants}
       initial="initial"
       whileHover={animated ? "hover" : undefined}
       whileTap={animated ? "tap" : undefined}
@@ -55,14 +43,14 @@ export function Logo({ size = 48, animated = true, variant = 'icon' }: LogoProps
       >
         {/* Gradient definitions */}
         <defs>
-          <linearGradient id="cartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8B5CF6" />
-            <stop offset="50%" stopColor="#EC4899" />
-            <stop offset="100%" stopColor="#F59E0B" />
+          <linearGradient id="portalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00F5A0" />
+            <stop offset="50%" stopColor="#00D1FF" />
+            <stop offset="100%" stopColor="#3CFF9B" />
           </linearGradient>
-          <linearGradient id="globeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3B82F6" />
-            <stop offset="100%" stopColor="#06B6D4" />
+          <linearGradient id="ghostGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#F8FAFC" />
+            <stop offset="100%" stopColor="#A7F3D0" />
           </linearGradient>
           <filter id="glow">
             <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
@@ -73,69 +61,49 @@ export function Logo({ size = 48, animated = true, variant = 'icon' }: LogoProps
           </filter>
         </defs>
 
-        {/* Globe background */}
-        <motion.g variants={animated ? globeVariants : undefined} animate={animated ? "animate" : undefined}>
-          <circle cx="24" cy="24" r="22" stroke="url(#globeGradient)" strokeWidth="1.5" fill="none" opacity="0.3" />
-          <ellipse cx="24" cy="24" rx="12" ry="22" stroke="url(#globeGradient)" strokeWidth="1" fill="none" opacity="0.2" />
-          <ellipse cx="24" cy="24" rx="22" ry="12" stroke="url(#globeGradient)" strokeWidth="1" fill="none" opacity="0.2" />
-        </motion.g>
+        {/* Portal ring */}
+        <motion.circle
+          cx="24"
+          cy="24"
+          r="21"
+          stroke="url(#portalGradient)"
+          strokeWidth="2"
+          fill="none"
+          variants={animated ? shimmerVariants : undefined}
+          initial="initial"
+          animate={animated ? "animate" : undefined}
+        />
 
-        {/* Shopping cart icon */}
+        {/* Ghost icon */}
         <g filter="url(#glow)">
-          {/* Cart body */}
           <path
-            d="M12 16H38L35 28H15L12 16Z"
-            fill="url(#cartGradient)"
+            d="M14 22C14 16.5 18.5 12 24 12C29.5 12 34 16.5 34 22V33.5C34 35.4 32.4 37 30.5 37C29.2 37 28.2 36.4 27.3 35.6C26.5 34.9 25.5 34.5 24.4 34.5C23.3 34.5 22.3 34.9 21.5 35.6C20.6 36.4 19.6 37 18.3 37C16.4 37 14.8 35.4 14.8 33.5V22H14Z"
+            fill="url(#ghostGradient)"
             stroke="white"
-            strokeWidth="1"
-            strokeLinejoin="round"
+            strokeWidth="0.8"
           />
-          
-          {/* Cart handle */}
-          <path
-            d="M12 16L10 12H6"
-            stroke="url(#cartGradient)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          
-          {/* Cart wheels */}
-          <circle cx="18" cy="34" r="3" fill="url(#cartGradient)" stroke="white" strokeWidth="1" />
-          <circle cx="32" cy="34" r="3" fill="url(#cartGradient)" stroke="white" strokeWidth="1" />
-          
-          {/* Plus symbol in cart */}
-          <path
-            d="M25 19V25M22 22H28"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
+          <circle cx="20" cy="23" r="2" fill="#0B1B1F" />
+          <circle cx="28" cy="23" r="2" fill="#0B1B1F" />
         </g>
 
-        {/* Sparkles */}
-        <motion.circle 
-          cx="8" cy="8" r="2" 
-          fill="#F59E0B"
-          variants={animated ? sparkleVariants : undefined}
+        <motion.circle
+          cx="40"
+          cy="10"
+          r="1.8"
+          fill="#5DFEA0"
+          variants={animated ? shimmerVariants : undefined}
           initial="initial"
           animate={animated ? "animate" : undefined}
         />
-        <motion.circle 
-          cx="40" cy="10" r="1.5" 
-          fill="#EC4899"
-          variants={animated ? sparkleVariants : undefined}
+        <motion.circle
+          cx="10"
+          cy="36"
+          r="1.5"
+          fill="#38BDF8"
+          variants={animated ? shimmerVariants : undefined}
           initial="initial"
           animate={animated ? "animate" : undefined}
-          style={{ animationDelay: '0.5s' }}
-        />
-        <motion.circle 
-          cx="42" cy="38" r="1.5" 
-          fill="#8B5CF6"
-          variants={animated ? sparkleVariants : undefined}
-          initial="initial"
-          animate={animated ? "animate" : undefined}
-          style={{ animationDelay: '1s' }}
+          style={{ animationDelay: '0.6s' }}
         />
       </svg>
 
@@ -165,16 +133,16 @@ export function LogoWithText({ size = 48 }: { size?: number }) {
       <Logo size={size} />
       <div className="flex flex-col">
         <span 
-          className="font-bold tracking-tight bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 bg-clip-text text-transparent"
+          className="font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-cyan-400 to-lime-300 bg-clip-text text-transparent"
           style={{ fontSize: size * 0.5 }}
         >
-          Universal
+          Ghost
         </span>
         <span 
           className="font-bold tracking-tight text-foreground -mt-1"
           style={{ fontSize: size * 0.4 }}
         >
-          Cart
+          Writer
         </span>
       </div>
     </div>
