@@ -131,7 +131,12 @@ uses a screenshot-first workflow so you can grab long ChatGPT or Gemini threads
 without manual copy/paste.
 
 1. Take consecutive screenshots while scrolling your conversation, or record a screen video.
-2. Open GhostWriter (Safari is best) and upload screenshots (sorted by timestamp) or a recording.
+2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording.
 3. If using a recording, tune frame interval + motion delta for best results.
-4. Run OCR and let GhostWriter dedupe paragraphs.
+4. Run OCR and let GhostWriter dedupe paragraphs with line-heal cleanup.
 5. Copy or download the consolidated thread.
+
+Pro tips:
+- Use EXIF auto-sort to keep screenshots in the exact order you captured them.
+- If a recording is long, increase frame interval to reduce processing time.
+- Add a session name so the exported note is easy to find later.

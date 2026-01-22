@@ -24,13 +24,15 @@ type CaptureResult = {
   confidence: number | null
   keptParagraphs: number
   droppedParagraphs: number
+  capturedAt?: string
 }
 
 type InputMode = 'images' | 'video'
-type SortMode = 'timestamp' | 'filename'
+type SortMode = 'auto' | 'timestamp' | 'filename'
 
 const DEDUPE_WINDOW = 8
 const MOTION_SCALE = 8
+const PARAGRAPH_TOKEN = '__GW_PARA__'
 
 function tokenize(text: string) {
   return text
@@ -59,6 +61,34 @@ function splitParagraphs(text: string) {
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
+}
+
+function healText(rawText: string) {
+  if (!rawText) return ''
+  let cleaned = rawText.replace(/-\n(\w)/g, '$1')
+  cleaned = cleaned.replace(/\n\s*\n+/g, PARAGRAPH_TOKEN)
+  cleaned = cleaned.replace(/\n+/g, ' ')
+  cleaned = cleaned.replace(new RegExp(PARAGRAPH_TOKEN, 'g'), '\n\n')
+  return cleaned.trim()
+}
+
+function sortImageEntries(
+  entries: Array<{ file: File; timestamp: number | null }>,
+  mode: SortMode
+) {
+  const sorted = [...entries]
+  return sorted.sort((a, b) => {
+    if (mode === 'filename') {
+      return a.file.name.localeCompare(b.file.name)
+    }
+
+    const timeA = a.timestamp ?? a.file.lastModified
+    const timeB = b.timestamp ?? b.file.lastModified
+    if (timeA !== timeB) {
+      return timeA - timeB
+    }
+    return a.file.name.localeCompare(b.file.name)
+  })
 }
 
 function formatTimestamp(seconds: number) {
@@ -99,9 +129,12 @@ function computeMotionScore(prev: ImageData | null, next: ImageData, sampleStep:
 
 export function IOSCapture() {
   const [inputMode, setInputMode] = useState<InputMode>('images')
-  const [sortMode, setSortMode] = useState<SortMode>('timestamp')
+  const [sortMode, setSortMode] = useState<SortMode>('auto')
   const [files, setFiles] = useState<File[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [imageMeta, setImageMeta] = useState<Array<{ file: File; timestamp: number | null }>>([])
+  const [metaLoading, setMetaLoading] = useState(false)
+  const [metaMissingCount, setMetaMissingCount] = useState(0)
   const [results, setResults] = useState<CaptureResult[]>([])
   const [consolidated, setConsolidated] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -118,6 +151,10 @@ export function IOSCapture() {
   const [maxWidth, setMaxWidth] = useState(1280)
   const [sessionName, setSessionName] = useState('')
   const [includeHeader, setIncludeHeader] = useState(true)
+  const [lineHealEnabled, setLineHealEnabled] = useState(true)
+  const [dedupeWindow, setDedupeWindow] = useState(DEDUPE_WINDOW)
+  const [sourceApp, setSourceApp] = useState('ChatGPT')
+  const [autoSortEnabled, setAutoSortEnabled] = useState(true)
   const [summary, setSummary] = useState({
     processed: 0,
     emitted: 0,
@@ -133,16 +170,9 @@ export function IOSCapture() {
   )
 
   const sortedFiles = useMemo(() => {
-    const sorted = [...files]
-    return sorted.sort((a, b) => {
-      if (sortMode === 'timestamp') {
-        if (a.lastModified !== b.lastModified) {
-          return a.lastModified - b.lastModified
-        }
-      }
-      return a.name.localeCompare(b.name)
-    })
-  }, [files, sortMode])
+    const meta = imageMeta.length ? imageMeta : files.map((file) => ({ file, timestamp: null }))
+    return sortImageEntries(meta, sortMode)
+  }, [files, imageMeta, sortMode])
 
   const resetState = () => {
     setResults([])
@@ -162,15 +192,24 @@ export function IOSCapture() {
     setInputMode(mode)
     setFiles([])
     setVideoFile(null)
+    setImageMeta([])
+    setMetaMissingCount(0)
     resetState()
   }
 
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files
     if (!fileList) return
-    setFiles(Array.from(fileList))
+    const nextFiles = Array.from(fileList)
+    setFiles(nextFiles)
     setVideoFile(null)
     resetState()
+    if (autoSortEnabled) {
+      void buildImageMeta(nextFiles)
+    } else {
+      setImageMeta([])
+      setMetaMissingCount(0)
+    }
   }
 
   const handleVideoFile = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,12 +217,16 @@ export function IOSCapture() {
     if (!fileList || fileList.length === 0) return
     setVideoFile(fileList[0])
     setFiles([])
+    setImageMeta([])
+    setMetaMissingCount(0)
     resetState()
   }
 
   const handleClear = () => {
     setFiles([])
     setVideoFile(null)
+    setImageMeta([])
+    setMetaMissingCount(0)
     setResults([])
     setConsolidated('')
     setProgress(0)
@@ -219,6 +262,41 @@ export function IOSCapture() {
     URL.revokeObjectURL(url)
   }
 
+  const buildImageMeta = async (nextFiles: File[]) => {
+    if (!nextFiles.length) return
+    setMetaLoading(true)
+    setMetaMissingCount(0)
+    try {
+      const exifrModule = await import('exifr')
+      const nextMeta = []
+      let missing = 0
+
+      for (const file of nextFiles) {
+        let timestamp: number | null = null
+        try {
+          const data = await exifrModule.parse(file, {
+            pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate']
+          })
+          const exifDate = data?.DateTimeOriginal || data?.CreateDate || data?.ModifyDate
+          if (exifDate instanceof Date) {
+            timestamp = exifDate.getTime()
+          }
+        } catch {
+          timestamp = null
+        }
+
+        if (!timestamp) missing += 1
+        nextMeta.push({ file, timestamp })
+      }
+
+      setImageMeta(nextMeta)
+      setMetaMissingCount(missing)
+      return { meta: nextMeta, missing }
+    } finally {
+      setMetaLoading(false)
+    }
+  }
+
   const runOcr = useCallback(async () => {
     if (!canRun) return
     setIsProcessing(true)
@@ -244,9 +322,16 @@ export function IOSCapture() {
     const consolidatedParagraphs: string[] = []
     const recentParagraphs: string[] = []
     const nextResults: CaptureResult[] = []
+    let localImageEntries = sortedFiles
 
-    const ingestParagraphs = (rawText: string, label: string, confidence: number | null) => {
-      const paragraphs = splitParagraphs(rawText)
+    const ingestParagraphs = (
+      rawText: string,
+      label: string,
+      confidence: number | null,
+      capturedAt?: string
+    ) => {
+      const cleanedText = lineHealEnabled ? healText(rawText) : rawText.trim()
+      const paragraphs = splitParagraphs(cleanedText)
       let kept = 0
       let dropped = 0
 
@@ -257,7 +342,7 @@ export function IOSCapture() {
           continue
         }
 
-        if (dedupeEnabled) {
+          if (dedupeEnabled && dedupeWindow > 0) {
           const isDuplicate = recentParagraphs.some((recent) =>
             jaccardSimilarity(recent, paragraph) >= similarityThreshold
           )
@@ -270,7 +355,7 @@ export function IOSCapture() {
 
         consolidatedParagraphs.push(paragraph)
         recentParagraphs.unshift(paragraph)
-        if (recentParagraphs.length > DEDUPE_WINDOW) {
+        if (recentParagraphs.length > dedupeWindow) {
           recentParagraphs.pop()
         }
         kept += 1
@@ -279,10 +364,11 @@ export function IOSCapture() {
       nextResults.push({
         id: `${label}-${Date.now()}`,
         name: label,
-        text: rawText,
+        text: cleanedText,
         confidence,
         keptParagraphs: kept,
-        droppedParagraphs: dropped
+        droppedParagraphs: dropped,
+        capturedAt
       })
     }
 
@@ -294,15 +380,31 @@ export function IOSCapture() {
       await createdWorker.initialize(language)
 
       if (inputMode === 'images') {
-        for (let index = 0; index < sortedFiles.length; index += 1) {
+        if (autoSortEnabled && files.length > 0 && imageMeta.length !== files.length) {
+          const metaResult = await buildImageMeta(files)
+          if (metaResult?.meta) {
+            localImageEntries = sortImageEntries(metaResult.meta, sortMode)
+          }
+        }
+
+        for (let index = 0; index < localImageEntries.length; index += 1) {
           if (abortRef.current) break
-          const file = sortedFiles[index]
+          const entry = localImageEntries[index]
+          const file = entry.file
           setCurrentFile(file.name)
           const { data } = await createdWorker.recognize(file)
           const rawText = (data.text ?? '').trim()
-          ingestParagraphs(rawText, file.name, typeof data.confidence === 'number' ? data.confidence : null)
+          const capturedAt = entry.timestamp
+            ? new Date(entry.timestamp).toLocaleString()
+            : new Date(file.lastModified).toLocaleString()
+          ingestParagraphs(
+            rawText,
+            file.name,
+            typeof data.confidence === 'number' ? data.confidence : null,
+            capturedAt
+          )
           processed += 1
-          setProgress(Math.round(((index + 1) / sortedFiles.length) * 100))
+          setProgress(Math.round(((index + 1) / localImageEntries.length) * 100))
         }
       } else if (inputMode === 'video' && videoFile) {
         const video = document.createElement('video')
@@ -375,7 +477,8 @@ export function IOSCapture() {
           ingestParagraphs(
             rawText,
             `Frame ${index + 1} (${formatTimestamp(time)})`,
-            typeof data.confidence === 'number' ? data.confidence : null
+            typeof data.confidence === 'number' ? data.confidence : null,
+            formatTimestamp(time)
           )
           processed += 1
           setProgress(Math.round(((index + 1) / totalFrames) * 100))
@@ -387,6 +490,9 @@ export function IOSCapture() {
       const headerLines: string[] = []
       if (includeHeader && sessionName.trim()) {
         headerLines.push(`Session: ${sessionName.trim()}`)
+      }
+      if (includeHeader && sourceApp.trim()) {
+        headerLines.push(`Source: ${sourceApp.trim()}`)
       }
       if (includeHeader) {
         headerLines.push(`Captured: ${new Date().toLocaleString()}`)
@@ -421,11 +527,16 @@ export function IOSCapture() {
   }, [
     canRun,
     dedupeEnabled,
+    dedupeWindow,
     deltaThreshold,
     frameIntervalMs,
     includeHeader,
     inputMode,
     language,
+    autoSortEnabled,
+    imageMeta,
+    files,
+    sortMode,
     maxFrames,
     maxWidth,
     minChars,
@@ -433,6 +544,8 @@ export function IOSCapture() {
     sessionName,
     similarityThreshold,
     sortedFiles,
+    sourceApp,
+    lineHealEnabled,
     videoFile
   ])
 
@@ -487,8 +600,26 @@ export function IOSCapture() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
+                      variant={autoSortEnabled ? 'secondary' : 'outline'}
+                      onClick={() => {
+                        const nextValue = !autoSortEnabled
+                        setAutoSortEnabled(nextValue)
+                        if (nextValue) {
+                          void buildImageMeta(files)
+                        } else {
+                          setSortMode('filename')
+                          setImageMeta([])
+                          setMetaMissingCount(0)
+                        }
+                      }}
+                    >
+                      {autoSortEnabled ? 'Auto EXIF Sort' : 'Manual Sort'}
+                    </Button>
+                    <Button
+                      size="sm"
                       variant={sortMode === 'timestamp' ? 'secondary' : 'outline'}
                       onClick={() => setSortMode('timestamp')}
+                      disabled={!autoSortEnabled}
                     >
                       Sort by Time
                     </Button>
@@ -499,7 +630,24 @@ export function IOSCapture() {
                     >
                       Sort by Name
                     </Button>
+                    <Button
+                      size="sm"
+                      variant={sortMode === 'auto' ? 'secondary' : 'outline'}
+                      onClick={() => setSortMode('auto')}
+                      disabled={!autoSortEnabled}
+                    >
+                      Auto Order
+                    </Button>
                   </div>
+                  {autoSortEnabled && (
+                    <div className="text-xs text-muted-foreground">
+                      {metaLoading
+                        ? 'Reading EXIF timestamps...'
+                        : metaMissingCount > 0
+                          ? `${metaMissingCount} file(s) missing EXIF. Falling back to file time.`
+                          : 'EXIF timestamps detected.'}
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -558,7 +706,10 @@ export function IOSCapture() {
                     min={250}
                     max={3000}
                     value={frameIntervalMs}
-                    onChange={(event) => setFrameIntervalMs(Number(event.target.value))}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setFrameIntervalMs(Number.isFinite(next) ? next : 900)
+                    }}
                   />
                 </div>
                 <div className="space-y-1 rounded-lg border p-3">
@@ -568,7 +719,10 @@ export function IOSCapture() {
                     min={10}
                     max={600}
                     value={maxFrames}
-                    onChange={(event) => setMaxFrames(Number(event.target.value))}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setMaxFrames(Number.isFinite(next) ? next : 140)
+                    }}
                   />
                 </div>
                 <div className="space-y-1 rounded-lg border p-3">
@@ -579,7 +733,10 @@ export function IOSCapture() {
                     max={0.05}
                     step={0.001}
                     value={deltaThreshold}
-                    onChange={(event) => setDeltaThreshold(Number(event.target.value))}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setDeltaThreshold(Number.isFinite(next) ? next : 0.012)
+                    }}
                   />
                 </div>
               </div>
@@ -591,7 +748,10 @@ export function IOSCapture() {
                     min={1}
                     max={12}
                     value={sampleStep}
-                    onChange={(event) => setSampleStep(Number(event.target.value))}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setSampleStep(Number.isFinite(next) ? next : 4)
+                    }}
                   />
                 </div>
                 <div className="space-y-1 rounded-lg border p-3">
@@ -601,7 +761,10 @@ export function IOSCapture() {
                     min={480}
                     max={1920}
                     value={maxWidth}
-                    onChange={(event) => setMaxWidth(Number(event.target.value))}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setMaxWidth(Number.isFinite(next) ? next : 1280)
+                    }}
                   />
                 </div>
               </div>
@@ -623,7 +786,10 @@ export function IOSCapture() {
                 min={10}
                 max={200}
                 value={minChars}
-                onChange={(event) => setMinChars(Number(event.target.value))}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setMinChars(Number.isFinite(next) ? next : 40)
+                }}
               />
             </div>
             <div className="space-y-1 rounded-lg border p-3">
@@ -634,7 +800,10 @@ export function IOSCapture() {
                 max={0.99}
                 step={0.01}
                 value={similarityThreshold}
-                onChange={(event) => setSimilarityThreshold(Number(event.target.value))}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setSimilarityThreshold(Number.isFinite(next) ? next : 0.85)
+                }}
               />
             </div>
           </div>
@@ -654,6 +823,49 @@ export function IOSCapture() {
                 <p className="text-xs text-muted-foreground">Add session + timestamp</p>
               </div>
               <Switch checked={includeHeader} onCheckedChange={setIncludeHeader} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Source app</p>
+              <Input
+                value={sourceApp}
+                onChange={(event) => setSourceApp(event.target.value)}
+                placeholder="ChatGPT"
+              />
+              <div className="flex flex-wrap gap-2 pt-2">
+                {['ChatGPT', 'Gemini', 'Notes', 'Other'].map((label) => (
+                  <Button
+                    key={label}
+                    size="sm"
+                    variant={sourceApp === label ? 'secondary' : 'outline'}
+                    onClick={() => setSourceApp(label)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Line heal</p>
+                <p className="text-xs text-muted-foreground">Fix line breaks</p>
+              </div>
+              <Switch checked={lineHealEnabled} onCheckedChange={setLineHealEnabled} />
+            </div>
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Dedupe window</p>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={dedupeWindow}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setDedupeWindow(Number.isFinite(next) ? Math.max(1, next) : DEDUPE_WINDOW)
+                }}
+              />
             </div>
           </div>
 
@@ -717,13 +929,14 @@ export function IOSCapture() {
               <div key={result.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm font-medium">{result.name}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Kept {result.keptParagraphs}</span>
-                    <span>Dropped {result.droppedParagraphs}</span>
-                    {result.confidence !== null && (
-                      <Badge variant="outline">{Math.round(result.confidence)}% conf</Badge>
-                    )}
-                  </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Kept {result.keptParagraphs}</span>
+                <span>Dropped {result.droppedParagraphs}</span>
+                {result.confidence !== null && (
+                  <Badge variant="outline">{Math.round(result.confidence)}% conf</Badge>
+                )}
+                {result.capturedAt && <span>{result.capturedAt}</span>}
+              </div>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-3">
                   {result.text || 'No text detected.'}
