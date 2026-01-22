@@ -26,7 +26,11 @@ type CaptureResult = {
   droppedParagraphs: number
 }
 
+type InputMode = 'images' | 'video'
+type SortMode = 'timestamp' | 'filename'
+
 const DEDUPE_WINDOW = 8
+const MOTION_SCALE = 8
 
 function tokenize(text: string) {
   return text
@@ -57,8 +61,47 @@ function splitParagraphs(text: string) {
     .filter(Boolean)
 }
 
+function formatTimestamp(seconds: number) {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  const millis = Math.floor((seconds % 1) * 10)
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis}`
+}
+
+function getLuma(data: Uint8ClampedArray, idx: number) {
+  const r = data[idx]
+  const g = data[idx + 1]
+  const b = data[idx + 2]
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+}
+
+function computeMotionScore(prev: ImageData | null, next: ImageData, sampleStep: number) {
+  if (!prev) return 1
+  if (prev.width !== next.width || prev.height !== next.height) return 1
+  const step = Math.max(1, Math.floor(sampleStep))
+  let totalDiff = 0
+  let samples = 0
+  const width = next.width
+  const height = next.height
+
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const idx = (y * width + x) * 4
+      const lumaA = getLuma(prev.data, idx)
+      const lumaB = getLuma(next.data, idx)
+      totalDiff += Math.abs(lumaA - lumaB)
+      samples += 1
+    }
+  }
+
+  return samples === 0 ? 0 : totalDiff / samples
+}
+
 export function IOSCapture() {
+  const [inputMode, setInputMode] = useState<InputMode>('images')
+  const [sortMode, setSortMode] = useState<SortMode>('timestamp')
   const [files, setFiles] = useState<File[]>([])
+  const [videoFile, setVideoFile] = useState<File | null>(null)
   const [results, setResults] = useState<CaptureResult[]>([])
   const [consolidated, setConsolidated] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -68,30 +111,90 @@ export function IOSCapture() {
   const [minChars, setMinChars] = useState(40)
   const [similarityThreshold, setSimilarityThreshold] = useState(0.85)
   const [language, setLanguage] = useState('eng')
+  const [frameIntervalMs, setFrameIntervalMs] = useState(900)
+  const [maxFrames, setMaxFrames] = useState(140)
+  const [deltaThreshold, setDeltaThreshold] = useState(0.012)
+  const [sampleStep, setSampleStep] = useState(4)
+  const [maxWidth, setMaxWidth] = useState(1280)
+  const [sessionName, setSessionName] = useState('')
+  const [includeHeader, setIncludeHeader] = useState(true)
+  const [summary, setSummary] = useState({
+    processed: 0,
+    emitted: 0,
+    skippedMotion: 0,
+    skippedText: 0,
+    skippedDuplicate: 0
+  })
   const abortRef = useRef(false)
 
-  const canRun = files.length > 0 && !isProcessing
+  const canRun = !isProcessing && (
+    (inputMode === 'images' && files.length > 0) ||
+    (inputMode === 'video' && Boolean(videoFile))
+  )
 
   const sortedFiles = useMemo(() => {
-    return [...files].sort((a, b) => a.name.localeCompare(b.name))
-  }, [files])
+    const sorted = [...files]
+    return sorted.sort((a, b) => {
+      if (sortMode === 'timestamp') {
+        if (a.lastModified !== b.lastModified) {
+          return a.lastModified - b.lastModified
+        }
+      }
+      return a.name.localeCompare(b.name)
+    })
+  }, [files, sortMode])
+
+  const resetState = () => {
+    setResults([])
+    setConsolidated('')
+    setProgress(0)
+    setCurrentFile(null)
+    setSummary({
+      processed: 0,
+      emitted: 0,
+      skippedMotion: 0,
+      skippedText: 0,
+      skippedDuplicate: 0
+    })
+  }
+
+  const handleModeChange = (mode: InputMode) => {
+    setInputMode(mode)
+    setFiles([])
+    setVideoFile(null)
+    resetState()
+  }
 
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files
     if (!fileList) return
     setFiles(Array.from(fileList))
-    setResults([])
-    setConsolidated('')
-    setProgress(0)
-    setCurrentFile(null)
+    setVideoFile(null)
+    resetState()
+  }
+
+  const handleVideoFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files
+    if (!fileList || fileList.length === 0) return
+    setVideoFile(fileList[0])
+    setFiles([])
+    resetState()
   }
 
   const handleClear = () => {
     setFiles([])
+    setVideoFile(null)
     setResults([])
     setConsolidated('')
     setProgress(0)
     setCurrentFile(null)
+    setSummary({
+      processed: 0,
+      emitted: 0,
+      skippedMotion: 0,
+      skippedText: 0,
+      skippedDuplicate: 0
+    })
     abortRef.current = false
   }
 
@@ -123,9 +226,66 @@ export function IOSCapture() {
     setResults([])
     setConsolidated('')
     setCurrentFile(null)
+    setSummary({
+      processed: 0,
+      emitted: 0,
+      skippedMotion: 0,
+      skippedText: 0,
+      skippedDuplicate: 0
+    })
     abortRef.current = false
 
     let worker: { terminate: () => Promise<void> } | null = null
+    let processed = 0
+    let skippedMotion = 0
+    let skippedText = 0
+    let skippedDuplicate = 0
+
+    const consolidatedParagraphs: string[] = []
+    const recentParagraphs: string[] = []
+    const nextResults: CaptureResult[] = []
+
+    const ingestParagraphs = (rawText: string, label: string, confidence: number | null) => {
+      const paragraphs = splitParagraphs(rawText)
+      let kept = 0
+      let dropped = 0
+
+      for (const paragraph of paragraphs) {
+        if (paragraph.length < minChars) {
+          dropped += 1
+          skippedText += 1
+          continue
+        }
+
+        if (dedupeEnabled) {
+          const isDuplicate = recentParagraphs.some((recent) =>
+            jaccardSimilarity(recent, paragraph) >= similarityThreshold
+          )
+          if (isDuplicate) {
+            dropped += 1
+            skippedDuplicate += 1
+            continue
+          }
+        }
+
+        consolidatedParagraphs.push(paragraph)
+        recentParagraphs.unshift(paragraph)
+        if (recentParagraphs.length > DEDUPE_WINDOW) {
+          recentParagraphs.pop()
+        }
+        kept += 1
+      }
+
+      nextResults.push({
+        id: `${label}-${Date.now()}`,
+        name: label,
+        text: rawText,
+        confidence,
+        keptParagraphs: kept,
+        droppedParagraphs: dropped
+      })
+    }
+
     try {
       const { createWorker } = await import('tesseract.js')
       const createdWorker = await createWorker()
@@ -133,58 +293,115 @@ export function IOSCapture() {
       await createdWorker.loadLanguage(language)
       await createdWorker.initialize(language)
 
-      const consolidatedParagraphs: string[] = []
-      const recentParagraphs: string[] = []
-      const nextResults: CaptureResult[] = []
+      if (inputMode === 'images') {
+        for (let index = 0; index < sortedFiles.length; index += 1) {
+          if (abortRef.current) break
+          const file = sortedFiles[index]
+          setCurrentFile(file.name)
+          const { data } = await createdWorker.recognize(file)
+          const rawText = (data.text ?? '').trim()
+          ingestParagraphs(rawText, file.name, typeof data.confidence === 'number' ? data.confidence : null)
+          processed += 1
+          setProgress(Math.round(((index + 1) / sortedFiles.length) * 100))
+        }
+      } else if (inputMode === 'video' && videoFile) {
+        const video = document.createElement('video')
+        const url = URL.createObjectURL(videoFile)
+        video.src = url
+        video.muted = true
+        video.playsInline = true
+        video.preload = 'auto'
 
-      for (let index = 0; index < sortedFiles.length; index += 1) {
-        if (abortRef.current) break
-        const file = sortedFiles[index]
-        setCurrentFile(file.name)
-        const { data } = await createdWorker.recognize(file)
-        const rawText = (data.text ?? '').trim()
-        const paragraphs = splitParagraphs(rawText)
+        await new Promise<void>((resolve, reject) => {
+          const onLoaded = () => resolve()
+          const onError = () => reject(new Error('Failed to load video metadata.'))
+          video.addEventListener('loadedmetadata', onLoaded, { once: true })
+          video.addEventListener('error', onError, { once: true })
+          video.load()
+        })
 
-        let kept = 0
-        let dropped = 0
-        for (const paragraph of paragraphs) {
-          if (paragraph.length < minChars) {
-            dropped += 1
+        const duration = Number.isFinite(video.duration) ? video.duration : 0
+        if (duration <= 0) {
+          throw new Error('Video duration is unavailable or zero.')
+        }
+
+        const intervalSeconds = Math.max(frameIntervalMs / 1000, 0.25)
+        const estimatedFrames = Math.floor(duration / intervalSeconds) + 1
+        const totalFrames = Math.min(estimatedFrames, Math.max(1, maxFrames))
+
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        const motionCanvas = document.createElement('canvas')
+        const motionCtx = motionCanvas.getContext('2d')
+        if (!ctx || !motionCtx) {
+          throw new Error('Canvas unavailable for video processing.')
+        }
+
+        let lastMotionData: ImageData | null = null
+
+        for (let index = 0; index < totalFrames; index += 1) {
+          if (abortRef.current) break
+          const time = Math.min(duration, index * intervalSeconds)
+          setCurrentFile(`Frame ${index + 1} @ ${formatTimestamp(time)}`)
+
+          await new Promise<void>((resolve) => {
+            const onSeeked = () => resolve()
+            video.addEventListener('seeked', onSeeked, { once: true })
+            video.currentTime = time
+          })
+
+          const scale = Math.min(1, maxWidth / video.videoWidth)
+          const width = Math.max(1, Math.floor(video.videoWidth * scale))
+          const height = Math.max(1, Math.floor(video.videoHeight * scale))
+          canvas.width = width
+          canvas.height = height
+          ctx.drawImage(video, 0, 0, width, height)
+
+          motionCanvas.width = Math.max(1, Math.floor(width / MOTION_SCALE))
+          motionCanvas.height = Math.max(1, Math.floor(height / MOTION_SCALE))
+          motionCtx.drawImage(canvas, 0, 0, motionCanvas.width, motionCanvas.height)
+          const motionData = motionCtx.getImageData(0, 0, motionCanvas.width, motionCanvas.height)
+          const motionScore = computeMotionScore(lastMotionData, motionData, sampleStep)
+          lastMotionData = motionData
+
+          if (motionScore < deltaThreshold) {
+            skippedMotion += 1
+            setProgress(Math.round(((index + 1) / totalFrames) * 100))
             continue
           }
 
-          if (dedupeEnabled) {
-            const isDuplicate = recentParagraphs.some((recent) =>
-              jaccardSimilarity(recent, paragraph) >= similarityThreshold
-            )
-            if (isDuplicate) {
-              dropped += 1
-              continue
-            }
-          }
-
-          consolidatedParagraphs.push(paragraph)
-          recentParagraphs.unshift(paragraph)
-          if (recentParagraphs.length > DEDUPE_WINDOW) {
-            recentParagraphs.pop()
-          }
-          kept += 1
+          const { data } = await createdWorker.recognize(canvas)
+          const rawText = (data.text ?? '').trim()
+          ingestParagraphs(
+            rawText,
+            `Frame ${index + 1} (${formatTimestamp(time)})`,
+            typeof data.confidence === 'number' ? data.confidence : null
+          )
+          processed += 1
+          setProgress(Math.round(((index + 1) / totalFrames) * 100))
         }
 
-        nextResults.push({
-          id: `${file.name}-${index}`,
-          name: file.name,
-          text: rawText,
-          confidence: typeof data.confidence === 'number' ? data.confidence : null,
-          keptParagraphs: kept,
-          droppedParagraphs: dropped
-        })
-
-        setProgress(Math.round(((index + 1) / sortedFiles.length) * 100))
+        URL.revokeObjectURL(url)
       }
 
+      const headerLines: string[] = []
+      if (includeHeader && sessionName.trim()) {
+        headerLines.push(`Session: ${sessionName.trim()}`)
+      }
+      if (includeHeader) {
+        headerLines.push(`Captured: ${new Date().toLocaleString()}`)
+      }
+      const headerText = headerLines.length > 0 ? `${headerLines.join('\n')}\n\n` : ''
       setResults(nextResults)
-      setConsolidated(consolidatedParagraphs.join('\n\n'))
+      setConsolidated(headerText + consolidatedParagraphs.join('\n\n'))
+      setSummary({
+        processed,
+        emitted: consolidatedParagraphs.length,
+        skippedMotion,
+        skippedText,
+        skippedDuplicate
+      })
+
       if (abortRef.current) {
         toast.info('OCR stopped early.')
       } else {
@@ -201,7 +418,23 @@ export function IOSCapture() {
       setCurrentFile(null)
       abortRef.current = false
     }
-  }, [canRun, dedupeEnabled, language, minChars, similarityThreshold, sortedFiles])
+  }, [
+    canRun,
+    dedupeEnabled,
+    deltaThreshold,
+    frameIntervalMs,
+    includeHeader,
+    inputMode,
+    language,
+    maxFrames,
+    maxWidth,
+    minChars,
+    sampleStep,
+    sessionName,
+    similarityThreshold,
+    sortedFiles,
+    videoFile
+  ])
 
   return (
     <div className="space-y-6">
@@ -212,8 +445,8 @@ export function IOSCapture() {
             <div>
               <h3 className="text-lg font-semibold">iPhone Capture Vault</h3>
               <p className="text-sm text-muted-foreground">
-                Upload iPhone screenshots of ChatGPT or Gemini threads and let GhostWriter
-                stitch them into one clean note with automatic dedupe.
+                Upload iPhone screenshots or screen recordings of ChatGPT or Gemini threads and let
+                GhostWriter stitch them into one clean note with automatic dedupe.
               </p>
             </div>
           </div>
@@ -228,9 +461,54 @@ export function IOSCapture() {
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant={inputMode === 'images' ? 'default' : 'outline'}
+              onClick={() => handleModeChange('images')}
+            >
+              Screenshots
+            </Button>
+            <Button
+              size="sm"
+              variant={inputMode === 'video' ? 'default' : 'outline'}
+              onClick={() => handleModeChange('video')}
+            >
+              Screen Recording
+            </Button>
+            <Badge variant="secondary">{inputMode === 'images' ? 'Batch OCR' : 'Frame OCR'}</Badge>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
-              <Input type="file" multiple accept="image/*" onChange={handleFiles} />
+              {inputMode === 'images' ? (
+                <>
+                  <Input type="file" multiple accept="image/*" onChange={handleFiles} />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={sortMode === 'timestamp' ? 'secondary' : 'outline'}
+                      onClick={() => setSortMode('timestamp')}
+                    >
+                      Sort by Time
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={sortMode === 'filename' ? 'secondary' : 'outline'}
+                      onClick={() => setSortMode('filename')}
+                    >
+                      Sort by Name
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Input type="file" accept="video/*" onChange={handleVideoFile} />
+                  <div className="text-xs text-muted-foreground">
+                    Upload one screen recording. GhostWriter will sample frames at the interval below.
+                  </div>
+                </>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button onClick={runOcr} disabled={!canRun}>
                   <UploadSimple size={16} className="mr-1" />
@@ -239,13 +517,21 @@ export function IOSCapture() {
                 <Button onClick={handleStop} variant="outline" disabled={!isProcessing}>
                   Stop
                 </Button>
-                <Button onClick={handleClear} variant="ghost" disabled={isProcessing && !files.length}>
+                <Button
+                  onClick={handleClear}
+                  variant="ghost"
+                  disabled={isProcessing || (!files.length && !videoFile)}
+                >
                   <Trash size={16} className="mr-1" />
                   Clear
                 </Button>
               </div>
               <div className="text-xs text-muted-foreground">
-                {files.length} file(s) selected.
+                {inputMode === 'images'
+                  ? `${files.length} file(s) selected.`
+                  : videoFile
+                    ? `Selected: ${videoFile.name}`
+                    : 'No video selected.'}
               </div>
             </div>
             <div className="space-y-3">
@@ -261,6 +547,66 @@ export function IOSCapture() {
           </div>
 
           <Separator />
+
+          {inputMode === 'video' && (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-1 rounded-lg border p-3">
+                  <p className="text-sm font-medium">Frame interval (ms)</p>
+                  <Input
+                    type="number"
+                    min={250}
+                    max={3000}
+                    value={frameIntervalMs}
+                    onChange={(event) => setFrameIntervalMs(Number(event.target.value))}
+                  />
+                </div>
+                <div className="space-y-1 rounded-lg border p-3">
+                  <p className="text-sm font-medium">Max frames</p>
+                  <Input
+                    type="number"
+                    min={10}
+                    max={600}
+                    value={maxFrames}
+                    onChange={(event) => setMaxFrames(Number(event.target.value))}
+                  />
+                </div>
+                <div className="space-y-1 rounded-lg border p-3">
+                  <p className="text-sm font-medium">Motion delta</p>
+                  <Input
+                    type="number"
+                    min={0.001}
+                    max={0.05}
+                    step={0.001}
+                    value={deltaThreshold}
+                    onChange={(event) => setDeltaThreshold(Number(event.target.value))}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1 rounded-lg border p-3">
+                  <p className="text-sm font-medium">Motion sample step</p>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={sampleStep}
+                    onChange={(event) => setSampleStep(Number(event.target.value))}
+                  />
+                </div>
+                <div className="space-y-1 rounded-lg border p-3">
+                  <p className="text-sm font-medium">Max width</p>
+                  <Input
+                    type="number"
+                    min={480}
+                    max={1920}
+                    value={maxWidth}
+                    onChange={(event) => setMaxWidth(Number(event.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="flex items-center justify-between rounded-lg border p-3">
@@ -293,6 +639,24 @@ export function IOSCapture() {
             </div>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Session name</p>
+              <Input
+                value={sessionName}
+                onChange={(event) => setSessionName(event.target.value)}
+                placeholder="ChatGPT Project Threads"
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Include header</p>
+                <p className="text-xs text-muted-foreground">Add session + timestamp</p>
+              </div>
+              <Switch checked={includeHeader} onCheckedChange={setIncludeHeader} />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <p className="text-sm font-medium">Language</p>
             <Input
@@ -310,7 +674,7 @@ export function IOSCapture() {
             <div>
               <h3 className="text-lg font-semibold">Consolidated Thread</h3>
               <p className="text-sm text-muted-foreground">
-                GhostWriter stitches all screenshots into one continuous note.
+                GhostWriter stitches screenshots or recordings into one continuous note.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -324,10 +688,17 @@ export function IOSCapture() {
               </Button>
             </div>
           </div>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <Badge variant="secondary">Processed {summary.processed}</Badge>
+            <Badge variant="secondary">Emitted {summary.emitted}</Badge>
+            <Badge variant="outline">Skipped motion {summary.skippedMotion}</Badge>
+            <Badge variant="outline">Skipped text {summary.skippedText}</Badge>
+            <Badge variant="outline">Duplicates {summary.skippedDuplicate}</Badge>
+          </div>
           <Textarea
             value={consolidated}
             readOnly
-            placeholder="Upload screenshots to build your consolidated thread."
+            placeholder="Upload screenshots or a screen recording to build your consolidated thread."
             className="min-h-[260px]"
           />
         </CardContent>
@@ -337,7 +708,9 @@ export function IOSCapture() {
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Capture Breakdown</h3>
-            <Badge variant="secondary">{results.length} files</Badge>
+            <Badge variant="secondary">
+              {results.length} {inputMode === 'video' ? 'frames' : 'files'}
+            </Badge>
           </div>
           <div className="space-y-3">
             {results.map((result) => (
@@ -359,7 +732,7 @@ export function IOSCapture() {
             ))}
             {results.length === 0 && (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Upload iPhone screenshots to begin OCR extraction.
+                Upload iPhone screenshots or a screen recording to begin OCR extraction.
               </div>
             )}
           </div>

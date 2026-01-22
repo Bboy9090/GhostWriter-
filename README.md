@@ -130,7 +130,8 @@ iOS does not allow apps to read other apps in real time. For iPhone 15, GhostWri
 uses a screenshot-first workflow so you can grab long ChatGPT or Gemini threads
 without manual copy/paste.
 
-1. Take consecutive screenshots while scrolling your conversation.
-2. Open GhostWriter (Safari is best) and upload all screenshots at once.
-3. Run OCR and let GhostWriter dedupe paragraphs.
-4. Copy or download the consolidated thread.
+1. Take consecutive screenshots while scrolling your conversation, or record a screen video.
+2. Open GhostWriter (Safari is best) and upload screenshots (sorted by timestamp) or a recording.
+3. If using a recording, tune frame interval + motion delta for best results.
+4. Run OCR and let GhostWriter dedupe paragraphs.
+5. Copy or download the consolidated thread.
