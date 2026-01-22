@@ -103,6 +103,13 @@ For real-time OCR from a connected device:
 npm run ocr:live -- --interval 750 --duration 30000 --output ./ocr-live-log.txt
 ```
 
+Scrolling detection flags:
+- `--delta` motion threshold (default 0.012)
+- `--sample` pixel step for motion sampling (default 12)
+- `--dedupe` similarity threshold for duplicate suppression (default 0.88)
+- `--min-chars` minimum characters to log (default 20)
+- `--window` recent entries considered for dedupe (default 5)
+
 To plug in another real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
 
 ```bash
