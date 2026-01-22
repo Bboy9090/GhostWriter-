@@ -140,3 +140,5 @@ Pro tips:
 - Use EXIF auto-sort to keep screenshots in the exact order you captured them.
 - If a recording is long, increase frame interval to reduce processing time.
 - Add a session name so the exported note is easy to find later.
+- Enable noise filtering to drop UI chrome like "Regenerate response."
+- If your thread includes speaker labels, enable role normalization.

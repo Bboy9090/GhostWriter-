@@ -33,6 +33,22 @@ type SortMode = 'auto' | 'timestamp' | 'filename'
 const DEDUPE_WINDOW = 8
 const MOTION_SCALE = 8
 const PARAGRAPH_TOKEN = '__GW_PARA__'
+const DEFAULT_NOISE_PHRASES = [
+  'Regenerate response',
+  'Stop generating',
+  'Copy',
+  'Share',
+  'New chat',
+  'Edit',
+  'Retry',
+  'Scroll to bottom',
+  'Copied',
+  'Feedback',
+  'Thumbs up',
+  'Thumbs down'
+]
+const DEFAULT_USER_PATTERNS = ['User:', 'You:', 'Me:']
+const DEFAULT_ASSISTANT_PATTERNS = ['Assistant:', 'ChatGPT:', 'Gemini:', 'AI:']
 
 function tokenize(text: string) {
   return text
@@ -70,6 +86,35 @@ function healText(rawText: string) {
   cleaned = cleaned.replace(/\n+/g, ' ')
   cleaned = cleaned.replace(new RegExp(PARAGRAPH_TOKEN, 'g'), '\n\n')
   return cleaned.trim()
+}
+
+function parsePatternList(value: string) {
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+function normalizeRolePrefix(
+  paragraph: string,
+  userPatterns: string[],
+  assistantPatterns: string[]
+) {
+  const lower = paragraph.toLowerCase()
+  const matchPrefix = (patterns: string[]) =>
+    patterns.find((pattern) => lower.startsWith(pattern.toLowerCase()))
+
+  const userMatch = matchPrefix(userPatterns)
+  if (userMatch) {
+    return `User: ${paragraph.slice(userMatch.length).trim()}`
+  }
+
+  const assistantMatch = matchPrefix(assistantPatterns)
+  if (assistantMatch) {
+    return `Assistant: ${paragraph.slice(assistantMatch.length).trim()}`
+  }
+
+  return paragraph
 }
 
 function sortImageEntries(
@@ -155,12 +200,23 @@ export function IOSCapture() {
   const [dedupeWindow, setDedupeWindow] = useState(DEDUPE_WINDOW)
   const [sourceApp, setSourceApp] = useState('ChatGPT')
   const [autoSortEnabled, setAutoSortEnabled] = useState(true)
+  const [autoSegmentEnabled, setAutoSegmentEnabled] = useState(true)
+  const [segmentGapMinutes, setSegmentGapMinutes] = useState(8)
+  const [noiseFilterEnabled, setNoiseFilterEnabled] = useState(true)
+  const [noisePhraseInput, setNoisePhraseInput] = useState(DEFAULT_NOISE_PHRASES.join('\n'))
+  const [roleNormalizeEnabled, setRoleNormalizeEnabled] = useState(false)
+  const [userPatternInput, setUserPatternInput] = useState(DEFAULT_USER_PATTERNS.join(', '))
+  const [assistantPatternInput, setAssistantPatternInput] = useState(
+    DEFAULT_ASSISTANT_PATTERNS.join(', ')
+  )
   const [summary, setSummary] = useState({
     processed: 0,
     emitted: 0,
     skippedMotion: 0,
     skippedText: 0,
-    skippedDuplicate: 0
+    skippedDuplicate: 0,
+    skippedNoise: 0,
+    roleTagged: 0
   })
   const abortRef = useRef(false)
 
@@ -184,7 +240,9 @@ export function IOSCapture() {
       emitted: 0,
       skippedMotion: 0,
       skippedText: 0,
-      skippedDuplicate: 0
+      skippedDuplicate: 0,
+      skippedNoise: 0,
+      roleTagged: 0
     })
   }
 
@@ -204,6 +262,9 @@ export function IOSCapture() {
     setFiles(nextFiles)
     setVideoFile(null)
     resetState()
+    if (nextFiles.some((file) => file.type.includes('heic') || file.type.includes('heif'))) {
+      toast.info('HEIC detected. Convert to PNG/JPEG if OCR misses text.')
+    }
     if (autoSortEnabled) {
       void buildImageMeta(nextFiles)
     } else {
@@ -309,7 +370,9 @@ export function IOSCapture() {
       emitted: 0,
       skippedMotion: 0,
       skippedText: 0,
-      skippedDuplicate: 0
+      skippedDuplicate: 0,
+      skippedNoise: 0,
+      roleTagged: 0
     })
     abortRef.current = false
 
@@ -318,11 +381,14 @@ export function IOSCapture() {
     let skippedMotion = 0
     let skippedText = 0
     let skippedDuplicate = 0
+    let skippedNoise = 0
+    let roleTagged = 0
 
     const consolidatedParagraphs: string[] = []
     const recentParagraphs: string[] = []
     const nextResults: CaptureResult[] = []
     let localImageEntries = sortedFiles
+    let lastCaptureTimestamp: number | null = null
 
     const ingestParagraphs = (
       rawText: string,
@@ -334,6 +400,12 @@ export function IOSCapture() {
       const paragraphs = splitParagraphs(cleanedText)
       let kept = 0
       let dropped = 0
+      const noisePhrases = noisePhraseInput
+        .split('\n')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+      const userPatterns = parsePatternList(userPatternInput)
+      const assistantPatterns = parsePatternList(assistantPatternInput)
 
       for (const paragraph of paragraphs) {
         if (paragraph.length < minChars) {
@@ -342,9 +414,28 @@ export function IOSCapture() {
           continue
         }
 
+        if (noiseFilterEnabled) {
+          const lowered = paragraph.toLowerCase()
+          const isNoise = noisePhrases.some((phrase) => lowered.includes(phrase.toLowerCase()))
+          if (isNoise) {
+            dropped += 1
+            skippedNoise += 1
+            continue
+          }
+        }
+
+        let normalized = paragraph
+        if (roleNormalizeEnabled) {
+          const updated = normalizeRolePrefix(paragraph, userPatterns, assistantPatterns)
+          if (updated !== paragraph) {
+            roleTagged += 1
+          }
+          normalized = updated
+        }
+
           if (dedupeEnabled && dedupeWindow > 0) {
           const isDuplicate = recentParagraphs.some((recent) =>
-            jaccardSimilarity(recent, paragraph) >= similarityThreshold
+            jaccardSimilarity(recent, normalized) >= similarityThreshold
           )
           if (isDuplicate) {
             dropped += 1
@@ -353,8 +444,8 @@ export function IOSCapture() {
           }
         }
 
-        consolidatedParagraphs.push(paragraph)
-        recentParagraphs.unshift(paragraph)
+        consolidatedParagraphs.push(normalized)
+        recentParagraphs.unshift(normalized)
         if (recentParagraphs.length > dedupeWindow) {
           recentParagraphs.pop()
         }
@@ -397,6 +488,17 @@ export function IOSCapture() {
           const capturedAt = entry.timestamp
             ? new Date(entry.timestamp).toLocaleString()
             : new Date(file.lastModified).toLocaleString()
+
+            if (autoSegmentEnabled && entry.timestamp && lastCaptureTimestamp !== null) {
+              const gapMinutes = (entry.timestamp - lastCaptureTimestamp) / 60000
+              if (gapMinutes >= segmentGapMinutes) {
+                consolidatedParagraphs.push(`--- Session break (${capturedAt}) ---`)
+              }
+            }
+
+            if (entry.timestamp) {
+              lastCaptureTimestamp = entry.timestamp
+            }
           ingestParagraphs(
             rawText,
             file.name,
@@ -505,7 +607,9 @@ export function IOSCapture() {
         emitted: consolidatedParagraphs.length,
         skippedMotion,
         skippedText,
-        skippedDuplicate
+        skippedDuplicate,
+        skippedNoise,
+        roleTagged
       })
 
       if (abortRef.current) {
@@ -546,7 +650,14 @@ export function IOSCapture() {
     sortedFiles,
     sourceApp,
     lineHealEnabled,
-    videoFile
+    videoFile,
+    autoSegmentEnabled,
+    segmentGapMinutes,
+    noiseFilterEnabled,
+    noisePhraseInput,
+    roleNormalizeEnabled,
+    userPatternInput,
+    assistantPatternInput
   ])
 
   return (
@@ -869,6 +980,70 @@ export function IOSCapture() {
             </div>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Auto segment</p>
+                <p className="text-xs text-muted-foreground">Insert breaks on time gaps</p>
+              </div>
+              <Switch checked={autoSegmentEnabled} onCheckedChange={setAutoSegmentEnabled} />
+            </div>
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Gap minutes</p>
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={segmentGapMinutes}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setSegmentGapMinutes(Number.isFinite(next) ? Math.max(1, next) : 8)
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Noise filter</p>
+                <p className="text-xs text-muted-foreground">Remove UI chrome</p>
+              </div>
+              <Switch checked={noiseFilterEnabled} onCheckedChange={setNoiseFilterEnabled} />
+            </div>
+          </div>
+
+          {noiseFilterEnabled && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Noise phrases (one per line)</p>
+              <Textarea
+                value={noisePhraseInput}
+                onChange={(event) => setNoisePhraseInput(event.target.value)}
+                className="min-h-[140px]"
+              />
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Role normalize</p>
+                <p className="text-xs text-muted-foreground">Standardize speaker prefixes</p>
+              </div>
+              <Switch checked={roleNormalizeEnabled} onCheckedChange={setRoleNormalizeEnabled} />
+            </div>
+            <div className="rounded-lg border p-3 space-y-2">
+              <p className="text-sm font-medium">Role patterns</p>
+              <Input
+                value={userPatternInput}
+                onChange={(event) => setUserPatternInput(event.target.value)}
+                placeholder="User:, You:, Me:"
+              />
+              <Input
+                value={assistantPatternInput}
+                onChange={(event) => setAssistantPatternInput(event.target.value)}
+                placeholder="Assistant:, ChatGPT:, Gemini:"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <p className="text-sm font-medium">Language</p>
             <Input
@@ -906,6 +1081,8 @@ export function IOSCapture() {
             <Badge variant="outline">Skipped motion {summary.skippedMotion}</Badge>
             <Badge variant="outline">Skipped text {summary.skippedText}</Badge>
             <Badge variant="outline">Duplicates {summary.skippedDuplicate}</Badge>
+            <Badge variant="outline">Noise {summary.skippedNoise}</Badge>
+            <Badge variant="outline">Role tags {summary.roleTagged}</Badge>
           </div>
           <Textarea
             value={consolidated}
