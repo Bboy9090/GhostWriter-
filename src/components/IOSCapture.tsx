@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
@@ -8,9 +8,12 @@ import { Separator } from './ui/separator'
 import { Switch } from './ui/switch'
 import { Textarea } from './ui/textarea'
 import {
+  CaretLeft,
+  CaretRight,
   Copy,
   DeviceMobile,
   DownloadSimple,
+  ShareNetwork,
   Trash,
   UploadSimple,
   Warning
@@ -129,6 +132,13 @@ function buildHeading(paragraph: string, wordCount: number) {
   const tokens = tokenize(paragraph)
   if (tokens.length === 0) return 'Session'
   return tokens.slice(0, Math.max(3, wordCount)).join(' ')
+}
+
+function slugify(value: string) {
+  const trimmed = value.trim().toLowerCase()
+  if (!trimmed) return 'ghostwriter-vault'
+  const cleaned = trimmed.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  return cleaned || 'ghostwriter-vault'
 }
 
 function formatParagraph(paragraph: string, format: OutputFormat) {
@@ -310,6 +320,8 @@ export function IOSCapture() {
   const [autoHeadingEnabled, setAutoHeadingEnabled] = useState(true)
   const [headingWordCount, setHeadingWordCount] = useState(8)
   const [includeSegmentTimestamps, setIncludeSegmentTimestamps] = useState(true)
+  const [chunkSize, setChunkSize] = useState(3000)
+  const [chunkIndex, setChunkIndex] = useState(0)
   const [summary, setSummary] = useState({
     processed: 0,
     emitted: 0,
@@ -415,13 +427,38 @@ export function IOSCapture() {
     toast.success('Copied consolidated text.')
   }
 
+  const handleCopyChunk = async (text: string) => {
+    if (!text) return
+    await navigator.clipboard.writeText(text)
+    toast.success('Copied chunk.')
+  }
+
+  const handleShare = async (text: string) => {
+    if (!text) return
+    if (!navigator.share) {
+      toast.info('Share sheet not available. Use Copy or Download.')
+      return
+    }
+    try {
+      await navigator.share({
+        title: sessionName.trim() || 'GhostWriter Capture',
+        text
+      })
+    } catch (error) {
+      toast.error('Share failed.')
+      console.error(error)
+    }
+  }
+
   const handleDownload = () => {
     if (!consolidated) return
+    const extension = outputFormat === 'markdown' ? 'md' : outputFormat === 'json' ? 'json' : 'txt'
+    const fileBase = slugify(sessionName || sourceApp || 'ghostwriter-vault')
     const blob = new Blob([consolidated], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'ghostwriter-vault.txt'
+    link.download = `${fileBase}.${extension}`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -460,6 +497,35 @@ export function IOSCapture() {
       setMetaLoading(false)
     }
   }
+
+  const chunks = useMemo(() => {
+    if (!consolidated) return []
+    if (outputFormat === 'json') return [consolidated]
+    if (chunkSize <= 0) return [consolidated]
+    const paragraphs = consolidated.split(/\n\s*\n/).filter(Boolean)
+    const nextChunks: string[] = []
+    let current = ''
+
+    for (const paragraph of paragraphs) {
+      const candidate = current ? `${current}\n\n${paragraph}` : paragraph
+      if (candidate.length > chunkSize && current) {
+        nextChunks.push(current)
+        current = paragraph
+      } else {
+        current = candidate
+      }
+    }
+
+    if (current) {
+      nextChunks.push(current)
+    }
+
+    return nextChunks.length ? nextChunks : [consolidated]
+  }, [consolidated, chunkSize, outputFormat])
+
+  useEffect(() => {
+    setChunkIndex(0)
+  }, [consolidated, chunkSize, outputFormat])
 
   const runOcr = useCallback(async () => {
     if (!canRun) return
@@ -1256,6 +1322,14 @@ export function IOSCapture() {
                 <Copy size={16} className="mr-1" />
                 Copy
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleShare(consolidated)}
+                disabled={!consolidated}
+              >
+                <ShareNetwork size={16} className="mr-1" />
+                Share
+              </Button>
               <Button variant="outline" onClick={handleDownload} disabled={!consolidated}>
                 <DownloadSimple size={16} className="mr-1" />
                 Download
@@ -1272,6 +1346,72 @@ export function IOSCapture() {
             <Badge variant="outline">Noise {summary.skippedNoise}</Badge>
             <Badge variant="outline">Role tags {summary.roleTagged}</Badge>
           </div>
+          {outputFormat !== 'json' && chunks.length > 1 && (
+            <div className="rounded-lg border p-3 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-medium">
+                  Chunk {chunkIndex + 1} / {chunks.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={chunkIndex === 0}
+                    onClick={() => setChunkIndex((prev) => Math.max(0, prev - 1))}
+                  >
+                    <CaretLeft size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={chunkIndex === chunks.length - 1}
+                    onClick={() => setChunkIndex((prev) => Math.min(chunks.length - 1, prev + 1))}
+                  >
+                    <CaretRight size={14} />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Chunk size</p>
+                  <Input
+                    type="number"
+                    min={500}
+                    max={20000}
+                    value={chunkSize}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setChunkSize(Number.isFinite(next) ? Math.max(500, next) : 3000)
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Chunk actions</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCopyChunk(chunks[chunkIndex])}
+                    >
+                      <Copy size={14} />
+                      Copy chunk
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleShare(chunks[chunkIndex])}
+                    >
+                      <ShareNetwork size={14} />
+                      Share chunk
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {chunks[chunkIndex]?.length ?? 0} characters
+                </div>
+              </div>
+            </div>
+          )}
           <Textarea
             value={consolidated}
             readOnly
