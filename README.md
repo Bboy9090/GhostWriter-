@@ -149,6 +149,15 @@ without manual copy/paste.
 Deploy to a host like Vercel or Netlify, then open the URL on your iPhone and
 Add to Home Screen.
 
+## Native iOS (SwiftUI + Vision OCR)
+
+If you want a full native build, see the `ios-native/` folder. It includes:
+- SwiftUI app with PhotosPicker (screenshots + recordings)
+- Vision OCR on-device
+- Dedupe, segmentation, and export formatting
+
+Build steps are in `ios-native/README.md`.
+
 1. Take consecutive screenshots while scrolling your conversation, or record a screen video.
 2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording.
 3. If using a recording, tune frame interval + motion delta for best results.
