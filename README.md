@@ -130,6 +130,25 @@ iOS does not allow apps to read other apps in real time. For iPhone 15, GhostWri
 uses a screenshot-first workflow so you can grab long ChatGPT or Gemini threads
 without manual copy/paste.
 
+## Get GhostWriter on your phone (now)
+
+### Option A: Local network (fastest)
+1. Run the app on your computer:
+   ```bash
+   npm install
+   npm run dev:host
+   ```
+2. Find your local IP (example: 192.168.1.42).
+3. On your iPhone, open:
+   ```
+   http://192.168.1.42:5173
+   ```
+4. Tap Share → Add to Home Screen for a full-screen app.
+
+### Option B: Cloud deploy (anywhere)
+Deploy to a host like Vercel or Netlify, then open the URL on your iPhone and
+Add to Home Screen.
+
 1. Take consecutive screenshots while scrolling your conversation, or record a screen video.
 2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording.
 3. If using a recording, tune frame interval + motion delta for best results.

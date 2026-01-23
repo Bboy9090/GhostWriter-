@@ -1,0 +1,22 @@
+{
+  "name": "GhostWriter",
+  "short_name": "GhostWriter",
+  "description": "Stealth screen text extraction and vault capture.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1b1f",
+  "theme_color": "#0b1b1f",
+  "icons": [
+    {
+      "src": "/ghostwriter-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/ghostwriter-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
