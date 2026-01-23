@@ -146,3 +146,4 @@ Pro tips:
 - JSON output is ready to sync into your vault.
 - Share uses the iOS share sheet for Notes or Files.
 - Chunking helps split giant threads into bite-sized shares.
+- Use Image Enhance + Contrast to boost OCR on low-contrast screenshots.

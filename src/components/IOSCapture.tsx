@@ -141,6 +141,10 @@ function slugify(value: string) {
   return cleaned || 'ghostwriter-vault'
 }
 
+function clampChannel(value: number) {
+  return Math.min(255, Math.max(0, value))
+}
+
 function formatParagraph(paragraph: string, format: OutputFormat) {
   if (format !== 'markdown') return paragraph
   if (paragraph.startsWith('User:')) {
@@ -222,6 +226,70 @@ function formatOutput({
   })
 
   return lines.join('\n').trim()
+}
+
+async function loadImageToCanvas(file: File, maxWidth: number) {
+  const bitmap = await createImageBitmap(file)
+  const scale = Math.min(1, maxWidth / bitmap.width)
+  const width = Math.max(1, Math.floor(bitmap.width * scale))
+  const height = Math.max(1, Math.floor(bitmap.height * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) {
+    throw new Error('Canvas not available for image processing.')
+  }
+  ctx.drawImage(bitmap, 0, 0, width, height)
+  bitmap.close?.()
+  return { canvas, ctx, width, height }
+}
+
+function applyEnhancements(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  {
+    enableEnhance,
+    grayscale,
+    contrast
+  }: {
+    enableEnhance: boolean
+    grayscale: boolean
+    contrast: number
+  }
+) {
+  if (!enableEnhance && !grayscale) return
+
+  const imageData = ctx.getImageData(0, 0, width, height)
+  const data = imageData.data
+  const boundedContrast = Math.min(100, Math.max(-100, contrast))
+  const factor = (259 * (boundedContrast + 255)) / (255 * (259 - boundedContrast))
+
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i]
+    let g = data[i + 1]
+    let b = data[i + 2]
+
+    if (grayscale) {
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+      r = luma
+      g = luma
+      b = luma
+    }
+
+    if (enableEnhance) {
+      r = factor * (r - 128) + 128
+      g = factor * (g - 128) + 128
+      b = factor * (b - 128) + 128
+    }
+
+    data[i] = clampChannel(r)
+    data[i + 1] = clampChannel(g)
+    data[i + 2] = clampChannel(b)
+  }
+
+  ctx.putImageData(imageData, 0, 0)
 }
 
 function sortImageEntries(
@@ -322,6 +390,10 @@ export function IOSCapture() {
   const [includeSegmentTimestamps, setIncludeSegmentTimestamps] = useState(true)
   const [chunkSize, setChunkSize] = useState(3000)
   const [chunkIndex, setChunkIndex] = useState(0)
+  const [enhanceEnabled, setEnhanceEnabled] = useState(true)
+  const [grayscaleEnabled, setGrayscaleEnabled] = useState(true)
+  const [contrastBoost, setContrastBoost] = useState(20)
+  const [imageMaxWidth, setImageMaxWidth] = useState(1600)
   const [summary, setSummary] = useState({
     processed: 0,
     emitted: 0,
@@ -676,22 +748,28 @@ export function IOSCapture() {
           const entry = localImageEntries[index]
           const file = entry.file
           setCurrentFile(file.name)
-          const { data } = await createdWorker.recognize(file)
+          const { canvas, ctx, width, height } = await loadImageToCanvas(file, imageMaxWidth)
+          applyEnhancements(ctx, width, height, {
+            enableEnhance: enhanceEnabled,
+            grayscale: grayscaleEnabled,
+            contrast: contrastBoost
+          })
+          const { data } = await createdWorker.recognize(canvas)
           const rawText = (data.text ?? '').trim()
           const capturedAt = entry.timestamp
             ? new Date(entry.timestamp).toLocaleString()
             : new Date(file.lastModified).toLocaleString()
 
           if (autoSegmentEnabled && entry.timestamp && lastCaptureTimestamp !== null) {
-              const gapMinutes = (entry.timestamp - lastCaptureTimestamp) / 60000
-              if (gapMinutes >= segmentGapMinutes) {
+            const gapMinutes = (entry.timestamp - lastCaptureTimestamp) / 60000
+            if (gapMinutes >= segmentGapMinutes) {
               startSegment(capturedAt)
-              }
             }
+          }
 
-            if (entry.timestamp) {
-              lastCaptureTimestamp = entry.timestamp
-            }
+          if (entry.timestamp) {
+            lastCaptureTimestamp = entry.timestamp
+          }
           ensureSegment(capturedAt)
           ingestParagraphs(
             rawText,
@@ -728,9 +806,9 @@ export function IOSCapture() {
         const totalFrames = Math.min(estimatedFrames, Math.max(1, maxFrames))
 
         const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })
         const motionCanvas = document.createElement('canvas')
-        const motionCtx = motionCanvas.getContext('2d')
+        const motionCtx = motionCanvas.getContext('2d', { willReadFrequently: true })
         if (!ctx || !motionCtx) {
           throw new Error('Canvas unavailable for video processing.')
         }
@@ -754,6 +832,11 @@ export function IOSCapture() {
           canvas.width = width
           canvas.height = height
           ctx.drawImage(video, 0, 0, width, height)
+          applyEnhancements(ctx, width, height, {
+            enableEnhance: enhanceEnabled,
+            grayscale: grayscaleEnabled,
+            contrast: contrastBoost
+          })
 
           motionCanvas.width = Math.max(1, Math.floor(width / MOTION_SCALE))
           motionCanvas.height = Math.max(1, Math.floor(height / MOTION_SCALE))
@@ -843,6 +926,7 @@ export function IOSCapture() {
     sortMode,
     maxFrames,
     maxWidth,
+    imageMaxWidth,
     minChars,
     sampleStep,
     sessionName,
@@ -861,7 +945,10 @@ export function IOSCapture() {
     outputFormat,
     autoHeadingEnabled,
     headingWordCount,
-    includeSegmentTimestamps
+    includeSegmentTimestamps,
+    enhanceEnabled,
+    grayscaleEnabled,
+    contrastBoost
   ])
 
   return (
@@ -1179,6 +1266,65 @@ export function IOSCapture() {
                 onChange={(event) => {
                   const next = Number(event.target.value)
                   setDedupeWindow(Number.isFinite(next) ? Math.max(1, next) : DEDUPE_WINDOW)
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Image enhance</p>
+                <p className="text-xs text-muted-foreground">Boost OCR clarity</p>
+              </div>
+              <Switch checked={enhanceEnabled} onCheckedChange={setEnhanceEnabled} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Grayscale</p>
+                <p className="text-xs text-muted-foreground">Reduce color noise</p>
+              </div>
+              <Switch checked={grayscaleEnabled} onCheckedChange={setGrayscaleEnabled} />
+            </div>
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Contrast</p>
+              <Input
+                type="number"
+                min={-30}
+                max={80}
+                value={contrastBoost}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setContrastBoost(Number.isFinite(next) ? Math.min(80, Math.max(-30, next)) : 20)
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Image max width</p>
+              <Input
+                type="number"
+                min={720}
+                max={2400}
+                value={imageMaxWidth}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setImageMaxWidth(Number.isFinite(next) ? Math.max(720, next) : 1600)
+                }}
+              />
+            </div>
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">Video max width</p>
+              <Input
+                type="number"
+                min={480}
+                max={1920}
+                value={maxWidth}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  setMaxWidth(Number.isFinite(next) ? next : 1280)
                 }}
               />
             </div>
