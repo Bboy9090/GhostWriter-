@@ -10,6 +10,8 @@ import { Switch } from './components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Toaster } from './components/ui/sonner'
 import { IOSCapture } from './components/IOSCapture'
+import { FloatingPortal } from './components/FloatingPortal'
+import { GodModeExtractor } from './components/GodModeExtractor'
 import { toast } from 'sonner'
 import {
   Browser,
@@ -199,6 +201,10 @@ function App() {
     })
   }
 
+  const handlePortalToggle = (active: boolean) => {
+    setPortalActive(active)
+  }
+
   const toggleVault = () => {
     setVaultUnlocked((prev) => {
       const next = !prev
@@ -210,6 +216,18 @@ function App() {
   return (
     <>
       <Toaster />
+
+      {/* Floating Portal Toggle */}
+      <FloatingPortal
+        isActive={portalActive}
+        onToggle={handlePortalToggle}
+        onOpenVault={() => {
+          setActiveTab('vault')
+          // Scroll to top smoothly
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
+      />
+
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
           <div className="container mx-auto px-4 py-4">
@@ -307,9 +325,13 @@ function App() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-            <TabsList className="grid w-full max-w-4xl grid-cols-6">
+            <TabsList className="grid w-full max-w-4xl grid-cols-7">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="portal">Portal</TabsTrigger>
+              <TabsTrigger value="extractor" className="gap-1.5">
+                <Sparkle size={16} />
+                God Mode
+              </TabsTrigger>
               <TabsTrigger value="vault">Vault</TabsTrigger>
               <TabsTrigger value="search">Search</TabsTrigger>
               <TabsTrigger value="ios" className="gap-1.5">
@@ -456,6 +478,10 @@ function App() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="extractor" className="mt-6 space-y-6">
+              <GodModeExtractor />
             </TabsContent>
 
             <TabsContent value="vault" className="mt-6 space-y-6">

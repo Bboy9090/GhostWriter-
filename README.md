@@ -1,37 +1,48 @@
-# GhostWriter | The Enterprise-Grade Stealth Extraction Stack
+<div align="center">
 
-GhostWriter is a world-class, real-time contextual data pipeline designed to portal text from a mobile screen directly into an AI-powered semantic vault. Built for the 2026 tech landscape, it leverages on-device NPUs for OCR and LLM healing, ensuring that what you see is what you remember, word for word and paragraph for paragraph.
+# 👻 GhostWriter
+
+**The Enterprise-Grade Stealth Extraction Stack**
+
+[![CI](https://github.com/your-username/GhostWriter-/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/GhostWriter-/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.2-purple)](https://vitejs.dev/)
+
+*World-class, real-time contextual data pipeline designed to portal text from mobile screens directly into an AI-powered semantic vault.*
+
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+</div>
+
+---
+
+## 🎯 Overview
+
+GhostWriter is a cutting-edge solution for extracting and storing text from mobile screens with enterprise-grade precision. Built for the 2026 tech landscape, it leverages on-device NPUs for OCR and LLM healing, ensuring that what you see is what you remember, word for word and paragraph for paragraph.
+
+### Why GhostWriter?
+
+- 🔒 **Privacy First**: All processing happens on-device; raw images never leave your device
+- ⚡ **Real-time**: Low-latency extraction with visual delta deduplication
+- 🧠 **AI-Powered**: Semantic search with zero-keyword queries
+- 📱 **Cross-Platform**: Web, iOS, and Android support
+- 🏗️ **Enterprise Ready**: Production-grade architecture and tooling
 
 ## 🏗 System Architecture
 
 GhostWriter follows a distributed intelligence model, prioritizing low-latency extraction and high-fidelity storage.
 
 | Layer | Component | Technology | Role |
-|---|---|---|---|
-| Edge | Mobile Portal | Kotlin / MediaProjection | Real-time screen buffer capture (5-10 FPS). |
-| Intelligence | The Healer | ML Kit + MediaPipe | On-device OCR and Gemma 2B text reconstruction. |
-| Transport | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data synchronization. |
-| Storage | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent memory. |
-| Search | The Oracle | Hybrid RRF Search | AI-driven concept-based retrieval. |
+|-------|-----------|------------|------|
+| **Edge** | Mobile Portal | Kotlin / MediaProjection | Real-time screen buffer capture (5-10 FPS) |
+| **Intelligence** | The Healer | ML Kit + MediaPipe | On-device OCR and Gemma 2B text reconstruction |
+| **Transport** | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data synchronization |
+| **Storage** | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent memory |
+| **Search** | The Oracle | Hybrid RRF Search | AI-driven concept-based retrieval |
 
-## 📂 Project Structure
-
-```text
-ghostwriter/
-├── mobile-android/           # Kotlin/Jetpack Compose Portal
-│   ├── features/portal/      # MediaProjection & Foreground Service
-│   ├── features/ocr/         # ML Kit Text Recognition Engine
-│   └── features/healer/      # MediaPipe/Gemma 2B Local Inference
-├── backend-go/               # High-concurrency Go API
-│   ├── internal/vault/       # pgvector & SQL Repository
-│   ├── internal/stream/      # WebSocket & Redis Pub/Sub
-│   └── cmd/api/              # Service Entry Point
-└── infra/                    # Deployment & Orchestration
-    ├── docker-compose.yml    # Full-stack Local Dev Environment
-    └── k8s/                  # Kubernetes Production Manifests
-```
-
-Note: This repository currently focuses on the GhostWriter portal UI and product specification. The mobile and backend folders above describe the target stack layout. A starter docker-compose.yml is included at the repo root for local vault services.
+> **Note**: This repository currently focuses on the GhostWriter portal UI and product specification. The mobile and backend folders describe the target stack layout. A starter `docker-compose.yml` is included at the repo root for local vault services.
 
 ## ⚡ Key Features
 
@@ -43,135 +54,302 @@ GhostWriter does not waste resources. It uses a Visual Delta Check to monitor sc
 
 Utilizing pgvector, the Vault stores data as high-dimensional vectors. This enables zero-keyword search.
 
-Query: "That time I was looking at repair parts for a 2006 black MacBook."
+**Example Query**: *"That time I was looking at repair parts for a 2006 black MacBook."*
 
-Result: GhostWriter finds the specific forum post you scrolled past, even if the exact phrase "repair parts" was never captured, because the AI understands intent.
+**Result**: GhostWriter finds the specific forum post you scrolled past, even if the exact phrase "repair parts" was never captured, because the AI understands intent.
 
 ### 3. Hybrid RRF Search
 
 The search engine merges BM25 lexical search (exact part numbers or names) with vector similarity (concepts and intent) using Reciprocal Rank Fusion, providing a single best list.
 
+### 4. Cross-Platform Support
+
+- **Web**: Progressive Web App (PWA) with offline support
+- **iOS**: Native SwiftUI app with Vision OCR
+- **Android**: Kotlin/Jetpack Compose (planned)
+
 ## 🔒 Security & Stealth Protocol
 
-- Privacy First: Raw screen images are processed in RAM and discarded instantly. No screenshots are saved to the device gallery.
-- On-Device Healing: Text cleanup happens locally on the phone NPU.
-- Encrypted Sync: Data is transmitted via TLS-encrypted WebSockets to your private vault.
-- Unchained Mode: Optional root/LSPosed module to strip FLAG_SECURE, allowing extraction from restricted apps.
+- **Privacy First**: Raw screen images are processed in RAM and discarded instantly. No screenshots are saved to the device gallery.
+- **On-Device Healing**: Text cleanup happens locally on the phone NPU.
+- **Encrypted Sync**: Data is transmitted via TLS-encrypted WebSockets to your private vault.
+- **Unchained Mode**: Optional root/LSPosed module to strip FLAG_SECURE, allowing extraction from restricted apps.
 
 ## 🚀 Quick Start
 
-### 1. Spin up the Vault
+### Prerequisites
 
+- Node.js 20+ and npm
+- Docker and Docker Compose (for vault services)
+- Git
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/GhostWriter-.git
+   cd GhostWriter-
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Spin up the Vault** (optional, for full-stack testing):
+   ```bash
+   docker-compose up -d
+   ```
+
+### 🖥️ Automatic Screen Capture Setup
+
+GhostWriter supports automatic screen capture on **all platforms**:
+
+#### Quick Start - Auto-Detect Platform
 ```bash
-docker-compose up -d
+# Automatically detects and starts capture for your platform
+npm run capture:all
+
+# Continuous watch mode
+npm run capture:all -- --watch
 ```
 
-This initializes the Postgres database with the pgvector extension and starts the Go ingestion API.
+#### Platform-Specific Commands
 
-### 2. Initialize the Portal
+**Windows/Mac/Linux Desktop:**
+```bash
+npm run ocr:desktop          # One-time capture
+npm run ocr:desktop:watch    # Continuous capture
+```
 
-1. Build the `mobile-android` project.
-2. Grant System Alert Window (Overlay) and Media Projection permissions.
-3. Tap the floating Ghost icon to open the portal.
+**Android (via ADB):**
+```bash
+# Connect device via USB, then:
+npm run ocr:live -- --interval 750
+```
 
-### 3. Scroll & Sync
+**iOS:**
+- Use the web UI to upload screenshots
+- See `scripts/PLATFORM_SETUP.md` for details
 
-Open any app (browser, social media, PDF) and start scrolling. The text teleports into your Vault in real time.
+📖 **Full setup guide:** See `scripts/PLATFORM_SETUP.md` for detailed platform-specific instructions.
 
-Built for modders, makers, and reflectors. GhostWriter turns digital consumption into a permanent, searchable intelligence asset.
-
-## OCR Test Harness
-
-The repository includes a real OCR harness to validate captured text output against
-ground truth from live device frames.
+### Development
 
 ```bash
+# Start dev server
+npm run dev
+
+# Start dev server with network access (for mobile testing)
+npm run dev:host
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run linter
+npm run lint
+
+# Run tests
+npm test
+```
+
+## 📱 Mobile Setup
+
+### iPhone - Floating Portal
+
+The floating portal works perfectly on iPhone! Just:
+
+1. **Start the server**:
+   ```bash
+   npm run dev:host
+   ```
+
+2. **On iPhone Safari**: Open `http://YOUR_IP:5173`
+
+3. **Add to Home Screen**: Tap Share → Add to Home Screen
+
+4. **Use the Portal**:
+   - Floating ghost logo appears on screen
+   - **Tap** to toggle capture on/off
+   - **Drag** to move anywhere
+   - Green dot = active, Gray dot = paused
+
+📖 **Full iPhone guide**: See `IPHONE_PORTAL_SETUP.md`
+
+### Option A: Local Network (Fastest)
+
+1. Run the app on your computer:
+   ```bash
+   npm run dev:host
+   ```
+
+2. Find your local IP (example: `192.168.1.42`)
+
+3. On your iPhone, open:
+   ```
+   http://192.168.1.42:5173
+   ```
+
+4. Tap **Share → Add to Home Screen** for a full-screen app experience
+
+### Option B: Cloud Deploy (Vercel)
+
+GhostWriter is optimized for **Vercel** deployment:
+
+1. **Connect Repository**: Import your GitHub repo to Vercel
+2. **Auto-Configure**: Vercel auto-detects `vercel.json`
+3. **Set Environment Variables**: Add `VITE_API_URL` and others
+4. **Deploy**: Click deploy and you're live!
+
+📖 **Full deployment guide**: See `DEPLOYMENT.md`
+
+**Other Platforms**: Also works on Netlify, Render, Railway, or any static host.
+
+## 📂 Project Structure
+
+```
+GhostWriter-/
+├── src/                    # Source code
+│   ├── components/         # React components
+│   │   ├── ui/            # Reusable UI components
+│   │   └── ...            # Feature components
+│   ├── lib/               # Utilities and helpers
+│   ├── hooks/             # Custom React hooks
+│   └── styles/            # Global styles
+├── scripts/               # Build and utility scripts
+│   └── ocr-adapters/      # OCR adapter implementations
+├── ios-native/            # Native iOS Swift code
+├── tests/                 # Test files
+├── public/                # Static assets
+└── .github/               # GitHub workflows and templates
+```
+
+## 🧪 OCR Test Harness
+
+The repository includes a comprehensive OCR harness to validate captured text output against ground truth from live device frames.
+
+### Basic Testing
+
+```bash
+# Run OCR tests
 npm run ocr:test
+
+# Test with specific adapter
+npm run ocr:test:adapter -- --adapter tesseract
 ```
 
-Capture a real frame from a connected device:
+### Capture Workflow
 
 ```bash
+# Capture a frame from connected device
 npm run ocr:capture -- --id OCR-001 --name "Portal sample"
-```
 
-Populate the expected text file that was created, then re-run the harness.
-
-For real-time OCR from a connected device:
-
-```bash
+# Real-time OCR from connected device
 npm run ocr:live -- --interval 750 --duration 30000 --output ./ocr-live-log.txt
 ```
 
-Scrolling detection flags:
-- `--delta` motion threshold (default 0.012)
-- `--sample` pixel step for motion sampling (default 12)
-- `--dedupe` similarity threshold for duplicate suppression (default 0.88)
-- `--min-chars` minimum characters to log (default 20)
-- `--window` recent entries considered for dedupe (default 5)
-- `--region` crop region as x,y,width,height (optional)
-- `--json` emit structured logs
+### Advanced Options
 
-WebSocket streaming (real-time vault sync):
-- `--ws` WebSocket URL (e.g. ws://localhost:8080/portal/sync)
-- `--token` bearer token if required
-- `--device` device identifier for the payload
-- `--source` source app label
+- `--delta` - Motion threshold (default: 0.012)
+- `--sample` - Pixel step for motion sampling (default: 12)
+- `--dedupe` - Similarity threshold for duplicate suppression (default: 0.88)
+- `--min-chars` - Minimum characters to log (default: 20)
+- `--window` - Recent entries considered for dedupe (default: 5)
+- `--region` - Crop region as x,y,width,height (optional)
+- `--json` - Emit structured JSON logs
 
-To plug in another real OCR adapter, implement scripts/ocr-adapters/<name>.mjs and run:
+### WebSocket Streaming
+
+For real-time vault sync:
+
+```bash
+npm run ocr:live -- \
+  --ws ws://localhost:8080/portal/sync \
+  --token YOUR_TOKEN \
+  --device device-001 \
+  --source "Chrome Browser"
+```
+
+### Custom OCR Adapters
+
+To plug in another OCR adapter, implement `scripts/ocr-adapters/<name>.mjs` and run:
 
 ```bash
 node scripts/ocr-harness.mjs --adapter <name>
 ```
 
-## iPhone Capture Workflow
+## 📱 Native iOS (SwiftUI + Vision OCR)
 
-iOS does not allow apps to read other apps in real time. For iPhone 15, GhostWriter
-uses a screenshot-first workflow so you can grab long ChatGPT or Gemini threads
-without manual copy/paste.
+For a full native iOS experience, see the `ios-native/` folder. It includes:
 
-## Get GhostWriter on your phone (now)
-
-### Option A: Local network (fastest)
-1. Run the app on your computer:
-   ```bash
-   npm install
-   npm run dev:host
-   ```
-2. Find your local IP (example: 192.168.1.42).
-3. On your iPhone, open:
-   ```
-   http://192.168.1.42:5173
-   ```
-4. Tap Share → Add to Home Screen for a full-screen app.
-
-### Option B: Cloud deploy (anywhere)
-Deploy to a host like Vercel or Netlify, then open the URL on your iPhone and
-Add to Home Screen.
-
-## Native iOS (SwiftUI + Vision OCR)
-
-If you want a full native build, see the `ios-native/` folder. It includes:
 - SwiftUI app with PhotosPicker (screenshots + recordings)
 - Vision OCR on-device
 - Dedupe, segmentation, and export formatting
 
 Build steps are in `ios-native/README.md`.
 
-1. Take consecutive screenshots while scrolling your conversation, or record a screen video.
-2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording.
-3. If using a recording, tune frame interval + motion delta for best results.
-4. Run OCR and let GhostWriter dedupe paragraphs with line-heal cleanup.
-5. Copy or download the consolidated thread.
+### iOS Workflow
 
-Pro tips:
-- Use EXIF auto-sort to keep screenshots in the exact order you captured them.
-- If a recording is long, increase frame interval to reduce processing time.
-- Add a session name so the exported note is easy to find later.
-- Enable noise filtering to drop UI chrome like "Regenerate response."
-- If your thread includes speaker labels, enable role normalization.
-- Markdown output adds headings and bold speaker labels.
-- JSON output is ready to sync into your vault.
-- Share uses the iOS share sheet for Notes or Files.
-- Chunking helps split giant threads into bite-sized shares.
-- Use Image Enhance + Contrast to boost OCR on low-contrast screenshots.
+1. Take consecutive screenshots while scrolling your conversation, or record a screen video
+2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording
+3. If using a recording, tune frame interval + motion delta for best results
+4. Run OCR and let GhostWriter dedupe paragraphs with line-heal cleanup
+5. Copy or download the consolidated thread
+
+### Pro Tips
+
+- ✅ Use EXIF auto-sort to keep screenshots in the exact order you captured them
+- ✅ If a recording is long, increase frame interval to reduce processing time
+- ✅ Add a session name so the exported note is easy to find later
+- ✅ Enable noise filtering to drop UI chrome like "Regenerate response"
+- ✅ If your thread includes speaker labels, enable role normalization
+- ✅ Markdown output adds headings and bold speaker labels
+- ✅ JSON output is ready to sync into your vault
+- ✅ Share uses the iOS share sheet for Notes or Files
+- ✅ Chunking helps split giant threads into bite-sized shares
+- ✅ Use Image Enhance + Contrast to boost OCR on low-contrast screenshots
+
+## 📚 Documentation
+
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute to GhostWriter
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
+- [Security Policy](SECURITY.md) - Security reporting
+- [Product Requirements](PRD.md) - Product specification
+- [OCR Test Cases](OCR_TEST_CASES.md) - OCR testing documentation
+- [iOS Native README](ios-native/README.md) - iOS development guide
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+Built for modders, makers, and reflectors. GhostWriter turns digital consumption into a permanent, searchable intelligence asset.
+
+---
+
+<div align="center">
+
+**Made with ❤️ by the GhostWriter team**
+
+[Report Bug](https://github.com/your-username/GhostWriter-/issues) • [Request Feature](https://github.com/your-username/GhostWriter-/issues) • [Documentation](https://github.com/your-username/GhostWriter-/wiki)
+
+</div>
