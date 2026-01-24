@@ -1,0 +1,52 @@
+services:
+  vault-db:
+    image: pgvector/pgvector:pg17
+    container_name: ghostwriter-db
+    restart: always
+    environment:
+      POSTGRES_USER: bobby_admin
+      POSTGRES_PASSWORD: bronx_password
+      POSTGRES_DB: ghostwriter_vault
+    ports:
+      - "5432:5432"
+    volumes:
+      - ghostwriter_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bobby_admin -d ghostwriter_vault"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ghost-stream:
+    image: redis:7-alpine
+    container_name: ghostwriter-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  ghost-api:
+    build:
+      context: ./backend-go
+      dockerfile: Dockerfile
+    container_name: ghostwriter-api
+    restart: always
+    depends_on:
+      vault-db:
+        condition: service_healthy
+      ghost-stream:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: postgres://bobby_admin:bronx_password@vault-db:5432/ghostwriter_vault?sslmode=disable
+      REDIS_URL: ghost-stream:6379
+      JWT_SECRET: scorpio_rising_secret_key
+      PORT: 8080
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  ghostwriter_data:

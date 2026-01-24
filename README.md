@@ -1,468 +1,355 @@
-# 🔒 Card Command Center
+<div align="center">
 
-A **security-focused** web application with **automatic cloud backup** for managing payment card metadata and tracking spending patterns without ever storing sensitive information like full card numbers or CVV codes.
+# 👻 GhostWriter
 
-## ⚠️ Security Philosophy
+**The Enterprise-Grade Stealth Extraction Stack**
 
-**What This App Does:**
-- ✅ Stores safe metadata: nickname, bank, network, last 4 digits, expiry, tags, notes, and optional links
-- ✅ Tracks transaction history: amount, merchant, category, and date for spending insights
-- ✅ Uses SHA-256 hashed PIN authentication to protect access
-- ✅ Implements automatic session locking after 5 minutes of inactivity
-- ✅ Provides panic wipe functionality to instantly destroy all cloud data
-- ✅ Tracks failed login attempts and auto-wipes after 5 failures
-- ✅ **Automatically syncs all data to secure cloud storage in real-time**
-- ✅ **Works offline with automatic sync queue when reconnected**
-- ✅ **Accessible from any device with your PIN**
+[![CI](https://github.com/your-username/GhostWriter-/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/GhostWriter-/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.2-purple)](https://vitejs.dev/)
 
-**What This App Does NOT Do:**
-- ❌ Never stores or handles full card numbers
-- ❌ Never stores or handles CVV/CVC codes
-- ❌ Never shares your data with third parties
-- ❌ Never makes your data publicly accessible
+*World-class, real-time contextual data pipeline designed to portal text from mobile screens directly into an AI-powered semantic vault.*
 
-**Important:** This tool is designed for organizing card metadata and personal spending tracking only. Keep your actual full card numbers and CVVs in a proper password manager or secure vault.
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+</div>
 
 ---
 
-## 🚀 Running Locally
+## 🎯 Overview
 
-This is a React + TypeScript + Vite application that runs entirely in your browser.
+GhostWriter is a cutting-edge solution for extracting and storing text from mobile screens with enterprise-grade precision. Built for the 2026 tech landscape, it leverages on-device NPUs for OCR and LLM healing, ensuring that what you see is what you remember, word for word and paragraph for paragraph.
+
+### Why GhostWriter?
+
+- 🔒 **Privacy First**: All processing happens on-device; raw images never leave your device
+- ⚡ **Real-time**: Low-latency extraction with visual delta deduplication
+- 🧠 **AI-Powered**: Semantic search with zero-keyword queries
+- 📱 **Cross-Platform**: Web, iOS, and Android support
+- 🏗️ **Enterprise Ready**: Production-grade architecture and tooling
+
+## 🏗 System Architecture
+
+GhostWriter follows a distributed intelligence model, prioritizing low-latency extraction and high-fidelity storage.
+
+| Layer | Component | Technology | Role |
+|-------|-----------|------------|------|
+| **Edge** | Mobile Portal | Kotlin / MediaProjection | Real-time screen buffer capture (5-10 FPS) |
+| **Intelligence** | The Healer | ML Kit + MediaPipe | On-device OCR and Gemma 2B text reconstruction |
+| **Transport** | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data synchronization |
+| **Storage** | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent memory |
+| **Search** | The Oracle | Hybrid RRF Search | AI-driven concept-based retrieval |
+
+> **Note**: This repository currently focuses on the GhostWriter portal UI and product specification. The mobile and backend folders describe the target stack layout. A starter `docker-compose.yml` is included at the repo root for local vault services.
+
+## ⚡ Key Features
+
+### 1. Visual Delta Deduplication
+
+GhostWriter does not waste resources. It uses a Visual Delta Check to monitor screen movement. It only triggers the OCR engine when the screen layout changes by more than 2 percent, allowing for perfectly deduplicated captures during slow scrolls.
+
+### 2. Semantic Memory Vault
+
+Utilizing pgvector, the Vault stores data as high-dimensional vectors. This enables zero-keyword search.
+
+**Example Query**: *"That time I was looking at repair parts for a 2006 black MacBook."*
+
+**Result**: GhostWriter finds the specific forum post you scrolled past, even if the exact phrase "repair parts" was never captured, because the AI understands intent.
+
+### 3. Hybrid RRF Search
+
+The search engine merges BM25 lexical search (exact part numbers or names) with vector similarity (concepts and intent) using Reciprocal Rank Fusion, providing a single best list.
+
+### 4. Cross-Platform Support
+
+- **Web**: Progressive Web App (PWA) with offline support
+- **iOS**: Native SwiftUI app with Vision OCR
+- **Android**: Kotlin/Jetpack Compose (planned)
+
+## 🔒 Security & Stealth Protocol
+
+- **Privacy First**: Raw screen images are processed in RAM and discarded instantly. No screenshots are saved to the device gallery.
+- **On-Device Healing**: Text cleanup happens locally on the phone NPU.
+- **Encrypted Sync**: Data is transmitted via TLS-encrypted WebSockets to your private vault.
+- **Unchained Mode**: Optional root/LSPosed module to strip FLAG_SECURE, allowing extraction from restricted apps.
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- npm (comes with Node.js)
 
-### Installation & Running
+- Node.js 20+ and npm
+- Docker and Docker Compose (for vault services)
+- Git
 
-1. **Install dependencies:**
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/GhostWriter-.git
+   cd GhostWriter-
+   ```
+
+2. **Install dependencies**:
    ```bash
    npm install
    ```
 
-2. **Start the development server:**
+3. **Start the development server**:
    ```bash
    npm run dev
    ```
 
-3. **Open in browser:**
-   The app will be available at `http://localhost:5173` (or the port shown in your terminal)
+4. **Spin up the Vault** (optional, for full-stack testing):
+   ```bash
+   docker-compose up -d
+   ```
 
-### Building for Production
+### 🖥️ Automatic Screen Capture Setup
+
+GhostWriter supports automatic screen capture on **all platforms**:
+
+#### Quick Start - Auto-Detect Platform
+```bash
+# Automatically detects and starts capture for your platform
+npm run capture:all
+
+# Continuous watch mode
+npm run capture:all -- --watch
+```
+
+#### Platform-Specific Commands
+
+**Windows/Mac/Linux Desktop:**
+```bash
+npm run ocr:desktop          # One-time capture
+npm run ocr:desktop:watch    # Continuous capture
+```
+
+**Android (via ADB):**
+```bash
+# Connect device via USB, then:
+npm run ocr:live -- --interval 750
+```
+
+**iOS:**
+- Use the web UI to upload screenshots
+- See `scripts/PLATFORM_SETUP.md` for details
+
+📖 **Full setup guide:** See `scripts/PLATFORM_SETUP.md` for detailed platform-specific instructions.
+
+### Development
 
 ```bash
+# Start dev server
+npm run dev
+
+# Start dev server with network access (for mobile testing)
+npm run dev:host
+
+# Build for production
 npm run build
+
+# Preview production build
+npm run preview
+
+# Run linter
+npm run lint
+
+# Run tests
+npm test
 ```
 
-The optimized production files will be in the `dist/` directory. You can serve these files with any static file server.
+## 📱 Mobile Setup
 
----
+### iPhone - Floating Portal
 
-## 🔐 How Security Features Work
+The floating portal works perfectly on iPhone! Just:
 
-### PIN Lock System
+1. **Start the server**:
+   ```bash
+   npm run dev:host
+   ```
 
-**First Run:**
-- On first launch, you'll be prompted to create a 4-8 digit PIN
-- Your PIN is immediately hashed using SHA-256 before storage
-- The raw PIN is never stored anywhere
-- You must confirm your PIN to prevent typos
+2. **On iPhone Safari**: Open `http://YOUR_IP:5173`
 
-**Subsequent Access:**
-- Enter your PIN to unlock the app
-- The app hashes your input and compares it to the stored hash
-- Incorrect PINs are counted and tracked
+3. **Add to Home Screen**: Tap Share → Add to Home Screen
 
-**Failed Attempts:**
-- Each incorrect PIN increments a failure counter
-- After 5 failed attempts, the app automatically triggers a panic wipe
-- All local data is permanently erased
-- The app resets to first-run state
+4. **Use the Portal**:
+   - Floating ghost logo appears on screen
+   - **Tap** to toggle capture on/off
+   - **Drag** to move anywhere
+   - Green dot = active, Gray dot = paused
 
-**Lost PIN:**
-- There is no password recovery mechanism (by design)
-- If you forget your PIN, you must perform a panic wipe
-- This security measure prevents unauthorized access
+📖 **Full iPhone guide**: See `IPHONE_PORTAL_SETUP.md`
 
-### Inactivity Auto-Lock
+### Option A: Local Network (Fastest)
 
-- The app monitors mouse, keyboard, scroll, and click events
-- If no activity is detected for **5 minutes**, the app automatically locks
-- Your data remains intact when locked due to inactivity
-- Simply enter your PIN again to continue
+1. Run the app on your computer:
+   ```bash
+   npm run dev:host
+   ```
 
-**Adjusting the timeout:**
-Edit `src/lib/storage.ts` and change the `INACTIVITY_TIMEOUT` constant:
-```typescript
-export const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
+2. Find your local IP (example: `192.168.1.42`)
+
+3. On your iPhone, open:
+   ```
+   http://192.168.1.42:5173
+   ```
+
+4. Tap **Share → Add to Home Screen** for a full-screen app experience
+
+### Option B: Cloud Deploy (Vercel)
+
+GhostWriter is optimized for **Vercel** deployment:
+
+1. **Connect Repository**: Import your GitHub repo to Vercel
+2. **Auto-Configure**: Vercel auto-detects `vercel.json`
+3. **Set Environment Variables**: Add `VITE_API_URL` and others
+4. **Deploy**: Click deploy and you're live!
+
+📖 **Full deployment guide**: See `DEPLOYMENT.md`
+
+**Other Platforms**: Also works on Netlify, Render, Railway, or any static host.
+
+## 📂 Project Structure
+
+```
+GhostWriter-/
+├── src/                    # Source code
+│   ├── components/         # React components
+│   │   ├── ui/            # Reusable UI components
+│   │   └── ...            # Feature components
+│   ├── lib/               # Utilities and helpers
+│   ├── hooks/             # Custom React hooks
+│   └── styles/            # Global styles
+├── scripts/               # Build and utility scripts
+│   └── ocr-adapters/      # OCR adapter implementations
+├── ios-native/            # Native iOS Swift code
+├── tests/                 # Test files
+├── public/                # Static assets
+└── .github/               # GitHub workflows and templates
 ```
 
-### Panic Wipe / Self-Destruct
+## 🧪 OCR Test Harness
 
-**Automatic Trigger:**
-- Activates after 5 consecutive failed PIN attempts
-- Shows a 2-second warning before wiping
-- Cannot be cancelled once triggered
+The repository includes a comprehensive OCR harness to validate captured text output against ground truth from live device frames.
 
-**Manual Trigger:**
-1. Unlock the app normally
-2. Scroll to the bottom and expand the "Danger Zone" section
-3. Click "Panic Wipe"
-4. Type `DELETE` to confirm
-5. All data is immediately erased from cloud storage
+### Basic Testing
 
-**What Gets Wiped:**
-- All card metadata
-- All transaction history
-- PIN hash
-- Failed attempt counter
-- All cloud storage entries under the `cardCommandCenter.*` namespace
+```bash
+# Run OCR tests
+npm run ocr:test
 
-**After Wipe:**
-- The app reloads in first-run state
-- You must set a new PIN
-- Sample data is automatically loaded as a starting point
-- Previous data cannot be recovered
-
-**Adjusting max attempts:**
-Edit `src/lib/storage.ts` and change the `MAX_FAILED_ATTEMPTS` constant:
-```typescript
-export const MAX_FAILED_ATTEMPTS = 5
+# Test with specific adapter
+npm run ocr:test:adapter -- --adapter tesseract
 ```
 
----
+### Capture Workflow
 
-## ☁️ Cloud Backup & Sync
+```bash
+# Capture a frame from connected device
+npm run ocr:capture -- --id OCR-001 --name "Portal sample"
 
-### Automatic Cloud Backup
-
-**Real-Time Sync:**
-- Every card you add, edit, or delete is automatically saved to secure cloud storage
-- Every transaction is instantly synced to the cloud
-- No manual backup steps required
-- **Works offline** - changes are queued and automatically synced when you reconnect
-
-**Offline Mode:**
-- App automatically detects when you're offline
-- All changes are saved locally and queued for sync
-- Orange "Offline" badge shows in header with queued changes count
-- When you reconnect, all queued changes sync automatically
-- Toast notifications inform you of offline/online status changes
-
-**Reconnection Process:**
-1. Connection is restored (you'll see a "Connection restored" toast)
-2. App automatically syncs all queued changes
-3. Status badge shows "Syncing..." with animated cloud icon
-4. After completion, "All changes synced!" confirmation appears
-5. Badge returns to normal "Synced" state
-
-**Cross-Device Access:**
-- Access your cards and transactions from any device
-- Simply log in with your PIN
-- All your data syncs automatically
-- Offline changes on one device sync when that device reconnects
-
-**Sync Status:**
-- A badge in the header shows your current sync status:
-  - **Online**: Normal operation, changes sync immediately
-  - **Offline**: Changes queued for later sync (shows queue count)
-  - **Syncing**: Processing queued changes
-  - **Synced**: All data up to date (shows time since last sync)
-- Hover over the badge for more details
-
-**Data Security:**
-- Your data is encrypted and securely stored
-- Only you can access your data with your PIN
-- No one else, including administrators, can see your card metadata
-
-### Manual Export (Optional)
-
-**Export Local Copy:**
-- Navigate to the Data Management section
-- Click "Export Backup" to download a JSON file
-- Use for offline storage or importing to other systems
-- Exported files contain plain JSON (store securely)
-
-**Import from File:**
-- Click "Import Backup" and select a JSON file
-- Preview the data before importing
-- Choose to merge with existing data or replace all data
-- Imported data automatically syncs to cloud after import
-
----
-
-## 💳 Features
-
-### Card Management
-
-**Add Cards:**
-- Click "Add Card" button
-- Fill in metadata fields (all fields except full card number/CVV)
-- Required: label, bank, network, last 4 digits, expiration
-- Optional: tags, notes, source URL
-- Card automatically syncs to cloud
-
-**Edit Cards:**
-- Click the pencil icon on any card
-- Modify any field
-- Changes save immediately and sync to cloud
-
-**Delete Cards:**
-- Click the trash icon on any card
-- Confirm deletion in the browser prompt
-- Deletion is permanent and syncs to cloud (cannot be undone)
-
-### Usage Tracking & Spending Insights
-
-**Add Transactions:**
-- Switch to the "Insights" tab
-- Click "Add Transaction" button
-- Select a card from your active cards
-- Enter amount, date, merchant, and category
-- Optional: Add notes about the transaction
-
-**View Analytics:**
-- **Overview Stats:** Total spending, transaction count, average transaction size, most used card
-- **By Card:** See spending breakdown per card with percentages and transaction counts
-- **By Category:** Analyze spending across categories (Dining, Groceries, Shopping, Travel, etc.)
-- **Timeline:** Visual daily spending chart for the last 30 days
-- **Insights:** AI-powered insights about your spending patterns and trends
-- **Trend Comparison:** Compare current 30-day period vs previous 30 days
-
-**Categories Supported:**
-- Dining
-- Groceries
-- Shopping
-- Travel
-- Entertainment
-- Bills
-- Gas
-- Healthcare
-- Other
-
-### Search & Filtering
-
-**Search:**
-- Real-time text search across label, bank, network, last 4 digits, and notes
-- Type in the search box at the top of the Cards tab
-
-**Filters:**
-- **Status Filter:** All | Active | Frozen | Closed
-- **Tag Filter:** Filter by any usage tag (shopping, bills, travel, etc.)
-- **Sort Options:**
-  - Sort by Label (A-Z)
-  - Sort by Bank
-  - Sort by Expiration (soonest first)
-
-**Clear Filters:**
-- Click "Clear Filters" to reset all search and filter criteria
-
-### Card Metadata Model
-
-Each card stores the following information:
-
-```typescript
-{
-  id: "unique-identifier",           // Auto-generated
-  label: "Main Visa – Online Shopping", // Nickname/description
-  bank: "Chase",                       // Bank or issuer name
-  network: "Visa",                     // Visa | Mastercard | Amex | Discover | Other
-  last4: "1234",                       // Last 4 digits only
-  expMonth: "12",                      // Expiration month (MM)
-  expYear: "2028",                     // Expiration year (YYYY)
-  status: "active",                    // active | frozen | closed
-  usageTags: ["shopping", "primary"],  // Array of custom tags
-  notes: "Use this for Amazon...",     // Free-form notes
-  sourceUrl: "https://...",            // Optional link to bank page
-  createdAt: 1234567890                // Timestamp when card was added
-}
+# Real-time OCR from connected device
+npm run ocr:live -- --interval 750 --duration 30000 --output ./ocr-live-log.txt
 ```
 
-### Transaction Data Model
+### Advanced Options
 
-Each transaction stores the following information:
+- `--delta` - Motion threshold (default: 0.012)
+- `--sample` - Pixel step for motion sampling (default: 12)
+- `--dedupe` - Similarity threshold for duplicate suppression (default: 0.88)
+- `--min-chars` - Minimum characters to log (default: 20)
+- `--window` - Recent entries considered for dedupe (default: 5)
+- `--region` - Crop region as x,y,width,height (optional)
+- `--json` - Emit structured JSON logs
 
-```typescript
-{
-  id: "unique-identifier",      // Auto-generated
-  cardId: "card-id",             // References a card in your collection
-  amount: 42.50,                 // Transaction amount in dollars
-  merchant: "Amazon",            // Merchant name
-  category: "Shopping",          // Spending category
-  date: 1234567890,              // Transaction timestamp
-  notes: "Optional notes..."     // Additional details
-}
+### WebSocket Streaming
+
+For real-time vault sync:
+
+```bash
+npm run ocr:live -- \
+  --ws ws://localhost:8080/portal/sync \
+  --token YOUR_TOKEN \
+  --device device-001 \
+  --source "Chrome Browser"
 ```
 
-### Sample Data
+### Custom OCR Adapters
 
-On first run (or after a panic wipe), the app loads:
-- **8 sample cards** demonstrating different:
-  - Card networks (Visa, Mastercard, Amex, Discover)
-  - Statuses (active, frozen, closed)
-  - Usage tags (shopping, bills, travel, rewards, etc.)
-  - Card types (personal, business, backup)
-- **~300 sample transactions** spanning the last 90 days across various categories
+To plug in another OCR adapter, implement `scripts/ocr-adapters/<name>.mjs` and run:
 
-You can delete sample data and add your own, or modify it as needed.
+```bash
+node scripts/ocr-harness.mjs --adapter <name>
+```
 
----
+## 📱 Native iOS (SwiftUI + Vision OCR)
 
-## 🏗️ Code Architecture
+For a full native iOS experience, see the `ios-native/` folder. It includes:
 
-The codebase is modular and easy to customize:
+- SwiftUI app with PhotosPicker (screenshots + recordings)
+- Vision OCR on-device
+- Dedupe, segmentation, and export formatting
 
-### Key Files
+Build steps are in `ios-native/README.md`.
 
-**Storage & Security:**
-- `src/lib/storage.ts` - All cloud storage operations, PIN hashing, panic wipe logic
-- `src/lib/offline-sync.ts` - Offline detection and queued sync management
-- `src/lib/types.ts` - TypeScript interfaces for Card and AppSettings
+### iOS Workflow
 
-**Components:**
-- `src/components/LockScreen.tsx` - PIN entry, hash validation, failed attempt tracking
-- `src/components/CloudSyncStatus.tsx` - Real-time cloud sync status indicator
-- `src/components/OfflineIndicator.tsx` - Offline mode detection and queue status display
-- `src/components/CardItem.tsx` - Individual card display component
-- `src/components/CardForm.tsx` - Add/edit card modal form
-- `src/components/PanicWipeDialog.tsx` - Confirmation dialog for manual wipe
-- `src/components/StatsDashboard.tsx` - Spending analytics and insights dashboard
-- `src/components/UsageForm.tsx` - Add/edit transaction modal form
-- `src/components/BackupManager.tsx` - Export/import functionality for manual backups
-- `src/App.tsx` - Main app container with tabs, search, filters, and card list
+1. Take consecutive screenshots while scrolling your conversation, or record a screen video
+2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording
+3. If using a recording, tune frame interval + motion delta for best results
+4. Run OCR and let GhostWriter dedupe paragraphs with line-heal cleanup
+5. Copy or download the consolidated thread
 
-**Hooks:**
-- `src/hooks/use-offline-sync.ts` - React hook for offline sync status and operations
-- `src/hooks/use-mobile.ts` - Mobile device detection
+### Pro Tips
 
-**Styling:**
-- `src/index.css` - Custom color theme, fonts, and animations
-- `src/components/ui/*` - Shadcn UI component library (pre-installed)
+- ✅ Use EXIF auto-sort to keep screenshots in the exact order you captured them
+- ✅ If a recording is long, increase frame interval to reduce processing time
+- ✅ Add a session name so the exported note is easy to find later
+- ✅ Enable noise filtering to drop UI chrome like "Regenerate response"
+- ✅ If your thread includes speaker labels, enable role normalization
+- ✅ Markdown output adds headings and bold speaker labels
+- ✅ JSON output is ready to sync into your vault
+- ✅ Share uses the iOS share sheet for Notes or Files
+- ✅ Chunking helps split giant threads into bite-sized shares
+- ✅ Use Image Enhance + Contrast to boost OCR on low-contrast screenshots
 
-### Customization Points
+## 📚 Documentation
 
-**Change Inactivity Timeout:**
-`src/lib/storage.ts` → `INACTIVITY_TIMEOUT`
-
-**Change Max Failed Attempts:**
-`src/lib/storage.ts` → `MAX_FAILED_ATTEMPTS`
-
-**Modify Sample Data:**
-`src/lib/storage.ts` → `resetToSampleData()` and `initializeSampleUsageData()` functions
-
-**Add New Card Networks:**
-`src/lib/types.ts` → `CardNetwork` type
-
-**Add New Card Statuses:**
-`src/lib/types.ts` → `CardStatus` type
-
-**Customize Theme Colors:**
-`src/index.css` → `:root` CSS variables
-
----
-
-## 🎨 Design & UX
-
-**Typography:**
-- **Space Grotesk** - Primary font for UI elements
-- **JetBrains Mono** - Monospace font for card numbers and dates
-
-**Color Palette:**
-- Deep navy primary color for authority and trust
-- Vibrant cyan accent for interactive elements
-- Alert red for destructive actions
-- Secure green for success states
-
-**Animations:**
-- Smooth transitions between locked/unlocked states
-- Shake animation on incorrect PIN entry
-- Pulsing border on panic wipe confirmation
-- Hover effects on cards and buttons
-
----
-
-## 🛡️ Privacy & Data Storage
-
-**Where Data Lives:**
-- All data is stored in secure cloud storage provided by the Spark platform
-- Data is encrypted and only accessible with your PIN
-- Syncs automatically across all your devices
-- No third-party access to your data
-
-**Clearing Data:**
-- Manual: Use the Panic Wipe feature in the Danger Zone
-- Automatic: Triggered after 5 failed PIN attempts
-- Both methods permanently delete all cloud data
-
-**Switching Browsers/Devices:**
-- Data automatically syncs across all browsers and devices
-- Simply enter your PIN on any device to access your cards
-- Changes on one device instantly appear on all others
-
-**Export for Offline Backup:**
-- Use the Export Backup feature in Data Management
-- Download a JSON file of all your cards and transactions
-- Store this file securely offline as an additional backup
-- Import back anytime if needed
-
----
-
-## 🚨 Limitations & Important Notes
-
-1. **Cloud Storage:** Data is backed up to secure cloud storage and syncs across devices. Your PIN is required to access data.
-
-2. **Manual Export Available:** You can export your data to JSON files for offline backup or to import into other systems.
-
-3. **PIN Recovery:** If you forget your PIN, the only option is a panic wipe. Write down your PIN and store it securely offline.
-
-4. **Browser Compatibility:** Requires a modern browser with Web Crypto API support (all current browsers).
-
-5. **Not a Password Manager:** This tool is for organizing card metadata only. Store actual sensitive data in a proper password manager like 1Password, Bitwarden, or similar.
-
-6. **Cloud-Based:** Data syncs to the cloud for convenience. If you need fully offline operation, this may not be the right tool for you.
-
----
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
----
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute to GhostWriter
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
+- [Security Policy](SECURITY.md) - Security reporting
+- [Product Requirements](PRD.md) - Product specification
+- [OCR Test Cases](OCR_TEST_CASES.md) - OCR testing documentation
+- [iOS Native README](ios-native/README.md) - iOS development guide
 
 ## 🤝 Contributing
 
-This is a security-focused tool. If you find vulnerabilities or have security improvements, please report them responsibly.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-**Security Principles to Maintain:**
-- Never add features that store full card numbers or CVVs
-- Never share user data with third parties
-- Keep cloud storage encrypted and secure
-- Keep the panic wipe and auto-lock mechanisms intact
-- Maintain the failed attempt counter and auto-wipe logic
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
----
+## 📄 License
 
-## ⚡ Quick Reference
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-| Action | How |
-|--------|-----|
-| **Unlock app** | Enter PIN on lock screen |
-| **Lock app manually** | Click "Lock" button in header |
-| **View sync status** | Check badge in header (shows connection and sync status) |
-| **Check offline status** | Look for orange "Offline" badge or alert banner |
-| **Switch views** | Click "Cards" or "Insights" tabs |
-| **Add card** | Cards tab → Click "Add Card" button, fill form |
-| **Edit card** | Click pencil icon on card |
-| **Delete card** | Click trash icon on card |
-| **Search cards** | Type in search box at top of Cards tab |
-| **Filter cards** | Use dropdown filters (status, tags, sort) |
-| **Add transaction** | Insights tab → Click "Add Transaction" button |
-| **View analytics** | Navigate to Insights tab |
-| **Export backup** | Data Management → Click "Export Backup" |
-| **Import backup** | Data Management → Click "Import Backup" → Select file |
-| **Panic wipe** | Expand Danger Zone → Click "Panic Wipe" → Type DELETE → Confirm |
-| **Reset after lost PIN** | Manual panic wipe (all cloud data will be erased) |
+## 🙏 Acknowledgments
+
+Built for modders, makers, and reflectors. GhostWriter turns digital consumption into a permanent, searchable intelligence asset.
 
 ---
 
-**Remember:** This tool helps you organize card metadata with automatic cloud backup, but never replaces proper security practices. Keep your full card details in a secure password manager and enable fraud alerts with your banks.
+<div align="center">
+
+**Made with ❤️ by the GhostWriter team**
+
+[Report Bug](https://github.com/your-username/GhostWriter-/issues) • [Request Feature](https://github.com/your-username/GhostWriter-/issues) • [Documentation](https://github.com/your-username/GhostWriter-/wiki)
+
+</div>

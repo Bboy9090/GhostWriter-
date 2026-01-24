@@ -3,26 +3,35 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Universal Cart - Shop Anywhere, Save Everything</title>
-    <meta name="description" content="The ultimate universal shopping cart. Right-click to add items from any store, share wishlists with friends, track prices, and never lose a find again." />
-    <meta name="keywords" content="universal cart, wishlist, shopping, price tracker, browser extension, gift registry" />
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GhostWriter" />
+    <title>GhostWriter - Stealth Screen Text Extraction</title>
+    <meta name="description" content="GhostWriter portals screen text into a private, AI-searchable vault with on-device OCR, LLM healing, and real-time sync." />
+    <meta name="keywords" content="ghostwriter, screen text extraction, ocr, mediaprojection, semantic search, pgvector, android overlay" />
+    <meta name="theme-color" content="#0b1b1f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="GhostWriter" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
     <!-- Open Graph -->
-    <meta property="og:title" content="Universal Cart - Shop Anywhere, Save Everything" />
-    <meta property="og:description" content="The ultimate universal shopping cart. Add items from any store with a right-click." />
+    <meta property="og:title" content="GhostWriter - Stealth Screen Text Extraction" />
+    <meta property="og:description" content="Real-time screen text extraction with on-device OCR, LLM healing, and a semantic vault." />
     <meta property="og:type" content="website" />
-    
+
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
-    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👻</text></svg>" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/ghostwriter-icon.svg" />
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
+
     <link href="/src/main.css" rel="stylesheet" />
-    
+
     <style>
         /* Initial loading state */
         #root:empty {
@@ -32,13 +41,13 @@
             min-height: 100vh;
             background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
         }
-        
+
         #root:empty::after {
-            content: '🛒';
+            content: '👻';
             font-size: 4rem;
             animation: pulse 1.5s ease-in-out infinite;
         }
-        
+
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.8; }
