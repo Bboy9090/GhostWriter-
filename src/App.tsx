@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import { Analytics } from '@vercel/analytics/react'
 import { Logo, LogoWithText } from './components/Logo'
 import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
@@ -218,6 +219,7 @@ function App() {
     <>
       <Toaster />
       <SpeedInsights />
+      <Analytics />
 
       {/* Floating Portal Toggle */}
       <FloatingPortal
