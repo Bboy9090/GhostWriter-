@@ -100,6 +100,12 @@ create_branch() {
         return 1
     fi
     
+    # Validate branch name format
+    if ! [[ "$branch_name" =~ ^[a-zA-Z0-9/_-]+$ ]]; then
+        echo -e "${RED}Error: Invalid branch name. Use only alphanumeric, hyphens, underscores, and slashes.${NC}"
+        return 1
+    fi
+    
     git checkout -b "$branch_name"
     echo -e "${GREEN}✓ Created and switched to branch: $branch_name${NC}"
 }
@@ -111,6 +117,12 @@ merge_to_main() {
     
     if [ -z "$branch_name" ]; then
         echo -e "${RED}Error: Branch name cannot be empty${NC}"
+        return 1
+    fi
+    
+    # Validate branch name format
+    if ! [[ "$branch_name" =~ ^[a-zA-Z0-9/_-]+$ ]]; then
+        echo -e "${RED}Error: Invalid branch name. Use only alphanumeric, hyphens, underscores, and slashes.${NC}"
         return 1
     fi
     
@@ -156,7 +168,7 @@ stash_changes() {
     if [ -z "$message" ]; then
         git stash
     else
-        git stash save "$message"
+        git stash push -m "$message"
     fi
     
     echo -e "${GREEN}✓ Changes stashed${NC}"

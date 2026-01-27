@@ -191,7 +191,7 @@ git remote prune origin
 
 ```bash
 # Save current changes
-git stash save "Work in progress"
+git stash push -m "Work in progress"
 
 # Switch branches and sync
 git checkout main

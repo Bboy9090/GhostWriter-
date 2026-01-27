@@ -202,7 +202,7 @@ git push origin --delete feature/my-feature
 
 ```bash
 # Stash your changes
-git stash save "WIP: working on feature X"
+git stash push -m "WIP: working on feature X"
 
 # Do other work...
 git checkout main
@@ -325,7 +325,7 @@ Add to `~/.gitconfig`:
     up = pull --rebase --autostash
     
     # Stash helpers
-    save = stash save
+    save = stash push -m
     pop = stash pop
 ```
 

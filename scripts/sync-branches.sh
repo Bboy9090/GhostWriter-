@@ -84,6 +84,11 @@ if [ -z "$MAIN_BRANCH" ]; then
     echo "Available branches are listed above"
     echo "Please specify which branch should be the main branch:"
     read -p "Enter main branch name: " MAIN_BRANCH
+    # Validate branch name format
+    if ! [[ "$MAIN_BRANCH" =~ ^[a-zA-Z0-9/_-]+$ ]]; then
+        print_error "Invalid branch name format. Use only alphanumeric, hyphens, underscores, and slashes."
+        exit 1
+    fi
 fi
 
 print_status "Main branch identified: ${MAIN_BRANCH}"
