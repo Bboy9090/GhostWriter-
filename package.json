@@ -54,7 +54,10 @@
     "ocr:live": "node scripts/ocr-live.mjs",
     "ocr:desktop": "node scripts/ocr-desktop.mjs",
     "ocr:desktop:watch": "node scripts/ocr-desktop.mjs --watch",
-    "capture:all": "node scripts/capture-unified.mjs"
+    "capture:all": "node scripts/capture-unified.mjs",
+    "git:sync": "./scripts/sync-branches.sh",
+    "git:status": "./scripts/git-status.sh",
+    "git:branches": "git branch -vv"
   },
   "dependencies": {
     "@github/spark": "^0.44.19",

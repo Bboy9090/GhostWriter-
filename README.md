@@ -201,6 +201,40 @@ npm run lint
 npm test
 ```
 
+### Git Workflow & Branch Management
+
+GhostWriter includes powerful scripts to keep all branches synchronized:
+
+```bash
+# Full synchronization (recommended)
+npm run git:sync
+# or
+./scripts/sync-branches.sh
+
+# Quick status check
+npm run git:status
+
+# Interactive git helper
+./scripts/git-helper.sh
+
+# Show all branches
+npm run git:branches
+```
+
+**What the sync does:**
+- ✅ Fetches all changes from all remotes
+- ✅ Updates main/master branch with latest changes
+- ✅ Updates all local branches that track remotes
+- ✅ Cleans up stale remote references
+- ✅ Returns you to your original branch
+
+📖 **Full git workflow guide:** See [GIT_WORKFLOW.md](GIT_WORKFLOW.md) for detailed instructions on:
+- Manual git operations
+- Handling merge conflicts
+- Creating and merging feature branches
+- Syncing forks with upstream
+- Best practices and tips
+
 ## 📱 Mobile Setup
 
 ### iPhone - Floating Portal
