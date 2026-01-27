@@ -106,6 +106,46 @@ The search engine merges BM25 lexical search (exact part numbers or names) with 
    docker-compose up -d
    ```
 
+## 🔧 Backend Setup (Go + PostgreSQL + Redis)
+
+The GhostWriter backend provides WebSocket-based real-time syncing, semantic search, and push notifications.
+
+### Quick Start with Docker Compose
+
+```bash
+# Start all services (PostgreSQL + Redis + Go API)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f ghost-api
+
+# Stop services
+docker-compose down
+```
+
+### Configuration
+
+1. **Copy environment template**:
+   ```bash
+   cd backend-go
+   cp .env.template .env
+   ```
+
+2. **Configure `.env` file**:
+   - `OPENAI_API_KEY`: Your OpenAI API key for embeddings
+   - `APNS_*`: Apple Push Notification Service credentials (optional)
+
+3. **API will be available at**: `http://localhost:8080`
+
+### API Endpoints
+
+- `GET /health` - Health check
+- `GET /ws` - WebSocket connection for real-time sync
+- `POST /vault/search` - Semantic search with vector similarity
+- `GET /entries` - Get recent entries for a user
+
+📖 **Full backend documentation**: See `backend-go/README.md`
+
 ### 🖥️ Automatic Screen Capture Setup
 
 GhostWriter supports automatic screen capture on **all platforms**:
@@ -288,21 +328,40 @@ node scripts/ocr-harness.mjs --adapter <name>
 
 ## 📱 Native iOS (SwiftUI + Vision OCR)
 
-For a full native iOS experience, see the `ios-native/` folder. It includes:
+The native iOS app provides a complete mobile experience with on-device OCR, real-time sync, and semantic search.
 
-- SwiftUI app with PhotosPicker (screenshots + recordings)
-- Vision OCR on-device
-- Dedupe, segmentation, and export formatting
+### Features
 
-Build steps are in `ios-native/README.md`.
+- **OCR Screen Capture**: Extract text from screenshots and screen recordings
+- **WebSocket Sync**: Real-time syncing with backend server
+- **Push Notifications**: Get notified when text processing completes
+- **Semantic Search**: Search your vault by meaning, not just keywords
+- **Export Options**: Save to iCloud Drive, Files app, or share with other apps
 
-### iOS Workflow
+### Quick Start
 
-1. Take consecutive screenshots while scrolling your conversation, or record a screen video
-2. Open GhostWriter (Safari is best) and upload screenshots (EXIF-sorted) or a recording
-3. If using a recording, tune frame interval + motion delta for best results
-4. Run OCR and let GhostWriter dedupe paragraphs with line-heal cleanup
-5. Copy or download the consolidated thread
+1. Open `ios-native/` in Xcode
+2. Configure your backend URL in Settings
+3. Build and run on your iPhone
+4. Grant camera and notification permissions
+5. Start capturing text!
+
+📖 **Full iOS guide**: See `ios-native/README.md`
+
+### iOS App Workflow
+
+1. **Capture**: Take screenshots or screen recordings of content
+2. **Extract**: Upload to app and run Vision OCR
+3. **Sync**: Text automatically syncs to backend via WebSocket
+4. **Search**: Use semantic search to find text by meaning
+5. **Export**: Save to iCloud, Files, or share with other apps
+
+### Configuration
+
+In the Settings tab:
+- **User ID**: Auto-generated unique identifier
+- **Server URL**: Backend WebSocket endpoint (default: `ws://localhost:8080/ws`)
+- **Push Notifications**: Enable to receive processing updates
 
 ### Pro Tips
 
@@ -316,6 +375,7 @@ Build steps are in `ios-native/README.md`.
 - ✅ Share uses the iOS share sheet for Notes or Files
 - ✅ Chunking helps split giant threads into bite-sized shares
 - ✅ Use Image Enhance + Contrast to boost OCR on low-contrast screenshots
+- ✅ Connect to backend to enable semantic search across all captures
 
 ## 📚 Documentation
 
