@@ -413,12 +413,18 @@ In the Settings tab:
 
 ## 📚 Documentation
 
+### Core Documentation
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to GhostWriter
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
 - [Security Policy](SECURITY.md) - Security reporting
 - [Product Requirements](PRD.md) - Product specification
 - [OCR Test Cases](OCR_TEST_CASES.md) - OCR testing documentation
 - [iOS Native README](ios-native/README.md) - iOS development guide
+
+### Git & Development Workflow
+- [Git Workflow Guide](GIT_WORKFLOW.md) - Complete git workflow and branch management
+- [Git Quick Reference](GIT_QUICK_REFERENCE.md) - Visual cheat sheet for git commands
+- [CI/CD Git Examples](CI_CD_GIT_EXAMPLES.md) - Automated git sync in pipelines
 
 ## 🤝 Contributing
 
