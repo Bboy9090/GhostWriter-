@@ -4,13 +4,15 @@
 
 **The Enterprise-Grade Stealth Extraction Stack**
 
-[![CI](https://github.com/your-username/GhostWriter-/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/GhostWriter-/actions/workflows/ci.yml)
+[![CI](https://github.com/Bboy9090/GhostWriter-/actions/workflows/ci.yml/badge.svg)](https://github.com/Bboy9090/GhostWriter-/actions/workflows/ci.yml)
+[![Deploy](https://github.com/Bboy9090/GhostWriter-/actions/workflows/deploy.yml/badge.svg)](https://github.com/Bboy9090/GhostWriter-/actions/workflows/deploy.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2-blue)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-7.2-purple)](https://vitejs.dev/)
+[![Deploy to Vercel](https://img.shields.io/badge/Deploy-Vercel-black)](https://vercel.com/new/clone?repository-url=https://github.com/Bboy9090/GhostWriter-)
 
-*World-class, real-time contextual data pipeline designed to portal text from mobile screens directly into an AI-powered semantic vault.*
+_World-class, real-time contextual data pipeline designed to portal text from mobile screens directly into an AI-powered semantic vault._
 
 [Features](#-key-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
@@ -34,13 +36,13 @@ GhostWriter is a cutting-edge solution for extracting and storing text from mobi
 
 GhostWriter follows a distributed intelligence model, prioritizing low-latency extraction and high-fidelity storage.
 
-| Layer | Component | Technology | Role |
-|-------|-----------|------------|------|
-| **Edge** | Mobile Portal | Kotlin / MediaProjection | Real-time screen buffer capture (5-10 FPS) |
-| **Intelligence** | The Healer | ML Kit + MediaPipe | On-device OCR and Gemma 2B text reconstruction |
-| **Transport** | Ghost-Stream | Go / WebSockets | Low-latency bi-directional data synchronization |
-| **Storage** | The Vault | Postgres + pgvector | Semantic and keyword-indexed permanent memory |
-| **Search** | The Oracle | Hybrid RRF Search | AI-driven concept-based retrieval |
+| Layer            | Component     | Technology               | Role                                            |
+| ---------------- | ------------- | ------------------------ | ----------------------------------------------- |
+| **Edge**         | Mobile Portal | Kotlin / MediaProjection | Real-time screen buffer capture (5-10 FPS)      |
+| **Intelligence** | The Healer    | ML Kit + MediaPipe       | On-device OCR and Gemma 2B text reconstruction  |
+| **Transport**    | Ghost-Stream  | Go / WebSockets          | Low-latency bi-directional data synchronization |
+| **Storage**      | The Vault     | Postgres + pgvector      | Semantic and keyword-indexed permanent memory   |
+| **Search**       | The Oracle    | Hybrid RRF Search        | AI-driven concept-based retrieval               |
 
 > **Note**: This repository currently focuses on the GhostWriter portal UI and product specification. The mobile and backend folders describe the target stack layout. A starter `docker-compose.yml` is included at the repo root for local vault services.
 
@@ -54,7 +56,7 @@ GhostWriter does not waste resources. It uses a Visual Delta Check to monitor sc
 
 Utilizing pgvector, the Vault stores data as high-dimensional vectors. This enables zero-keyword search.
 
-**Example Query**: *"That time I was looking at repair parts for a 2006 black MacBook."*
+**Example Query**: _"That time I was looking at repair parts for a 2006 black MacBook."_
 
 **Result**: GhostWriter finds the specific forum post you scrolled past, even if the exact phrase "repair parts" was never captured, because the AI understands intent.
 
@@ -86,17 +88,20 @@ The search engine merges BM25 lexical search (exact part numbers or names) with 
 ### Installation
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/your-username/GhostWriter-.git
    cd GhostWriter-
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Start the development server**:
+
    ```bash
    npm run dev
    ```
@@ -126,6 +131,7 @@ docker-compose down
 ### Configuration
 
 1. **Copy environment template**:
+
    ```bash
    cd backend-go
    cp .env.template .env
@@ -151,6 +157,7 @@ docker-compose down
 GhostWriter supports automatic screen capture on **all platforms**:
 
 #### Quick Start - Auto-Detect Platform
+
 ```bash
 # Automatically detects and starts capture for your platform
 npm run capture:all
@@ -162,18 +169,21 @@ npm run capture:all -- --watch
 #### Platform-Specific Commands
 
 **Windows/Mac/Linux Desktop:**
+
 ```bash
 npm run ocr:desktop          # One-time capture
 npm run ocr:desktop:watch    # Continuous capture
 ```
 
 **Android (via ADB):**
+
 ```bash
 # Connect device via USB, then:
 npm run ocr:live -- --interval 750
 ```
 
 **iOS:**
+
 - Use the web UI to upload screenshots
 - See `scripts/PLATFORM_SETUP.md` for details
 
@@ -222,6 +232,7 @@ npm run git:branches
 ```
 
 **What the sync does:**
+
 - ✅ Fetches all changes from all remotes
 - ✅ Updates main/master branch with latest changes
 - ✅ Updates all local branches that track remotes
@@ -229,6 +240,7 @@ npm run git:branches
 - ✅ Returns you to your original branch
 
 📖 **Full git workflow guide:** See [GIT_WORKFLOW.md](GIT_WORKFLOW.md) for detailed instructions on:
+
 - Manual git operations
 - Handling merge conflicts
 - Creating and merging feature branches
@@ -242,6 +254,7 @@ npm run git:branches
 The floating portal works perfectly on iPhone! Just:
 
 1. **Start the server**:
+
    ```bash
    npm run dev:host
    ```
@@ -261,6 +274,7 @@ The floating portal works perfectly on iPhone! Just:
 ### Option A: Local Network (Fastest)
 
 1. Run the app on your computer:
+
    ```bash
    npm run dev:host
    ```
@@ -268,22 +282,47 @@ The floating portal works perfectly on iPhone! Just:
 2. Find your local IP (example: `192.168.1.42`)
 
 3. On your iPhone, open:
+
    ```
    http://192.168.1.42:5173
    ```
 
 4. Tap **Share → Add to Home Screen** for a full-screen app experience
 
-### Option B: Cloud Deploy (Vercel)
+### Option B: Cloud Deploy (Vercel) - Production Ready! 🚀
 
-GhostWriter is optimized for **Vercel** deployment:
+GhostWriter is **fully configured and ready to deploy** to Vercel:
+
+#### Quick Deploy (2 Minutes)
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Login and deploy
+vercel login
+vercel --prod
+```
+
+#### Or Use One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Bboy9090/GhostWriter-)
+
+#### Manual Setup
 
 1. **Connect Repository**: Import your GitHub repo to Vercel
-2. **Auto-Configure**: Vercel auto-detects `vercel.json`
+2. **Auto-Configure**: Vercel auto-detects `vercel.json` ✨
 3. **Set Environment Variables**: Add `VITE_API_URL` and others
-4. **Deploy**: Click deploy and you're live!
+4. **Deploy**: Click deploy and you're live! 🎉
 
-📖 **Full deployment guide**: See `DEPLOYMENT.md`
+#### Automated Deployments
+
+Push to `main` branch → Automatic deployment via GitHub Actions!
+
+📖 **Deployment guides**:
+
+- Quick Start: `DEPLOY_QUICK_START.md`
+- Full Guide: `DEPLOYMENT.md`
 
 **Other Platforms**: Also works on Netlify, Render, Railway, or any static host.
 
@@ -393,6 +432,7 @@ The native iOS app provides a complete mobile experience with on-device OCR, rea
 ### Configuration
 
 In the Settings tab:
+
 - **User ID**: Auto-generated unique identifier
 - **Server URL**: Backend WebSocket endpoint (default: `ws://localhost:8080/ws`)
 - **Push Notifications**: Enable to receive processing updates
@@ -414,6 +454,7 @@ In the Settings tab:
 ## 📚 Documentation
 
 ### Core Documentation
+
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to GhostWriter
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
 - [Security Policy](SECURITY.md) - Security reporting
@@ -422,6 +463,7 @@ In the Settings tab:
 - [iOS Native README](ios-native/README.md) - iOS development guide
 
 ### Git & Development Workflow
+
 - [Git Workflow Guide](GIT_WORKFLOW.md) - Complete git workflow and branch management
 - [Git Quick Reference](GIT_QUICK_REFERENCE.md) - Visual cheat sheet for git commands
 - [CI/CD Git Examples](CI_CD_GIT_EXAMPLES.md) - Automated git sync in pipelines
