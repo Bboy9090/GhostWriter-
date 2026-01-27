@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/models"
 	"github.com/google/uuid"
