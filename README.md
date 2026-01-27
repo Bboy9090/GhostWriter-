@@ -90,7 +90,7 @@ The search engine merges BM25 lexical search (exact part numbers or names) with 
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/your-username/GhostWriter-.git
+   git clone https://github.com/Bboy9090/GhostWriter-.git
    cd GhostWriter-
    ```
 
