@@ -201,6 +201,40 @@ npm run lint
 npm test
 ```
 
+### Git Workflow & Branch Management
+
+GhostWriter includes powerful scripts to keep all branches synchronized:
+
+```bash
+# Full synchronization (recommended)
+npm run git:sync
+# or
+./scripts/sync-branches.sh
+
+# Quick status check
+npm run git:status
+
+# Interactive git helper
+./scripts/git-helper.sh
+
+# Show all branches
+npm run git:branches
+```
+
+**What the sync does:**
+- ✅ Fetches all changes from all remotes
+- ✅ Updates main/master branch with latest changes
+- ✅ Updates all local branches that track remotes
+- ✅ Cleans up stale remote references
+- ✅ Returns you to your original branch
+
+📖 **Full git workflow guide:** See [GIT_WORKFLOW.md](GIT_WORKFLOW.md) for detailed instructions on:
+- Manual git operations
+- Handling merge conflicts
+- Creating and merging feature branches
+- Syncing forks with upstream
+- Best practices and tips
+
 ## 📱 Mobile Setup
 
 ### iPhone - Floating Portal
@@ -379,12 +413,18 @@ In the Settings tab:
 
 ## 📚 Documentation
 
+### Core Documentation
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to GhostWriter
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
 - [Security Policy](SECURITY.md) - Security reporting
 - [Product Requirements](PRD.md) - Product specification
 - [OCR Test Cases](OCR_TEST_CASES.md) - OCR testing documentation
 - [iOS Native README](ios-native/README.md) - iOS development guide
+
+### Git & Development Workflow
+- [Git Workflow Guide](GIT_WORKFLOW.md) - Complete git workflow and branch management
+- [Git Quick Reference](GIT_QUICK_REFERENCE.md) - Visual cheat sheet for git commands
+- [CI/CD Git Examples](CI_CD_GIT_EXAMPLES.md) - Automated git sync in pipelines
 
 ## 🤝 Contributing
 
