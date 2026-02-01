@@ -1,1 +1,16 @@
 fly.toml
+tests
+documentation
+backend-go
+ios-native
+eng.traineddata
+.git
+.github
+node_modules
+dist
+*.md
+.env*
+.vscode
+.husky
+playwright.config.ts
+vitest.config.ts
