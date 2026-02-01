@@ -9,7 +9,8 @@
         "build": "tsc -b --noCheck && vite build",
         "lint": "eslint .",
         "optimize": "vite optimize",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "start": "node server/index.js"
     },
     "dependencies": {
         "@github/spark": ">=0.43.1 <1",
@@ -53,6 +54,7 @@
         "d3": "^7.9.0",
         "date-fns": "^3.6.0",
         "embla-carousel-react": "^8.5.2",
+        "express": "^4.22.1",
         "framer-motion": "^12.23.26",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.484.0",
