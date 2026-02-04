@@ -1,8 +1,8 @@
 {
-  "buildCommand": "npm ci && npm run build",
+  "buildCommand"tsc && vite build"",
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
-  "installCommand": "npm ci",
+  "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
     {

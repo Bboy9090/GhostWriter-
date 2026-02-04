@@ -1,10 +1,10 @@
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react-swc";
-import { defineConfig, PluginOption } from "vite";
-import { visualizer } from 'rollup-plugin-visualizer';
+import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react-swc'
+import { defineConfig, PluginOption } from 'vite'
+import { visualizer } from 'rollup-plugin-visualizer'
 
-import sparkPlugin from "@github/spark/spark-vite-plugin";
-import createIconImportProxy from "@github/spark/vitePhosphorIconProxyPlugin";
+import sparkPlugin from '@github/spark/spark-vite-plugin'
+import createIconImportProxy from '@github/spark/vitePhosphorIconProxyPlugin'
 import { resolve } from 'path'
 
 const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
@@ -18,27 +18,32 @@ export default defineConfig({
     createIconImportProxy() as PluginOption,
     sparkPlugin() as PluginOption,
     // Bundle analyzer (only in analyze mode)
-    process.env.ANALYZE === 'true' && visualizer({
-      open: true,
-      filename: 'dist/stats.html',
-      gzipSize: true,
-      brotliSize: true,
-    }) as PluginOption,
+    process.env.ANALYZE === 'true' &&
+      (visualizer({
+        open: true,
+        filename: 'dist/stats.html',
+        gzipSize: true,
+        brotliSize: true,
+      }) as PluginOption),
   ].filter(Boolean),
   resolve: {
     alias: {
-      '@': resolve(projectRoot, 'src')
-    }
+      '@': resolve(projectRoot, 'src'),
+    },
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+          ],
           'utils-vendor': ['date-fns', 'zod', 'clsx', 'tailwind-merge'],
-        }
-      }
+        },
+      },
     },
     sourcemap: process.env.NODE_ENV === 'development',
     minify: 'terser',
@@ -58,6 +63,6 @@ export default defineConfig({
     host: process.env.HOST || '0.0.0.0',
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
+    include: ['react', 'react-dom'],
   },
-});
+})
