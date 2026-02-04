@@ -1,0 +1,48 @@
+name: Keep Render Service Alive
+
+# This workflow keeps your Render.com free tier service awake by pinging it every 5 minutes
+# This is an alternative to UptimeRobot if you prefer to use GitHub Actions
+# Note: GitHub Actions free tier includes 2000 minutes/month which is more than enough
+
+on:
+  schedule:
+    # Run every 5 minutes (* /5 * * * * would be ideal, but GitHub minimum is 5 min)
+    # This runs 288 times per day = ~8640 times per month
+    # Total runtime: ~10 seconds × 8640 = ~24 hours/month (well within free tier)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Service
+        run: |
+          # Replace YOUR_APP_URL with your actual Render.com URL
+          # Example: https://ghostwriter-api.onrender.com
+          echo "Pinging Render service to keep it awake..."
+          
+          # Ping the health endpoint (or any endpoint)
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.RENDER_SERVICE_URL }}/health || echo "000")
+          
+          if [ "$response" = "200" ] || [ "$response" = "204" ]; then
+            echo "✅ Service is awake! Response code: $response"
+          else
+            echo "⚠️  Unexpected response code: $response"
+            echo "Service may be starting up or experiencing issues"
+          fi
+          
+      - name: Log timestamp
+        run: echo "Keep-alive ping completed at $(date)"
+
+# To use this workflow:
+# 1. Go to your GitHub repository settings
+# 2. Navigate to Settings > Secrets and variables > Actions
+# 3. Add a new secret named RENDER_SERVICE_URL
+# 4. Set the value to your Render.com service URL (e.g., https://ghostwriter-api.onrender.com)
+# 5. Commit this workflow file to your repository
+# 6. The workflow will run automatically every 5 minutes
+
+# Alternative: Use UptimeRobot (recommended)
+# UptimeRobot is a dedicated uptime monitoring service that's free and easier to setup
+# Sign up at: https://uptimerobot.com

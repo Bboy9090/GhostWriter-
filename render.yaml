@@ -1,0 +1,58 @@
+# Render.com Blueprint for GhostWriter
+# This file enables one-click deployment on Render.com
+# Deploy: https://render.com/deploy
+
+services:
+  # Frontend - Static Site
+  - type: web
+    name: ghostwriter
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: ghostwriter-api
+          property: host
+      - key: VITE_WS_URL
+        fromService:
+          type: web
+          name: ghostwriter-api
+          property: host
+
+  # Backend API - Go Service
+  - type: web
+    name: ghostwriter-api
+    runtime: go
+    rootDir: backend-go
+    buildCommand: go build -o bin/ghostwriter ./cmd/server
+    startCommand: ./bin/ghostwriter
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_URL
+        fromDatabase:
+          name: ghostwriter-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ghostwriter-redis
+          property: connectionString
+    healthCheckPath: /health
+
+databases:
+  # PostgreSQL Database
+  - name: ghostwriter-db
+    databaseName: ghostwriter_vault
+    user: ghostwriter_user
+    plan: free
+
+  # Redis Cache
+  - name: ghostwriter-redis
+    plan: free

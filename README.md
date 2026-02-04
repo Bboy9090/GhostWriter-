@@ -29,13 +29,37 @@ A **security-focused** web application with **automatic cloud backup** for manag
 
 ## 🚀 Deployment
 
+### 💰 **NEW: Free 24/7 Deployment Options!**
+
+**Save money!** Deploy GhostWriter for **$0/month** with 24/7 uptime:
+
+- 🏆 **[Render.com](https://render.com)** - Completely FREE with UptimeRobot keep-alive
+- 🚀 **[Fly.io](https://fly.io)** - FREE tier (256MB RAM × 3 VMs)
+- 🎨 **[Railway.app](https://railway.app)** - $5 free credit/month (no credit card)
+
+**📚 Complete Guide**: See [FREE_TIER_DEPLOYMENT.md](./FREE_TIER_DEPLOYMENT.md) for step-by-step instructions
+
+**💡 Cost Comparison**: Check [COST_OPTIMIZATION.md](./COST_OPTIMIZATION.md) to see exact savings
+
+**Migrating from Replit?** Save $7-20/month! Follow the migration guide in FREE_TIER_DEPLOYMENT.md
+
+---
+
 ### ⚡ One-Click Deploy (Vercel)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBboy9090%2FGhostWriter-)
 
 Click → Sign in → Deploy. See [ONE_CLICK_DEPLOY.md](./ONE_CLICK_DEPLOY.md) for details.
 
-### Deploy to Fly.io
+### Deploy to Render.com (Recommended - FREE!)
+
+**One-click deployment with Render Blueprint:**
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Bboy9090/GhostWriter-)
+
+Or follow the manual steps in [FREE_TIER_DEPLOYMENT.md](./FREE_TIER_DEPLOYMENT.md)
+
+### Deploy to Fly.io (FREE Tier Optimized)
 
 This app is configured for deployment on [Fly.io](https://fly.io) with Docker.
 
