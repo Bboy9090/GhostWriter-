@@ -1,5 +1,11 @@
 # 🔒 Card Command Center
 
+> **💰 NEW: Save $7-20/month!** Migrate from Replit to FREE 24/7 hosting in 15 minutes!
+> 
+> - 📖 Quick Start: [QUICK_START_SAVE_MONEY.md](./QUICK_START_SAVE_MONEY.md)
+> - ✅ Migration Guide: [REPLIT_MIGRATION_CHECKLIST.md](./REPLIT_MIGRATION_CHECKLIST.md)
+> - 💵 Cost Analysis: [COST_OPTIMIZATION.md](./COST_OPTIMIZATION.md)
+
 A **security-focused** web application with **automatic cloud backup** for managing payment card metadata and tracking spending patterns without ever storing sensitive information like full card numbers or CVV codes.
 
 ## ⚠️ Security Philosophy
