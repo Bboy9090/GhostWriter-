@@ -6,7 +6,7 @@ name: Keep Render Service Alive
 
 on:
   schedule:
-    # Run every 5 minutes (* /5 * * * * would be ideal, but GitHub minimum is 5 min)
+    # Run every 5 minutes (*/5 * * * * - GitHub Actions minimum is 5 min)
     # This runs 288 times per day = ~8640 times per month
     # Total runtime: ~10 seconds × 8640 = ~24 hours/month (well within free tier)
     - cron: '*/5 * * * *'

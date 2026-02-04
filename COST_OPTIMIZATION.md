@@ -6,7 +6,7 @@ This guide shows you exactly how much each deployment option costs and how to mi
 
 Based on your requirements:
 - ✅ Save money (migrate from Replit)
-- ✅ 24/7 productivity 
+- ✅ 24/7 uptime
 - ✅ Minimal deployment complexity
 - ✅ Screen capture to notes functionality
 
