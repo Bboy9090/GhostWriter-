@@ -1,41 +1,4 @@
-# 🔒 Card Command Center
 
-> **💰 NEW: Save $7-20/month!** Migrate from Replit to FREE 24/7 hosting in 15 minutes!
-> 
-> - 📖 Quick Start: [QUICK_START_SAVE_MONEY.md](./QUICK_START_SAVE_MONEY.md)
-> - ✅ Migration Guide: [REPLIT_MIGRATION_CHECKLIST.md](./REPLIT_MIGRATION_CHECKLIST.md)
-> - 💵 Cost Analysis: [COST_OPTIMIZATION.md](./COST_OPTIMIZATION.md)
-
-A **security-focused** web application with **automatic cloud backup** for managing payment card metadata and tracking spending patterns without ever storing sensitive information like full card numbers or CVV codes.
-
-## ⚠️ Security Philosophy
-
-**What This App Does:**
-
-- ✅ Stores safe metadata: nickname, bank, network, last 4 digits, expiry, tags, notes, and optional links
-- ✅ Tracks transaction history: amount, merchant, category, and date for spending insights
-- ✅ Uses SHA-256 hashed PIN authentication to protect access
-- ✅ Implements automatic session locking after 5 minutes of inactivity
-- ✅ Provides panic wipe functionality to instantly destroy all cloud data
-- ✅ Tracks failed login attempts and auto-wipes after 5 failures
-- ✅ **Automatically syncs all data to secure cloud storage in real-time**
-- ✅ **Works offline with automatic sync queue when reconnected**
-- ✅ **Accessible from any device with your PIN**
-
-**What This App Does NOT Do:**
-
-- ❌ Never stores or handles full card numbers
-- ❌ Never stores or handles CVV/CVC codes
-- ❌ Never shares your data with third parties
-- ❌ Never makes your data publicly accessible
-
-**Important:** This tool is designed for organizing card metadata and personal spending tracking only. Keep your actual full card numbers and CVVs in a proper password manager or secure vault.
-
----
-
-## 🚀 Deployment
-
-### 💰 **NEW: Free 24/7 Deployment Options!**
 
 **Save money!** Deploy GhostWriter for **$0/month** with 24/7 uptime:
 
