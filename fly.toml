@@ -1,15 +1,15 @@
-# fly.toml app configuration file generated for ghostwriter-winter-flower-7141 on 2026-01-31T22:44:19-05:00
+# fly.toml app configuration file generated for ghost-writer on 2026-02-01T01:50:32Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'ghostwriter-winter-flower-7141'
-primary_region = 'iad'
+app = 'ghost-writer'
+primary_region = 'ams'
 
 [build]
 
 [http_service]
-  internal_port = 80
+  internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
@@ -18,6 +18,5 @@ primary_region = 'iad'
 
 [[vm]]
   cpu_kind = 'shared'
-  memory = '1gb'
   cpus = 1
   memory_mb = 1024
