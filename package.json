@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:host": "vite --host",
     "kill": "fuser -k 5000/tcp",
-    "build": "tsc && vite build",
+    "build": "npx tsc && vite build",
     "build:skip-checks": "vite build",
     "build:check": "tsc --noEmit",
     "lint": "eslint .",
