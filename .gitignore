@@ -77,3 +77,17 @@ ios-native/*.xcuserstate
 tests/ocr/fixtures/*.png
 tests/ocr/fixtures/*.jpg
 ocr-live-log.txt
+
+# Go
+backend-go/server
+backend-go/*.exe
+backend-go/*.dll
+backend-go/*.so
+backend-go/*.dylib
+backend-go/vendor/
+backend-go/.env
+
+# APNS certificates
+*.p12
+*.p8
+*.pem
