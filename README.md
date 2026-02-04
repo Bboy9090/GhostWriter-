@@ -20,6 +20,72 @@ _World-class, real-time contextual data pipeline designed to portal text from mo
 
 ---
 
+
+## 🚀 Deployment
+
+### Deploy to Fly.io (Recommended)
+
+This app is configured for deployment on [Fly.io](https://fly.io) with Docker.
+
+**Prerequisites:**
+- [Install Fly CLI](https://fly.io/docs/hands-on/install-flyctl/)
+- Create a Fly.io account
+
+**Deploy Steps:**
+
+1. **Login to Fly.io:**
+   ```bash
+   flyctl auth login
+   ```
+
+2. **Launch your app (first time only):**
+   ```bash
+   flyctl launch
+   ```
+   - Accept the detected settings
+   - Choose your region
+   - Don't deploy yet if you want to customize `fly.toml` first
+
+3. **Deploy:**
+   ```bash
+   flyctl deploy
+   ```
+
+4. **Open your app:**
+   ```bash
+   flyctl open
+   ```
+
+**Your app will be available at:** `https://ghostwriter.fly.dev`
+
+### Docker Build Locally
+
+To test the Docker build locally before deploying:
+
+```bash
+# Build the image
+docker build -t ghostwriter .
+
+# Run the container
+docker run -p 3000:3000 ghostwriter
+
+# Open in browser
+# http://localhost:3000
+```
+
+### Architecture
+
+- **Vite** builds the static frontend to `/dist`
+- **Express** server serves:
+  - Static files from `/dist`
+  - API routes at `/api/*`
+- **Single container** with Node.js 20 Alpine
+- **Production optimized** with multi-stage build
+
+---
+
+## 🚀 Running Locally
+
 ## 🎯 Overview
 
 GhostWriter is a cutting-edge solution for extracting and storing text from mobile screens with enterprise-grade precision. Built for the 2026 tech landscape, it leverages on-device NPUs for OCR and LLM healing, ensuring that what you see is what you remember, word for word and paragraph for paragraph.
@@ -61,6 +127,7 @@ Utilizing pgvector, the Vault stores data as high-dimensional vectors. This enab
 **Result**: GhostWriter finds the specific forum post you scrolled past, even if the exact phrase "repair parts" was never captured, because the AI understands intent.
 
 ### 3. Hybrid RRF Search
+
 
 The search engine merges BM25 lexical search (exact part numbers or names) with vector similarity (concepts and intent) using Reciprocal Rank Fusion, providing a single best list.
 
