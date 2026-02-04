@@ -13,6 +13,7 @@ Run the automated synchronization script:
 ```
 
 This script will:
+
 - ✅ Fetch all changes from all remotes
 - ✅ Identify and update your main/master branch
 - ✅ Update all local branches that track remote branches
@@ -300,6 +301,7 @@ git remote set-url origin https://github.com/Bboy9090/GhostWriter-.git
 ## Best Practices
 
 1. **Always fetch before starting work**
+
    ```bash
    git fetch --all
    ```
@@ -310,6 +312,7 @@ git remote set-url origin https://github.com/Bboy9090/GhostWriter-.git
    - Keep main in sync with remote
 
 3. **Use meaningful branch names**
+
    ```bash
    git checkout -b feature/add-websocket-support
    git checkout -b fix/ocr-memory-leak
@@ -317,6 +320,7 @@ git remote set-url origin https://github.com/Bboy9090/GhostWriter-.git
    ```
 
 4. **Commit often, push regularly**
+
    ```bash
    git add .
    git commit -m "feat: add new feature"
@@ -324,6 +328,7 @@ git remote set-url origin https://github.com/Bboy9090/GhostWriter-.git
    ```
 
 5. **Use rebase for clean history**
+
    ```bash
    git pull --rebase  # instead of git pull
    ```

@@ -26,7 +26,7 @@ import {
   Share,
   Sparkle,
   Warning,
-  Folder
+  Folder,
 } from '@phosphor-icons/react'
 
 type CaptureEntry = {
@@ -56,32 +56,32 @@ const pipelineSteps: PipelineStep[] = [
     title: 'Capture Buffer',
     description: 'MediaProjection frames with delta gating and overlay-first launch.',
     metric: '2.1% visual delta',
-    status: 'live'
+    status: 'live',
   },
   {
     title: 'OCR Extraction',
     description: 'On-device ML Kit recognition with block geometry retention.',
     metric: '41ms p95',
-    status: 'live'
+    status: 'live',
   },
   {
     title: 'Dedup Gatekeeper',
     description: 'Levenshtein + SimHash over the last five blocks.',
     metric: '89% similarity cutoff',
-    status: 'live'
+    status: 'live',
   },
   {
     title: 'Healer Pass',
     description: 'Local LLM cleanup restores paragraphs and fixes line breaks.',
     metric: 'Gemma 2B',
-    status: 'warming'
+    status: 'warming',
   },
   {
     title: 'Vault Sync',
     description: 'WebSocket stream into pgvector with RRF hybrid search.',
     metric: '32ms round-trip',
-    status: 'live'
-  }
+    status: 'live',
+  },
 ]
 
 const captureFeed: CaptureEntry[] = [
@@ -91,7 +91,7 @@ const captureFeed: CaptureEntry[] = [
     content: 'MediaProjection must start after overlay is visible on Android 15.',
     confidence: 97,
     tags: ['portal', 'permissions'],
-    capturedAt: '09:42 AM'
+    capturedAt: '09:42 AM',
   },
   {
     id: 'cap-2',
@@ -99,7 +99,7 @@ const captureFeed: CaptureEntry[] = [
     content: 'Dedup gate ignored 4 repeated paragraphs during slow scroll.',
     confidence: 94,
     tags: ['dedupe', 'scroll'],
-    capturedAt: '09:44 AM'
+    capturedAt: '09:44 AM',
   },
   {
     id: 'cap-3',
@@ -107,7 +107,7 @@ const captureFeed: CaptureEntry[] = [
     content: 'Healer reconstructed the paragraph and removed line breaks.',
     confidence: 91,
     tags: ['healer', 'formatting'],
-    capturedAt: '09:45 AM'
+    capturedAt: '09:45 AM',
   },
   {
     id: 'cap-4',
@@ -115,7 +115,7 @@ const captureFeed: CaptureEntry[] = [
     content: 'Portal captured block geometry for layout-aware syncing.',
     confidence: 96,
     tags: ['layout', 'blocks'],
-    capturedAt: '09:47 AM'
+    capturedAt: '09:47 AM',
   },
   {
     id: 'cap-5',
@@ -123,51 +123,51 @@ const captureFeed: CaptureEntry[] = [
     content: 'Vault indexed the entry with vector embeddings in 28ms.',
     confidence: 93,
     tags: ['vault', 'pgvector'],
-    capturedAt: '09:49 AM'
-  }
+    capturedAt: '09:49 AM',
+  },
 ]
 
 const featureHighlights = [
   {
     title: 'Stealth Overlay',
     description: 'Floating portal UI stays above other apps without recording.',
-    tag: 'Portal UI'
+    tag: 'Portal UI',
   },
   {
     title: 'On-Device Healer',
     description: 'Gemma-class LLM cleanup keeps paragraphs intact and readable.',
-    tag: 'Healer'
+    tag: 'Healer',
   },
   {
     title: 'Hybrid Search',
     description: 'RRF merges keyword and vector search into one ranking.',
-    tag: 'Oracle'
+    tag: 'Oracle',
   },
   {
     title: 'Zero-Knowledge Vault',
     description: 'Raw frames never leave the device. Only healed text syncs.',
-    tag: 'Security'
-  }
+    tag: 'Security',
+  },
 ]
 
 const vaultStats = [
   { label: 'Vault Entries', value: '128,440', detail: '+1,482 today' },
   { label: 'Dedup Rate', value: '92.4%', detail: 'scroll-safe' },
   { label: 'OCR Latency', value: '41ms', detail: 'p95 on-device' },
-  { label: 'Sync Lag', value: '28ms', detail: 'websocket' }
+  { label: 'Sync Lag', value: '28ms', detail: 'websocket' },
 ]
 
 const serviceHealth: ServiceStatus[] = [
   { name: 'ghost-api', status: 'healthy', detail: 'p95 33ms' },
   { name: 'vault-db', status: 'healthy', detail: 'pgvector hnsw ready' },
   { name: 'ghost-stream', status: 'healthy', detail: 'redis fanout ok' },
-  { name: 'embedding', status: 'degraded', detail: 'fallback to keywords' }
+  { name: 'embedding', status: 'degraded', detail: 'fallback to keywords' },
 ]
 
 const captureModes = [
   { key: 'quality', label: 'Quality', fps: 3, delta: '1.5%' },
   { key: 'balanced', label: 'Balanced', fps: 5, delta: '2.0%' },
-  { key: 'turbo', label: 'Turbo', fps: 10, delta: '3.5%' }
+  { key: 'turbo', label: 'Turbo', fps: 10, delta: '3.5%' },
 ]
 
 function App() {
@@ -186,19 +186,22 @@ function App() {
       return captureFeed
     }
 
-    return captureFeed.filter(entry =>
-      entry.content.toLowerCase().includes(query) ||
-      entry.sourceApp.toLowerCase().includes(query) ||
-      entry.tags.some(tag => tag.toLowerCase().includes(query))
+    return captureFeed.filter(
+      entry =>
+        entry.content.toLowerCase().includes(query) ||
+        entry.sourceApp.toLowerCase().includes(query) ||
+        entry.tags.some(tag => tag.toLowerCase().includes(query))
     )
   }, [searchQuery])
 
   const selectedCaptureMode = captureModes.find(mode => mode.key === captureMode) ?? captureModes[1]
 
   const togglePortal = () => {
-    setPortalActive((prev) => {
+    setPortalActive(prev => {
       const next = !prev
-      toast.success(next ? 'Portal opened. Streaming live frames.' : 'Portal closed. Capture paused.')
+      toast.success(
+        next ? 'Portal opened. Streaming live frames.' : 'Portal closed. Capture paused.'
+      )
       return next
     })
   }
@@ -208,7 +211,7 @@ function App() {
   }
 
   const toggleVault = () => {
-    setVaultUnlocked((prev) => {
+    setVaultUnlocked(prev => {
       const next = !prev
       toast.success(next ? 'Vault unlocked for sync.' : 'Vault locked. Sync paused.')
       return next
@@ -239,7 +242,13 @@ function App() {
               <LogoWithText size={38} />
 
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className={portalActive ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-muted text-muted-foreground'}>
+                <Badge
+                  className={
+                    portalActive
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : 'bg-muted text-muted-foreground'
+                  }
+                >
                   {portalActive ? 'Portal Live' : 'Portal Idle'}
                 </Badge>
                 <Badge variant="secondary">Frame Delta {selectedCaptureMode.delta}</Badge>
@@ -272,18 +281,28 @@ function App() {
                   <Logo size={44} animated={false} />
                   <div>
                     <p className="text-sm text-muted-foreground">GhostWriter Portal</p>
-                    <h1 className="text-2xl font-semibold">Screen Text Extraction Command Center</h1>
+                    <h1 className="text-2xl font-semibold">
+                      Screen Text Extraction Command Center
+                    </h1>
                   </div>
                 </div>
                 <p className="text-muted-foreground">
-                  GhostWriter captures screen text in real time, heals it on-device, and syncs a clean,
-                  searchable memory vault with hybrid semantic retrieval.
+                  GhostWriter captures screen text in real time, heals it on-device, and syncs a
+                  clean, searchable memory vault with hybrid semantic retrieval.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">On-device OCR</Badge>
-                  <Badge className="bg-cyan-500/15 text-cyan-400 border-cyan-500/30">LLM Healer</Badge>
-                  <Badge className="bg-indigo-500/15 text-indigo-300 border-indigo-500/30">Hybrid Search</Badge>
-                  <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30">Stealth Overlay</Badge>
+                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                    On-device OCR
+                  </Badge>
+                  <Badge className="bg-cyan-500/15 text-cyan-400 border-cyan-500/30">
+                    LLM Healer
+                  </Badge>
+                  <Badge className="bg-indigo-500/15 text-indigo-300 border-indigo-500/30">
+                    Hybrid Search
+                  </Badge>
+                  <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30">
+                    Stealth Overlay
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -372,7 +391,11 @@ function App() {
                         <div key={step.title} className="flex gap-4">
                           <Badge
                             variant="outline"
-                            className={step.status === 'live' ? 'border-emerald-500/40 text-emerald-400' : 'border-amber-500/40 text-amber-300'}
+                            className={
+                              step.status === 'live'
+                                ? 'border-emerald-500/40 text-emerald-400'
+                                : 'border-amber-500/40 text-amber-300'
+                            }
                           >
                             {step.status.toUpperCase()}
                           </Badge>
@@ -420,7 +443,9 @@ function App() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold">Portal Controls</h3>
-                      <p className="text-sm text-muted-foreground">Overlay-first policy for Android 15+</p>
+                      <p className="text-sm text-muted-foreground">
+                        Overlay-first policy for Android 15+
+                      </p>
                     </div>
                     <Badge variant="secondary">MediaProjection</Badge>
                   </div>
@@ -469,13 +494,18 @@ function App() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-lg border p-4 space-y-2">
                       <p className="text-sm font-medium">Overlay Status</p>
-                      <p className="text-xs text-muted-foreground">Floating portal ready for tap-to-stream.</p>
-                      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">Active</Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Floating portal ready for tap-to-stream.
+                      </p>
+                      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                        Active
+                      </Badge>
                     </div>
                     <div className="rounded-lg border p-4 space-y-2">
                       <p className="text-sm font-medium">Capture Notes</p>
                       <p className="text-xs text-muted-foreground">
-                        Average output: {selectedCaptureMode.fps} FPS, delta gate {selectedCaptureMode.delta}.
+                        Average output: {selectedCaptureMode.fps} FPS, delta gate{' '}
+                        {selectedCaptureMode.delta}.
                       </p>
                       <Badge variant="outline">Rotation locked</Badge>
                     </div>
@@ -562,7 +592,9 @@ function App() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2 text-sm">
                             <Badge variant="outline">{entry.sourceApp}</Badge>
-                            <span className="text-xs text-muted-foreground">{entry.capturedAt}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {entry.capturedAt}
+                            </span>
                           </div>
                           <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
                             {entry.confidence}% confident
@@ -571,7 +603,9 @@ function App() {
                         <p className="text-sm text-muted-foreground">{entry.content}</p>
                         <div className="flex flex-wrap gap-2">
                           {entry.tags.map(tag => (
-                            <Badge key={tag} variant="secondary">{tag}</Badge>
+                            <Badge key={tag} variant="secondary">
+                              {tag}
+                            </Badge>
                           ))}
                         </div>
                       </div>
@@ -589,10 +623,13 @@ function App() {
                     <h3 className="font-semibold">Semantic Vault Search</h3>
                   </div>
                   <div className="relative">
-                    <MagnifyingGlass size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <MagnifyingGlass
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    />
                     <Input
                       value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
+                      onChange={event => setSearchQuery(event.target.value)}
                       placeholder="Search by concept, source, or tag..."
                       className="pl-10"
                     />
@@ -603,14 +640,18 @@ function App() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2 text-sm">
                             <Badge variant="outline">{entry.sourceApp}</Badge>
-                            <span className="text-xs text-muted-foreground">{entry.capturedAt}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {entry.capturedAt}
+                            </span>
                           </div>
                           <Badge variant="secondary">{entry.confidence}% match</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{entry.content}</p>
                         <div className="flex flex-wrap gap-2">
                           {entry.tags.map(tag => (
-                            <Badge key={tag} variant="secondary">{tag}</Badge>
+                            <Badge key={tag} variant="secondary">
+                              {tag}
+                            </Badge>
                           ))}
                         </div>
                       </div>
@@ -639,7 +680,10 @@ function App() {
                     </div>
                     <div className="space-y-3">
                       {serviceHealth.map(service => (
-                        <div key={service.name} className="flex items-center justify-between rounded-lg border p-3">
+                        <div
+                          key={service.name}
+                          className="flex items-center justify-between rounded-lg border p-3"
+                        >
                           <div>
                             <p className="font-medium">{service.name}</p>
                             <p className="text-xs text-muted-foreground">{service.detail}</p>
@@ -671,11 +715,15 @@ function App() {
                       <div className="rounded-lg border bg-muted/30 p-3 font-mono text-xs">
                         docker-compose up -d
                       </div>
-                      <p className="text-muted-foreground">Grant overlay + media projection permissions on-device.</p>
+                      <p className="text-muted-foreground">
+                        Grant overlay + media projection permissions on-device.
+                      </p>
                       <div className="rounded-lg border bg-muted/30 p-3 font-mono text-xs">
                         ./ghostwriter portal --mode {selectedCaptureMode.key}
                       </div>
-                      <p className="text-muted-foreground">Scroll in any app and watch the vault fill in real time.</p>
+                      <p className="text-muted-foreground">
+                        Scroll in any app and watch the vault fill in real time.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

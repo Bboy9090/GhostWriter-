@@ -48,9 +48,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -168,18 +168,18 @@ test:
 ```groovy
 pipeline {
     agent any
-    
+
     triggers {
         cron('H 2 * * *') // Run nightly
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        
+
         stage('Sync Branches') {
             steps {
                 sh '''
@@ -188,25 +188,25 @@ pipeline {
                 '''
             }
         }
-        
+
         stage('Install') {
             steps {
                 sh 'npm ci'
             }
         }
-        
+
         stage('Build') {
             steps {
                 sh 'npm run build'
             }
         }
-        
+
         stage('Test') {
             steps {
                 sh 'npm test'
             }
         }
-        
+
         stage('Status Report') {
             steps {
                 sh '''
@@ -216,7 +216,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
             cleanWs()
@@ -323,6 +323,7 @@ echo "✅ Repository synced and ready for development!"
 ```
 
 Add to crontab:
+
 ```bash
 # Run every weekday at 9 AM
 0 9 * * 1-5 ~/bin/ghostwriter-sync.sh
@@ -382,6 +383,7 @@ Add to `package.json`:
 ```
 
 Usage:
+
 ```bash
 npm run morning  # Run morning checklist
 npm run dev      # Auto-syncs before starting
@@ -400,6 +402,7 @@ Add to `~/.gitconfig`:
 ```
 
 Usage from anywhere in the repo:
+
 ```bash
 git gw-sync    # Full sync
 git gw-status  # Quick status
@@ -468,16 +471,19 @@ echo "$OUTPUT" | mail -s "$SUBJECT" "$RECIPIENT"
 ## Best Practices for CI/CD
 
 1. **Always fetch before operations**
+
    ```bash
    git fetch --all --prune
    ```
 
 2. **Use specific branch names**
+
    ```bash
    git checkout main  # Not just 'git checkout'
    ```
 
 3. **Configure git identity**
+
    ```bash
    git config user.name "CI Bot"
    git config user.email "ci@example.com"
@@ -489,6 +495,7 @@ echo "$OUTPUT" | mail -s "$SUBJECT" "$RECIPIENT"
    - Store credentials in CI/CD secrets
 
 5. **Clean workspace**
+
    ```bash
    git clean -ffdx  # Remove all untracked files
    ```
@@ -528,5 +535,6 @@ git checkout ${BRANCH_NAME}
 ---
 
 For more information, see:
+
 - [GIT_WORKFLOW.md](GIT_WORKFLOW.md) - Complete workflow guide
 - [GIT_QUICK_REFERENCE.md](GIT_QUICK_REFERENCE.md) - Quick command reference

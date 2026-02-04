@@ -34,11 +34,13 @@ This guide will help you set up the complete GhostWriter stack: Backend (Go), Fr
 This starts PostgreSQL, Redis, and the Go API all together.
 
 1. **Navigate to the repository root**:
+
    ```bash
    cd /path/to/GhostWriter-
    ```
 
 2. **Configure environment variables**:
+
    ```bash
    cd backend-go
    cp .env.template .env
@@ -49,21 +51,24 @@ This starts PostgreSQL, Redis, and the Go API all together.
    - `APNS_*`: Apple Push Notification credentials (optional)
 
 3. **Start all services**:
+
    ```bash
    cd ..
    docker compose up -d
    ```
 
 4. **Check logs**:
+
    ```bash
    docker compose logs -f ghost-api
    ```
 
 5. **Verify services are running**:
+
    ```bash
    # Check health endpoint
    curl http://localhost:8080/health
-   
+
    # Should return: {"status":"healthy","timestamp":"...","service":"ghostwriter-api"}
    ```
 
@@ -72,6 +77,7 @@ This starts PostgreSQL, Redis, and the Go API all together.
 If you want to run the backend without Docker:
 
 1. **Install and start PostgreSQL with pgvector**:
+
    ```bash
    # Install PostgreSQL 17
    # Then install pgvector extension
@@ -79,24 +85,26 @@ If you want to run the backend without Docker:
    ```
 
 2. **Install and start Redis**:
+
    ```bash
    redis-server
    ```
 
 3. **Build and run the Go backend**:
+
    ```bash
    cd backend-go
-   
+
    # Install dependencies
    go mod download
-   
+
    # Configure environment
    cp .env.template .env
    # Edit .env with your settings
-   
+
    # Build
    go build -o server ./cmd/server
-   
+
    # Run
    ./server
    ```
@@ -128,7 +136,7 @@ CREATE TABLE portal_entries (
 -- Indexes for performance
 CREATE INDEX idx_portal_entries_user_id ON portal_entries(user_id);
 CREATE INDEX idx_portal_entries_created_at ON portal_entries(created_at);
-CREATE INDEX idx_portal_entries_embedding ON portal_entries 
+CREATE INDEX idx_portal_entries_embedding ON portal_entries
     USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
 
@@ -137,11 +145,13 @@ CREATE INDEX idx_portal_entries_embedding ON portal_entries
 The frontend is a React/TypeScript web application.
 
 1. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 2. **Start development server**:
+
    ```bash
    npm run dev
    ```
@@ -196,6 +206,7 @@ The frontend is a React/TypeScript web application.
 
 4. **Update Info.plist**:
    Add these keys:
+
    ```xml
    <key>NSPhotoLibraryUsageDescription</key>
    <string>We need access to your photos to extract text from screenshots</string>
@@ -224,6 +235,7 @@ To enable push notifications:
 
 2. **Configure backend**:
    In `backend-go/.env`, add:
+
    ```
    APNS_AUTH_MODE=token
    APNS_KEY_PATH=/path/to/AuthKey_XXXXXXXXXX.p8
@@ -247,6 +259,7 @@ curl http://localhost:8080/health
 ```
 
 Expected response:
+
 ```json
 {
   "status": "healthy",
@@ -261,23 +274,25 @@ You can use a WebSocket client or the iOS app to test:
 
 ```javascript
 // JavaScript example
-const ws = new WebSocket('ws://localhost:8080/ws');
+const ws = new WebSocket('ws://localhost:8080/ws')
 
 ws.onopen = () => {
-  console.log('Connected');
-  
-  // Send a test message
-  ws.send(JSON.stringify({
-    type: 'text_sync',
-    user_id: 'test-user-123',
-    text_content: 'Hello from WebSocket!',
-    timestamp: new Date().toISOString()
-  }));
-};
+  console.log('Connected')
 
-ws.onmessage = (event) => {
-  console.log('Response:', event.data);
-};
+  // Send a test message
+  ws.send(
+    JSON.stringify({
+      type: 'text_sync',
+      user_id: 'test-user-123',
+      text_content: 'Hello from WebSocket!',
+      timestamp: new Date().toISOString(),
+    })
+  )
+}
+
+ws.onmessage = event => {
+  console.log('Response:', event.data)
+}
 ```
 
 ### 3. Test Semantic Search
@@ -310,11 +325,13 @@ curl -X POST http://localhost:8080/vault/search \
 ### Backend Issues
 
 **Problem**: Backend fails to start
+
 - Check if PostgreSQL is running: `docker compose ps`
 - Check logs: `docker compose logs ghost-api`
 - Verify database connection string in `.env`
 
 **Problem**: Embeddings not generated
+
 - Check if `OPENAI_API_KEY` is set in `.env`
 - Verify API key is valid
 - Check logs for API errors
@@ -322,16 +339,19 @@ curl -X POST http://localhost:8080/vault/search \
 ### iOS App Issues
 
 **Problem**: Cannot connect to backend
+
 - Verify backend is running: `curl http://YOUR_IP:8080/health`
 - Check firewall settings
 - Use correct URL format: `ws://` not `http://`
 
 **Problem**: Push notifications not working
+
 - Verify APNS is configured in backend
 - Check device token is registered
 - Ensure app has notification permissions
 
 **Problem**: OCR not working
+
 - Grant photo library permissions
 - Check iOS version (requires iOS 17+)
 - Verify Vision framework is available
@@ -339,6 +359,7 @@ curl -X POST http://localhost:8080/vault/search \
 ### Network Issues
 
 **Problem**: Mobile device can't access backend
+
 - Ensure both devices are on same network
 - Check firewall rules
 - Use `npm run dev:host` for frontend
@@ -347,6 +368,7 @@ curl -X POST http://localhost:8080/vault/search \
 ### Database Issues
 
 **Problem**: pgvector extension not found
+
 - Ensure using `pgvector/pgvector:pg17` Docker image
 - Check extension is created: `docker compose exec vault-db psql -U bobby_admin -d ghostwriter_vault -c "SELECT * FROM pg_extension;"`
 
@@ -355,6 +377,7 @@ curl -X POST http://localhost:8080/vault/search \
 ### Backend
 
 1. **Build Docker image**:
+
    ```bash
    cd backend-go
    docker build -t ghostwriter-backend:latest .
@@ -373,6 +396,7 @@ curl -X POST http://localhost:8080/vault/search \
 ### Frontend
 
 1. **Build for production**:
+
    ```bash
    npm run build
    ```
@@ -396,6 +420,7 @@ curl -X POST http://localhost:8080/vault/search \
 ## Support
 
 For issues and questions:
+
 - GitHub Issues: [Report a bug](https://github.com/Bboy9090/GhostWriter-/issues)
 - Documentation: Check `README.md`, `backend-go/README.md`, `ios-native/README.md`
 

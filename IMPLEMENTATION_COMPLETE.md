@@ -13,6 +13,7 @@ npm run git:sync
 ```
 
 **This single command will:**
+
 1. ✅ Fetch all changes from all remotes
 2. ✅ Update your main/master branch with latest changes
 3. ✅ Update all local branches that track remote branches
@@ -27,6 +28,7 @@ npm run git:status
 ```
 
 Shows you:
+
 - Current branch
 - All branches with tracking info
 - Uncommitted changes
@@ -40,6 +42,7 @@ Shows you:
 ```
 
 Provides an interactive menu for common git operations:
+
 - Full synchronization
 - Status checks
 - Branch creation
@@ -52,9 +55,11 @@ Provides an interactive menu for common git operations:
 ### 1. Automated Scripts (`scripts/`)
 
 #### `sync-branches.sh` - Full Synchronization
+
 The main synchronization script that automates the entire process.
 
 **Features:**
+
 - ✅ Color-coded output (green for success, yellow for warnings, red for errors)
 - ✅ Automatic main/master branch detection
 - ✅ Safe operations (never force pushes)
@@ -62,9 +67,11 @@ The main synchronization script that automates the entire process.
 - ✅ Input sanitization for security
 
 #### `git-status.sh` - Quick Status Overview
+
 Shows current repository status at a glance.
 
 **Shows:**
+
 - Current branch
 - All branches with upstream tracking
 - Uncommitted changes
@@ -72,9 +79,11 @@ Shows current repository status at a glance.
 - Remote repositories
 
 #### `git-helper.sh` - Interactive Menu
+
 User-friendly interactive interface for common operations.
 
 **Operations:**
+
 1. Full sync
 2. Quick status
 3. Update main only
@@ -89,7 +98,9 @@ User-friendly interactive interface for common operations.
 ### 2. Comprehensive Documentation
 
 #### `GIT_WORKFLOW.md` (8KB)
+
 **Complete workflow guide with:**
+
 - One-command synchronization
 - Manual workflow steps
 - Common scenarios (merge, rebase, sync fork)
@@ -99,7 +110,9 @@ User-friendly interactive interface for common operations.
 - Git aliases
 
 #### `GIT_QUICK_REFERENCE.md` (6.5KB)
+
 **Visual cheat sheet featuring:**
+
 - Quick commands
 - Workflow diagrams
 - Branch state illustrations
@@ -109,7 +122,9 @@ User-friendly interactive interface for common operations.
 - Useful aliases
 
 #### `CI_CD_GIT_EXAMPLES.md` (9.5KB)
+
 **CI/CD integration examples for:**
+
 - GitHub Actions workflows
 - GitLab CI pipelines
 - Jenkins configurations
@@ -119,7 +134,9 @@ User-friendly interactive interface for common operations.
 - Monitoring and notifications
 
 #### `GIT_SETUP_COMPLETE.md` (9KB)
+
 **Complete overview including:**
+
 - What was added
 - Quick start guide
 - Documentation structure
@@ -132,6 +149,7 @@ User-friendly interactive interface for common operations.
 ### 3. NPM Integration
 
 Added to `package.json`:
+
 ```json
 {
   "scripts": {
@@ -147,6 +165,7 @@ Added to `package.json`:
 Added a new section: **Git Workflow & Branch Management**
 
 Includes:
+
 - Quick start commands
 - What the sync does
 - Links to comprehensive guides
@@ -154,6 +173,7 @@ Includes:
 ## 🔒 Security Features
 
 All scripts include:
+
 - ✅ Input validation for branch names
 - ✅ Protection against command injection
 - ✅ Safe error handling
@@ -214,29 +234,32 @@ git status
 
 **For different needs, use different docs:**
 
-| Need | Document | Size |
-|------|----------|------|
-| Quick commands | `GIT_QUICK_REFERENCE.md` | 6.5KB |
-| Learning workflows | `GIT_WORKFLOW.md` | 8KB |
-| CI/CD setup | `CI_CD_GIT_EXAMPLES.md` | 9.5KB |
-| Complete overview | `GIT_SETUP_COMPLETE.md` | 9KB |
-| First stop | `README.md` (updated) | - |
+| Need               | Document                 | Size  |
+| ------------------ | ------------------------ | ----- |
+| Quick commands     | `GIT_QUICK_REFERENCE.md` | 6.5KB |
+| Learning workflows | `GIT_WORKFLOW.md`        | 8KB   |
+| CI/CD setup        | `CI_CD_GIT_EXAMPLES.md`  | 9.5KB |
+| Complete overview  | `GIT_SETUP_COMPLETE.md`  | 9KB   |
+| First stop         | `README.md` (updated)    | -     |
 
 ## 🎨 Features Highlight
 
 ### Color-Coded Output
+
 - 🟢 **Green**: Success messages
 - 🟡 **Yellow**: Warnings
 - 🔴 **Red**: Errors
 - 🔵 **Blue**: Information
 
 ### Smart Detection
+
 - Auto-detects main vs master branch
 - Identifies tracking branches
 - Shows diverged branches
 - Detects uncommitted changes
 
 ### Safe Operations
+
 - Never force pushes automatically
 - Always returns to original branch
 - Preserves local changes
@@ -246,21 +269,25 @@ git status
 ## 💡 Pro Tips
 
 1. **Start each day with a sync**
+
    ```bash
    npm run git:sync
    ```
 
 2. **Check status before pushing**
+
    ```bash
    npm run git:status
    ```
 
 3. **Use the interactive helper when unsure**
+
    ```bash
    ./scripts/git-helper.sh
    ```
 
 4. **Add git aliases for convenience**
+
    ```bash
    git config --global alias.sync '!./scripts/sync-branches.sh'
    ```
@@ -285,6 +312,7 @@ Add to `~/.gitconfig`:
 ```
 
 Then use from anywhere:
+
 ```bash
 git sync    # Full synchronization
 git quick   # Quick status
@@ -311,16 +339,19 @@ git lg      # Pretty branch graph
 ## 🎯 Benefits
 
 ### Time Saved
+
 - ⚡ **Before**: 5-10 minutes of manual git commands
 - ⚡ **After**: 1 command, 30 seconds
 
 ### Errors Prevented
+
 - 🛡️ Input validation catches mistakes
 - 🛡️ Clear error messages guide you
 - 🛡️ Safe defaults prevent accidents
 - 🛡️ Comprehensive checks catch issues
 
 ### Learning Enabled
+
 - 📚 Comprehensive documentation
 - 📚 Visual guides and examples
 - 📚 Troubleshooting help
@@ -338,16 +369,19 @@ git lg      # Pretty branch graph
 ### Common Issues
 
 **Scripts won't run?**
+
 ```bash
 chmod +x ./scripts/*.sh
 ```
 
 **Authentication failed?**
+
 - Check your GitHub credentials
 - Consider using SSH instead of HTTPS
 - Verify token permissions
 
 **Merge conflicts?**
+
 - See troubleshooting in `GIT_WORKFLOW.md`
 - Use the stash feature in `git-helper.sh`
 

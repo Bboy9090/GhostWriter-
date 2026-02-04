@@ -52,6 +52,7 @@ and syncs with the backend for semantic search and storage.
 ## Usage
 
 ### OCR Capture
+
 1. Switch to "Capture" tab
 2. Select screenshots or screen recording
 3. Configure OCR settings
@@ -59,12 +60,14 @@ and syncs with the backend for semantic search and storage.
 5. Text is automatically synced to backend (if WebSocket is connected)
 
 ### Vault Access
+
 1. Switch to "Vault" tab
 2. Search for text using semantic search
 3. View, share, or export entries
 4. Pull to refresh for latest entries
 
 ### Settings
+
 1. Configure your User ID (auto-generated)
 2. Set backend server URL
 3. Connect/disconnect WebSocket
@@ -74,18 +77,23 @@ and syncs with the backend for semantic search and storage.
 ## Configuration
 
 ### Backend Server
+
 Default: `ws://localhost:8080/ws`
 
 For production, update to your server URL:
+
 - Format: `ws://your-server.com/ws` or `wss://your-server.com/ws` (secure)
 
 ### Push Notifications
+
 To enable push notifications:
+
 1. Configure APNS in your Apple Developer account
 2. Add your device token in the backend
 3. Backend will send notifications when text processing completes
 
 ## Notes
+
 - iOS cannot capture other apps live. Use screenshots or screen recordings.
 - Vision OCR runs fully on-device (privacy-first)
 - WebSocket connection is optional - app works offline

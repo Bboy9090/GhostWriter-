@@ -147,33 +147,33 @@ iOS Device (VaultView)
 
 ### Backend Components
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **WebSocket Handler** | Fiber + WebSocket | Real-time text syncing |
-| **REST API** | Fiber | Vault search and entry retrieval |
-| **Database Layer** | PostgreSQL + pgvector | Vector storage and similarity search |
-| **Embeddings Service** | OpenAI API | Text-to-vector conversion (512D) |
-| **Redis Client** | Redis Pub/Sub | Broadcasting updates to clients |
-| **APNS Client** | apns2 library | Push notifications to iOS |
+| Component              | Technology            | Purpose                              |
+| ---------------------- | --------------------- | ------------------------------------ |
+| **WebSocket Handler**  | Fiber + WebSocket     | Real-time text syncing               |
+| **REST API**           | Fiber                 | Vault search and entry retrieval     |
+| **Database Layer**     | PostgreSQL + pgvector | Vector storage and similarity search |
+| **Embeddings Service** | OpenAI API            | Text-to-vector conversion (512D)     |
+| **Redis Client**       | Redis Pub/Sub         | Broadcasting updates to clients      |
+| **APNS Client**        | apns2 library         | Push notifications to iOS            |
 
 ### iOS Components
 
-| Component | Framework | Purpose |
-|-----------|-----------|---------|
-| **Vision OCR** | Vision | On-device text extraction |
-| **WebSocket Client** | URLSession | Real-time backend communication |
-| **API Client** | URLSession | REST API requests |
-| **VaultView** | SwiftUI | Browse and search vault entries |
-| **ExportView** | UIKit + SwiftUI | Export to iCloud/Files |
-| **PushNotificationManager** | UserNotifications | Handle push notifications |
+| Component                   | Framework         | Purpose                         |
+| --------------------------- | ----------------- | ------------------------------- |
+| **Vision OCR**              | Vision            | On-device text extraction       |
+| **WebSocket Client**        | URLSession        | Real-time backend communication |
+| **API Client**              | URLSession        | REST API requests               |
+| **VaultView**               | SwiftUI           | Browse and search vault entries |
+| **ExportView**              | UIKit + SwiftUI   | Export to iCloud/Files          |
+| **PushNotificationManager** | UserNotifications | Handle push notifications       |
 
 ### Infrastructure
 
-| Service | Technology | Purpose |
-|---------|-----------|---------|
-| **PostgreSQL** | pgvector/pgvector:pg17 | Vector database |
-| **Redis** | redis:7-alpine | Pub/Sub messaging |
-| **Backend API** | Go + Docker | Application server |
+| Service         | Technology             | Purpose            |
+| --------------- | ---------------------- | ------------------ |
+| **PostgreSQL**  | pgvector/pgvector:pg17 | Vector database    |
+| **Redis**       | redis:7-alpine         | Pub/Sub messaging  |
+| **Backend API** | Go + Docker            | Application server |
 
 ## Database Schema
 
@@ -189,7 +189,7 @@ CREATE TABLE portal_entries (
 -- Performance indexes
 CREATE INDEX idx_portal_entries_user_id ON portal_entries(user_id);
 CREATE INDEX idx_portal_entries_created_at ON portal_entries(created_at);
-CREATE INDEX idx_portal_entries_embedding ON portal_entries 
+CREATE INDEX idx_portal_entries_embedding ON portal_entries
     USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
 
@@ -200,6 +200,7 @@ CREATE INDEX idx_portal_entries_embedding ON portal_entries
 **Endpoint:** `ws://localhost:8080/ws`
 
 **Client → Server Message:**
+
 ```json
 {
   "type": "text_sync",
@@ -211,6 +212,7 @@ CREATE INDEX idx_portal_entries_embedding ON portal_entries
 ```
 
 **Server → Client Response:**
+
 ```json
 {
   "status": "received",
@@ -221,12 +223,14 @@ CREATE INDEX idx_portal_entries_embedding ON portal_entries
 ### REST API
 
 #### Health Check
+
 ```
 GET /health
 Response: {"status":"healthy","timestamp":"...","service":"ghostwriter-api"}
 ```
 
 #### Search Vault
+
 ```
 POST /vault/search
 Content-Type: application/json
@@ -257,6 +261,7 @@ Response:
 ```
 
 #### Get Entries
+
 ```
 GET /entries?user_id=550e8400-e29b-41d4-a716-446655440000&limit=100
 
@@ -270,18 +275,21 @@ Response:
 ## Security
 
 ### Backend
+
 - ✅ No authentication required (add JWT for production)
 - ✅ CORS enabled for cross-origin requests
 - ✅ Environment-based configuration
 - ✅ Secure WebSocket (use wss:// in production)
 
 ### iOS
+
 - ✅ On-device OCR (no raw images sent)
 - ✅ HTTPS/WSS for production
 - ✅ Push notification encryption
 - ✅ Keychain for sensitive data (implement as needed)
 
 ### Database
+
 - ✅ Connection pooling
 - ✅ Prepared statements (SQL injection prevention)
 - ✅ User ID-based isolation
@@ -290,6 +298,7 @@ Response:
 ## Deployment
 
 ### Development
+
 ```bash
 # Backend
 docker compose up -d
@@ -302,6 +311,7 @@ Open in Xcode and run
 ```
 
 ### Production
+
 ```bash
 # Backend (Docker)
 docker build -t ghostwriter-backend:latest backend-go/
@@ -318,6 +328,7 @@ Archive in Xcode → Submit to App Store Connect
 ## Monitoring
 
 ### Backend Metrics
+
 - WebSocket connections
 - Request latency
 - Database query performance
@@ -325,6 +336,7 @@ Archive in Xcode → Submit to App Store Connect
 - OpenAI API usage
 
 ### iOS Metrics
+
 - OCR success rate
 - WebSocket connection stability
 - Search query performance
@@ -333,12 +345,14 @@ Archive in Xcode → Submit to App Store Connect
 ## Scalability
 
 ### Horizontal Scaling
+
 - ✅ Stateless backend (multiple instances)
 - ✅ Redis for inter-instance communication
 - ✅ PostgreSQL connection pooling
 - ✅ Load balancer for WebSocket
 
 ### Performance Optimization
+
 - ✅ Vector index (ivfflat) for fast similarity search
 - ✅ Database indexes on frequently queried fields
 - ✅ Async processing for embeddings

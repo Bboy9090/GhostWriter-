@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/apns"
+	"github.com/pgvector/pgvector-go"
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/database"
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/embeddings"
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/models"
@@ -92,11 +93,15 @@ func (h *Handler) processTextEntry(msg WebSocketMessage) {
 		return
 	}
 
-	// Generate embedding for the text
-	embedding, err := h.embedding.GenerateEmbedding(msg.TextContent)
-	if err != nil {
-		log.Printf("Error generating embedding: %v", err)
-		// Continue without embedding
+	// Generate embedding for the text (skip if OPENAI_API_KEY not set)
+	var embedding pgvector.Vector
+	if h.embedding != nil {
+		var embErr error
+		embedding, embErr = h.embedding.GenerateEmbedding(msg.TextContent)
+		if embErr != nil {
+			log.Printf("Error generating embedding: %v", embErr)
+			// Continue without embedding
+		}
 	}
 
 	// Create portal entry
