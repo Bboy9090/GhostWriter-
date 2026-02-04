@@ -37,7 +37,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
           transition={{ duration: 0.5 }}
           className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, oklch(0.12 0.02 280) 0%, oklch(0.16 0.03 290) 50%, oklch(0.14 0.04 300) 100%)'
+            background: 'linear-gradient(135deg, oklch(0.10 0.03 200) 0%, oklch(0.12 0.04 210) 50%, oklch(0.11 0.05 230) 100%)'
           }}
         >
           {/* Animated background elements */}
@@ -45,7 +45,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
             {/* Floating orbs */}
             <motion.div
               className="absolute w-96 h-96 rounded-full blur-3xl"
-              style={{ background: 'oklch(0.55 0.25 300 / 0.2)' }}
+              style={{ background: 'oklch(0.65 0.20 160 / 0.2)' }}
               animate={{
                 x: ['-20%', '10%', '-20%'],
                 y: ['-10%', '20%', '-10%'],
@@ -54,7 +54,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
             />
             <motion.div
               className="absolute right-0 bottom-0 w-80 h-80 rounded-full blur-3xl"
-              style={{ background: 'oklch(0.70 0.15 190 / 0.2)' }}
+              style={{ background: 'oklch(0.65 0.18 190 / 0.2)' }}
               animate={{
                 x: ['20%', '-10%', '20%'],
                 y: ['10%', '-20%', '10%'],
@@ -63,7 +63,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
             />
             <motion.div
               className="absolute left-1/2 top-1/2 w-64 h-64 rounded-full blur-3xl"
-              style={{ background: 'oklch(0.65 0.22 330 / 0.15)' }}
+              style={{ background: 'oklch(0.70 0.20 150 / 0.15)' }}
               animate={{
                 scale: [1, 1.2, 1],
               }}
@@ -95,10 +95,10 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
                 transition={{ delay: 0.5, duration: 0.6 }}
                 className="text-5xl font-extrabold tracking-tight"
               >
-                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-400 bg-clip-text text-transparent">
-                  Universal
+                <span className="bg-gradient-to-r from-emerald-300 via-cyan-300 to-lime-300 bg-clip-text text-transparent">
+                  Ghost
                 </span>
-                <span className="text-white ml-3">Cart</span>
+                <span className="text-white ml-3">Writer</span>
               </motion.h1>
               
               <AnimatePresence>
@@ -110,7 +110,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
                     transition={{ duration: 0.4 }}
                     className="text-lg text-muted-foreground"
                   >
-                    Shop anywhere. Save everything. Share with anyone.
+                    Capture the thought. Leave no trace.
                   </motion.p>
                 )}
               </AnimatePresence>
@@ -124,18 +124,18 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
               className="flex items-center gap-6 text-sm text-muted-foreground"
             >
               <div className="flex items-center gap-2">
-                <span className="text-xl">🛒</span>
-                <span>Any Store</span>
+                <span className="text-xl">👻</span>
+                <span>Portal</span>
               </div>
               <div className="w-1 h-1 bg-muted-foreground/50 rounded-full" />
               <div className="flex items-center gap-2">
-                <span className="text-xl">👥</span>
-                <span>Social</span>
+                <span className="text-xl">🧠</span>
+                <span>Healer</span>
               </div>
               <div className="w-1 h-1 bg-muted-foreground/50 rounded-full" />
               <div className="flex items-center gap-2">
-                <span className="text-xl">🔒</span>
-                <span>Secure</span>
+                <span className="text-xl">🗄️</span>
+                <span>Vault</span>
               </div>
             </motion.div>
 
@@ -150,7 +150,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
                 <motion.div
                   key={i}
                   className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: 'linear-gradient(135deg, oklch(0.65 0.22 300), oklch(0.70 0.18 330))' }}
+                  style={{ background: 'linear-gradient(135deg, oklch(0.70 0.20 160), oklch(0.65 0.18 190))' }}
                   animate={{
                     scale: [1, 1.3, 1],
                     opacity: [0.5, 1, 0.5],
@@ -170,7 +170,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
           <div 
             className="absolute bottom-0 left-0 right-0 h-32"
             style={{
-              background: 'linear-gradient(to top, oklch(0.10 0.02 280) 0%, transparent 100%)'
+              background: 'linear-gradient(to top, oklch(0.08 0.02 210) 0%, transparent 100%)'
             }}
           />
         </motion.div>

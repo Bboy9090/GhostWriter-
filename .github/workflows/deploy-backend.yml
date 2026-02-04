@@ -1,0 +1,66 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend-go/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/ghostwriter-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend-go
+          file: ./backend-go/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image digest
+        run: echo ${{ steps.meta.outputs.digest }}
+
+  deploy-notification:
+    name: Deployment Notification
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Notify deployment success
+        run: |
+          echo "✅ Backend Docker image built and pushed successfully"
+          echo "📦 Image: ${{ secrets.DOCKER_USERNAME }}/ghostwriter-backend:latest"
+          echo "🚀 Ready to deploy with docker-compose or your orchestration platform"
