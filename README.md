@@ -84,6 +84,69 @@ docker run -p 3000:3000 ghostwriter
 
 ---
 
+## 🚀 Deployment
+
+### Deploy to Fly.io (Recommended)
+
+This app is configured for deployment on [Fly.io](https://fly.io) with Docker.
+
+**Prerequisites:**
+- [Install Fly CLI](https://fly.io/docs/hands-on/install-flyctl/)
+- Create a Fly.io account
+
+**Deploy Steps:**
+
+1. **Login to Fly.io:**
+   ```bash
+   flyctl auth login
+   ```
+
+2. **Launch your app (first time only):**
+   ```bash
+   flyctl launch
+   ```
+   - Accept the detected settings
+   - Choose your region
+   - Don't deploy yet if you want to customize `fly.toml` first
+
+3. **Deploy:**
+   ```bash
+   flyctl deploy
+   ```
+
+4. **Open your app:**
+   ```bash
+   flyctl open
+   ```
+
+**Your app will be available at:** `https://ghostwriter.fly.dev`
+
+### Docker Build Locally
+
+To test the Docker build locally before deploying:
+
+```bash
+# Build the image
+docker build -t ghostwriter .
+
+# Run the container
+docker run -p 3000:3000 ghostwriter
+
+# Open in browser
+# http://localhost:3000
+```
+
+### Architecture
+
+- **Vite** builds the static frontend to `/dist`
+- **Express** server serves:
+  - Static files from `/dist`
+  - API routes at `/api/*`
+- **Single container** with Node.js 20 Alpine
+- **Production optimized** with multi-stage build
+
+---
+
 ## 🚀 Running Locally
 
 ## 🎯 Overview
