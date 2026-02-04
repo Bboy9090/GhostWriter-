@@ -591,6 +591,21 @@ This is a security-focused tool. If you find vulnerabilities or have security im
 
 ---
 
+## 🔧 Repository Maintenance
+
+### Branch Cleanup Documentation
+
+This repository includes comprehensive branch management documentation and automation:
+
+- **[BRANCH_CLEANUP_SUMMARY.md](./BRANCH_CLEANUP_SUMMARY.md)** - Quick overview and next steps
+- **[BRANCH_CLEANUP_GUIDE.md](./BRANCH_CLEANUP_GUIDE.md)** - Step-by-step cleanup instructions
+- **[BRANCH_CLEANUP_ANALYSIS.md](./BRANCH_CLEANUP_ANALYSIS.md)** - Detailed branch analysis
+- **[scripts/branch-cleanup.sh](./scripts/branch-cleanup.sh)** - Automated cleanup tool
+
+These resources help maintain a clean repository by merging important updates and removing obsolete branches.
+
+---
+
 ## ⚡ Quick Reference
 
 | Action                   | How                                                             |
