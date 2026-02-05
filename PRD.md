@@ -1,220 +1,124 @@
-# Planning Guide
+# GhostWriter - Product Requirements Document
 
-A security-focused payment card metadata manager with automatic cloud backup and spending insights that helps users organize and track their cards and transactions without ever storing sensitive data like full card numbers or CVVs.
+> **Capture the thought. Leave no trace.**
 
-**Experience Qualities**:
-1. **Secure** - Every interaction reinforces that sensitive data is protected, with visual cues and clear messaging about what is and isn't stored
-2. **Reassuring** - The PIN lock, automatic cloud backup, panic wipe, and security warnings create confidence that the tool prioritizes user safety and data persistence
-3. **Efficient** - Powerful search, filtering, and sorting capabilities make finding the right card instantaneous, while analytics provide actionable spending insights
+GhostWriter is a real-time screen text extraction system that silently streams what you see into a clean, searchable memory vault. It operates as a stealth overlay on Android, processes OCR locally, heals the output with on-device LLMs, and syncs it into a hybrid semantic search backend.
 
-**Complexity Level**: Light Application (multiple features with basic state)
-This is a focused tool with several interconnected features (card CRUD, authentication, security measures, cloud sync, usage tracking, analytics dashboard) but maintains a tabbed single-view paradigm with modals for interactions.
+## 🎯 Vision
 
-## Essential Features
+GhostWriter turns transient screen text into permanent, AI-searchable memory. The experience should feel like a portal: you scroll on any app and the text appears in your vault, fully formatted and deduplicated, without manual copy/paste or screen recording.
 
-**Automatic Cloud Backup**
-- Functionality: All card metadata and transactions automatically sync to secure cloud storage in real-time, with offline mode detection, queued sync when reconnected, manual sync button to force immediate synchronization, and batch sync controls with pause/resume functionality for fine-grained control over data synchronization
-- Purpose: Ensure data is never lost and is accessible across all user devices without manual backup steps, even when working offline, with user control to force sync on demand and pause/resume syncing as needed during low-bandwidth situations or when needing to control when data uploads occur
-- Trigger: Any data modification (add/edit/delete card, add transaction, import data) OR when connection is restored after being offline OR user clicks "Sync Now" button OR user clicks pause/resume controls
-- Progression: User makes change → Data saves to cloud (if online and not paused) or queues for sync (if offline or paused) → Sync status updates → "Synced" indicator appears OR User goes offline → Changes queued → User reconnects → Queued changes sync automatically → Success notification OR User clicks "Sync Now" button → Manual sync initiates → Progress indicator shows → All queued changes sync → Success toast confirms completion OR User clicks pause → Syncing stops → Changes queue → User clicks resume → Syncing continues with queued operations OR Batch sync shows progress with current operation details and pause/resume controls
-- Success criteria: All changes persist immediately to cloud when online and not paused; offline changes queue and sync upon reconnection; paused changes queue and sync when resumed; sync status badge shows current connection state and queue size with count; manual sync button appears when changes are queued and online; manual sync processes entire queue and shows progress feedback; batch sync control shows detailed progress including current operation, total operations, and percentage complete; pause functionality immediately stops sync processing and allows user to queue more changes; resume functionality continues processing from where it left off; data accessible from any device
+## ✨ Experience Qualities
 
-**PIN Lock Screen**
-- Functionality: SHA-256 hashed PIN authentication that guards access to card metadata
-- Purpose: Prevents unauthorized access if someone gains physical access to the user's device
-- Trigger: App load, or after 5 minutes of inactivity
-- Progression: App loads → Lock screen displays → User enters PIN → Hash validation → Main app unlocks
-- Success criteria: Correct PIN grants access; incorrect attempts increment failure counter; 5 failures trigger panic wipe
+1. **Stealth** - Captures without interrupting workflows; overlay-first, no saved screenshots.
+2. **Accurate** - Paragraph-level fidelity with layout-aware OCR.
+3. **Fast** - Low-latency capture with 3-10 FPS throttling.
+4. **Secure** - Zero-knowledge pipeline with encrypted sync.
+5. **Searchable** - Hybrid semantic + keyword retrieval across all captured text.
 
-**Card Metadata Manager**
-- Functionality: CRUD operations for card metadata (nickname, bank, network, last 4 digits, expiry, tags, notes, source link)
-- Purpose: Organize and track payment cards without storing sensitive information
-- Trigger: User clicks "Add Card" button or clicks edit icon on existing card
-- Progression: Click action → Modal opens with form → User fills metadata → Save → Card appears in list → Data syncs to cloud
-- Success criteria: Cards persist across sessions and devices, display all metadata clearly, and can be edited or deleted
+## 🚀 Core Features
 
-**Usage Tracking & Transaction Logging**
-- Functionality: Record transaction details (amount, merchant, category, date) associated with specific cards
-- Purpose: Enable spending insights and usage analytics without storing sensitive payment information
-- Trigger: User clicks "Add Transaction" button in Insights tab
-- Progression: Click action → Modal opens → User selects card and enters transaction details → Save → Transaction syncs to cloud and appears in analytics
-- Success criteria: Transactions persist across sessions and devices, link correctly to cards, and update analytics in real-time
+### 1. Portal Overlay + MediaProjection
+- **Floating control** that stays above other apps.
+- **Foreground service** for consistent capture on Android 14/15+.
+- **Overlay-first launch** to satisfy background capture restrictions.
 
-**Spending Insights Dashboard**
-- Functionality: Visual analytics showing spending by card, category, and time period with trend analysis
-- Purpose: Help users understand spending patterns and make informed decisions about card usage
-- Trigger: User switches to "Insights" tab
-- Progression: Tab selection → Dashboard loads → Statistics calculate from usage data → Charts and metrics display
-- Success criteria: Analytics update instantly when transactions added; show accurate totals, percentages, and trends; compare current vs previous periods
+### 2. Frame Intelligence + Deduplication
+- Visual delta gating to avoid processing static frames.
+- Levenshtein + SimHash on text blocks to prevent duplicates.
+- Adaptive capture rate based on scroll velocity.
 
-**Batch Sync with Pause/Resume Controls**
-- Functionality: Advanced sync control panel showing real-time progress of batch synchronization operations with ability to pause and resume syncing, view queued operations, and monitor detailed sync status
-- Purpose: Give users fine-grained control over when and how their data syncs, especially useful during low-bandwidth situations, metered connections, or when user wants to control data upload timing
-- Trigger: Component appears automatically when sync operations are queued or in progress; user interacts with pause/resume controls
-- Progression: Sync starts → Batch sync control appears showing progress → Real-time updates show current operation (e.g., "Syncing cards", "Syncing transactions") and progress bar → User clicks pause → Sync stops immediately → Operations remain queued → User clicks resume → Sync continues from where it left off → All operations complete → Control disappears OR User clicks "Details" → Expands to show list of all queued operations with icons and timestamps → User clicks "Clear Queue" → Confirmation → Queue cleared
-- Success criteria: Progress bar accurately reflects completion percentage; current operation label updates in real-time; pause immediately stops processing; resume continues without data loss; detailed view shows all queued operations with timestamps and types; clear queue removes all pending operations; batch delay between operations prevents overwhelming the sync system; sync state persists across page reloads
+### 3. On-Device OCR
+- Google ML Kit for fast text recognition.
+- Preserves block geometry for layout-aware reconstruction.
+- Runs entirely on the device NPU for privacy.
 
-**Search & Filter System**
-- Functionality: Real-time text search and multiple filter dropdowns (status, tags, sort order)
-- Purpose: Quickly locate specific cards among many
-- Trigger: User types in search box or selects filter options
-- Progression: User inputs criteria → List updates in real-time → Matching cards display → Empty state shows if no matches
-- Success criteria: All search/filter combinations work instantly; multiple filters combine correctly
+### 4. Healer Layer (LLM Cleanup)
+- Local Gemma/Llama-style model repairs line breaks and typos.
+- Periodic batch pass that converts raw OCR into readable paragraphs.
 
-**Panic Wipe System**
-- Functionality: Complete erasure of all local data via manual trigger or automatic activation after failed login attempts
-- Purpose: Emergency security measure to protect card metadata in compromised situations
-- Trigger: Manual button click in danger zone OR 5 failed PIN attempts
-- Progression: Trigger activated → Confirmation dialog (if manual) → All localStorage keys deleted → App resets to first-run state → Success message displays
-- Success criteria: All data completely removed; app returns to fresh install state; user must set new PIN
+### 5. Semantic Memory Vault
+- Go backend stores entries in Postgres + pgvector.
+- Vector embeddings enable concept-based retrieval.
+- WebSocket sync delivers near real-time updates.
 
-**Inactivity Auto-Lock**
-- Functionality: Automatic re-locking after 5 minutes of no user interaction
-- Purpose: Protect data if user walks away from unlocked device
-- Trigger: No mouse/keyboard events detected for 5 minutes
-- Progression: User inactive → Timer counts down → 5 minutes elapsed → Lock screen appears → Data remains intact
-- Success criteria: Timer resets on any interaction; lock engages precisely at timeout; data preserved
+### 6. Hybrid Search (RRF)
+- BM25 handles precise keywords (part numbers, names).
+- Vector similarity handles intent-based queries.
+- RRF merges both into a single ranked list.
 
-**Backup Export/Import**
-- Functionality: Export all card metadata and transactions to a JSON file, and import from previously exported backups
-- Purpose: Allow users to create portable offline backups in addition to automatic cloud sync, or transfer data between different systems
-- Trigger: User clicks "Export Backup" or "Import Backup" button in Data Management section
-- Progression: Export: Click button → Confirmation dialog → JSON file downloads → Success toast; Import: Click button → Select file → Preview data → Choose merge or replace → Confirm → Data restored → Success toast
-- Success criteria: Export creates valid JSON with all cards and transactions; import validates file format; merge adds only new items; replace overwrites all data; corrupted files show error message; all imports sync to cloud after completion
+### 7. Security + Privacy
+- No screenshots saved to disk.
+- Device-only encryption keys for sync.
+- Optional panic wipe to clear local cache.
+- Optional root module to bypass FLAG_SECURE (advanced users only).
 
-## Edge Case Handling
+## 🎨 Design Direction
 
-- **First Run Setup**: If no PIN exists, redirect to PIN creation flow with confirmation field to prevent typos
-- **No Cards State**: Show welcoming empty state with "Add Your First Card" CTA and explanation of what metadata is safe to store
-- **No Usage Data**: Show empty state in analytics dashboard encouraging users to add transactions for insights
-- **Browser Without Crypto API**: Show error message that app requires modern browser with Web Crypto API support
-- **Lost PIN**: Inform user that only option is panic wipe (by design - no backdoor); provide clear warning during PIN setup
-- **Expired Cards**: Visual indicator on cards past expiry date; filter to show only expired cards for cleanup
-- **Duplicate Prevention**: Warn if adding card with same last 4 and bank as existing card
-- **Cloud Sync Status**: Always display current sync status in header; show "Synced" with timestamp after successful operations; show "Offline" with queued changes count when disconnected; show "Paused" when sync is manually paused; show "Sync Now" button when changes queued and online for manual synchronization
-- **Cloud Sync Failure**: If cloud save fails, queue changes for retry; show error toast but keep data in local memory; automatically retry sync on next operation or when connection restored; manual sync button allows user to retry immediately
-- **Offline Mode**: Automatically detect when offline and show appropriate messaging with alert banner; queue all changes for sync when connection restored; show queued changes count in status badge; manual sync button hidden while offline; process entire queue automatically upon reconnection
-- **Reconnection Handling**: When connection restored, show "Connection restored" toast; automatically sync all queued changes unless paused; show syncing progress in batch sync control; confirm successful sync with success toast; manual sync button becomes available if auto-sync fails
-- **Manual Sync**: When queued changes exist and online, "Sync Now" button appears next to status badge; clicking button triggers immediate sync of all queued changes; shows count of items being synced; button disabled while syncing in progress; success/error toasts provide feedback; attempting sync while offline shows error message
-- **Paused Sync State**: When user pauses sync, all sync operations stop immediately; new changes continue to queue; status badge shows "Paused" state; automatic sync does not process even when online; resume button becomes available; pause state persists across page reloads
-- **Batch Sync Progress**: Real-time progress indicator shows current operation number and total operations; progress bar shows percentage complete; current operation type displayed (e.g., "Syncing cards"); operations process with small delay between each to ensure data integrity; pause button available during processing
-- **Sync Queue Management**: Details view shows all queued operations with timestamps; each operation shows icon and label; current operation highlighted during sync; clear queue button allows removing all pending operations with confirmation; queue size always visible in status indicators
-- **Backup Security**: Exported JSON files contain plain metadata; warn users to store securely and not share publicly
-- **Invalid Backup Files**: Show clear error messages for corrupted or invalid JSON files during import
-- **Backup File Conflicts**: During merge import, skip items with duplicate IDs; during replace, clear all existing data first
-- **Deleted Cards with Usage History**: Usage data for deleted cards remains for analytics continuity but shows as "Unknown Card"
-- **Future Dated Transactions**: Prevent adding transactions with dates in the future
+### Visual Language
+- **Dark Mode First** with neon green accents.
+- **Minimal Interface** that feels invisible until needed.
+- **High Contrast** for quick glance readability.
 
-## Design Direction
+### Typography
+- **Primary**: Inter
+- **Monospace**: JetBrains Mono
 
-The design should evoke feelings of **security**, **reliability**, and **clarity**. Visual language should communicate both protection and seamless synchronization - like a digital security vault with cloud intelligence. The interface should feel authoritative yet approachable, with clear hierarchies that make security features obvious, operational features efficient, cloud sync status transparent, and insights actionable.
+### Motion
+- Subtle glow pulses on portal state changes.
+- Minimal toast notifications for status.
 
-## Color Selection
+## 📱 Platform Constraints
 
-A security-focused palette with strong contrast and clear semantic meaning.
+- **Android**: Supported via MediaProjection + overlay permission.
+- **iOS**: Restricted due to sandbox limitations; only possible with Accessibility APIs.
+- **FLAG_SECURE**: Protected windows remain black unless using a rooted bridge.
 
-- **Primary Color (Deep Navy)**: `oklch(0.25 0.05 250)` - Authoritative and secure; conveys trust and stability for the main UI framework
-- **Secondary Colors**: 
-  - **Card Background (Cool Gray)**: `oklch(0.96 0.01 250)` - Subtle, professional background for card containers
-  - **Muted Blue**: `oklch(0.65 0.08 250)` - Supporting color for secondary actions and borders
-- **Accent Color (Vibrant Cyan)**: `oklch(0.72 0.15 200)` - High-tech feel for active states, focus rings, and interactive elements; signals "active" and "accessible"
-- **Destructive (Alert Red)**: `oklch(0.55 0.22 25)` - Clear danger signal for panic wipe and delete actions
-- **Success (Secure Green)**: `oklch(0.65 0.15 145)` - Positive reinforcement for successful PIN entry and save actions
-- **Foreground/Background Pairings**:
-  - Primary Navy (`oklch(0.25 0.05 250)`): White text (`oklch(0.99 0 0)`) - Ratio 10.2:1 ✓
-  - Card Background (`oklch(0.96 0.01 250)`): Dark Gray text (`oklch(0.25 0 0)`) - Ratio 12.5:1 ✓
-  - Accent Cyan (`oklch(0.72 0.15 200)`): Dark Navy text (`oklch(0.20 0.05 250)`) - Ratio 7.8:1 ✓
-  - Destructive Red (`oklch(0.55 0.22 25)`): White text (`oklch(0.99 0 0)`) - Ratio 5.2:1 ✓
+## 🛡️ Edge Cases
 
-## Font Selection
+- Overlay permission denied or revoked.
+- MediaProjection dialog canceled mid-session.
+- Heavy scroll causing OCR lag or frame drops.
+- Offline mode: queue sync and retry later.
+- Rotation changes mid-capture.
 
-Typography should convey precision, security, and modern technical confidence - like a professional security system interface.
+## 📊 Success Metrics
 
-- **Primary Font**: **JetBrains Mono** - Monospace font for technical credibility; excellent for displaying card numbers (last 4 digits) and structured data
-- **Secondary Font**: **Space Grotesk** - Modern geometric sans-serif for headings and labels; feels contemporary and authoritative
+- **Capture accuracy**: OCR word accuracy > 95 percent.
+- **Latency**: < 100ms median from frame to vault entry.
+- **Dedup effectiveness**: > 85 percent duplicate suppression.
+- **Battery impact**: < 5 percent per 30 minutes of active capture.
 
-**Typographic Hierarchy**:
-- H1 (App Title "Card Command Center"): Space Grotesk Bold / 32px / tight letter-spacing (-0.02em)
-- H2 (Section Headers): Space Grotesk Semibold / 20px / normal letter-spacing
-- H3 (Card Labels): Space Grotesk Medium / 16px / normal letter-spacing
-- Body (Card metadata, descriptions): Space Grotesk Regular / 14px / normal letter-spacing / line-height 1.6
-- Monospace Data (Card numbers, dates): JetBrains Mono Medium / 14px / tracking-wide / used for last 4 digits and expiry dates
-- Small Text (Helper text, warnings): Space Grotesk Regular / 12px / line-height 1.5
-- Button Text: Space Grotesk Semibold / 14px / uppercase tracking
+## 🔮 Roadmap
 
-## Animations
+### Phase 2: Advanced Healer
+- Layout-aware paragraph restoration.
+- Multi-language OCR packs.
 
-Animations should reinforce security and precision - deliberate, not decorative. Use motion to guide attention during critical security moments and provide satisfying feedback for organizational tasks.
+### Phase 3: Cross-Device Vault
+- Desktop sync with real-time highlights.
+- Smart tags and auto-collections.
 
-- **Lock/Unlock Transitions**: Smooth fade + scale animation when transitioning between lock screen and main app (300ms ease-out) - feels like a vault opening
-- **PIN Entry Feedback**: Subtle shake animation on failed PIN (400ms) - universally understood "no" signal; success shows quick green flash on input field
-- **Card Interactions**: Gentle lift + shadow on hover (150ms); smooth height expansion when opening edit modal
-- **Panic Wipe Warning**: Pulsing red border on confirmation dialog (slow 2s pulse) - creates appropriate sense of caution
-- **Filter/Search Updates**: Staggered fade-in for card list items (50ms delay between each) - creates smooth, organized feel
-- **Inactivity Warning**: 30-second countdown with growing intensity (scale + color shift) before auto-lock engages
+### Phase 4: Memory Intelligence
+- Automatic summarization by session.
+- Contextual search with semantic filters.
 
-## Component Selection
+## 🏗️ Technical Architecture
 
-**Components**:
-- **Dialog (Lock Screen & Modals)**: Shadcn Dialog for PIN entry, card add/edit forms, transaction forms, and panic wipe confirmation - full-screen dialog for lock screen with backdrop blur
-- **Card**: Shadcn Card component for each card metadata display and analytics stat cards - customized with status badges and hover states
-- **Tabs**: Shadcn Tabs for switching between Cards and Insights views - prominent tab bar with icons
-- **Input**: Shadcn Input for search box and form fields - with leading icons from Phosphor
-- **Select**: Shadcn Select for status filter, tag filter, sort dropdown, and transaction category selection
-- **Button**: Shadcn Button with variants - default for primary, destructive for panic wipe, outline for secondary actions
-- **Badge**: Shadcn Badge for status indicators (active=green, frozen=blue, closed=gray), usage tags, and category labels
-- **Alert**: Shadcn Alert for security warnings and helper text
-- **Separator**: Shadcn Separator to divide sections (danger zone, settings)
+### Mobile
+- Kotlin + Jetpack Compose
+- Foreground service + MediaProjection
+- ML Kit OCR + MediaPipe LLM
 
-**Customizations**:
-- **Card Status Indicators**: Color-coded left border (4px) on card containers matching status
-- **Security Badge**: Custom component in header showing lock icon + "Secured" text when unlocked
-- **PIN Input Dots**: Custom masked input showing dots for each digit entered
-- **Countdown Timer**: Custom circular progress indicator for inactivity timeout warning
-- **Spending Charts**: Custom bar chart visualization using CSS for daily spending trends
-- **Progress Bars**: Custom horizontal progress bars showing spending distribution by card and category
+### Backend
+- Go API with WebSocket ingestion
+- PostgreSQL 17 + pgvector
+- Redis Streams for fanout
 
-**States**:
-- **Buttons**: Clear hover (lift + brightness), active (pressed scale), disabled (reduced opacity + no pointer)
-- **Inputs**: Focus ring in accent color with glow effect, error state with red border + shake
-- **Cards**: Hover elevation, selected state with accent border, expired cards with muted appearance
-- **Lock Screen**: Loading state during hash validation (subtle spinner)
-- **Analytics**: Loading state while calculating statistics, empty state with call-to-action
+### Infra
+- Docker Compose for local
+- Kubernetes for scale
 
-**Icon Selection**:
-- Lock/Unlock: `Lock`, `LockOpen` (Phosphor) - for security states
-- Cards: `CreditCard` - for add card button and empty states
-- Search: `MagnifyingGlass` - for search input
-- Filter: `Funnel` - for filter controls
-- Panic: `Warning` - for danger zone and wipe confirmation
-- Edit: `PencilSimple` - for card edit action
-- Delete: `Trash` - for card delete action
-- Link: `Link` - for source URL links
-- Status: `CheckCircle` (active), `Snowflake` (frozen), `XCircle` (closed)
-- Tags: `Tag` - for usage tags
-- Timer: `Timer` - for inactivity countdown
-- Analytics: `ChartLineUp`, `ChartBarHorizontal`, `TrendUp`, `Calendar`, `Receipt` - for insights dashboard
-- Trends: `ArrowUp` (increase), `ArrowDown` (decrease), `Minus` (neutral)
-- Backup: `DownloadSimple` (export), `UploadSimple` (import), `Database` - for data management
-- Sync: `ArrowsClockwise` - for manual sync button, spins during sync operation
-- Cloud: `CloudCheck` (synced), `Cloud` (syncing), `CloudWarning` (offline/error) - for sync status indicators
-- Batch Controls: `Play` (resume), `Pause` (pause), `ListBullets` (details), `X` (clear queue) - for batch sync control panel
-- Progress: `CheckCircle` (completed), `Warning` (error state) - for operation status feedback
+---
 
-**Spacing**:
-- Container padding: `p-6` (24px)
-- Card grid gap: `gap-4` (16px)
-- Form field spacing: `space-y-4` (16px)
-- Section margins: `mb-8` (32px)
-- Tight inline spacing (badges): `gap-2` (8px)
-- Dashboard card spacing: `space-y-6` (24px)
-
-**Mobile**:
-- Single column card grid on mobile (<768px)
-- Sticky tab bar at top for quick navigation
-- Full-width analytics cards stacking vertically
-- Bottom sheet for add/edit forms (using Shadcn Sheet component)
-- Larger touch targets for PIN input (48px minimum)
-- Collapsible filter section to save vertical space
-- Cards take full width with comfortable padding
-- Horizontal scroll for timeline chart on small screens
+**GhostWriter** - *A stealth portal from screen to memory.* 👻
