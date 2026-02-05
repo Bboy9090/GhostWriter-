@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -9,7 +8,7 @@ RUN npm run build
 FROM pierrezemb/gostatic
 COPY --from=build /app/dist/ /srv/http/
 CMD ["-port","8080","-https-promote", "-enable-logging"]
-=======
+
 # ---------- Build stage ----------
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -39,4 +38,3 @@ ENV PORT=3000
 EXPOSE 3000
 
 CMD ["node", "server/index.js"]
->>>>>>> Stashed changes
