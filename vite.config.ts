@@ -6,8 +6,11 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import sparkPlugin from '@github/spark/spark-vite-plugin'
 import createIconImportProxy from '@github/spark/vitePhosphorIconProxyPlugin'
 import { resolve } from 'path'
+import { fileURLToPath } from 'url'
 
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
+// Vercel (and Node in general) does not provide `import.meta.dirname`.
+// Use a standards-based root folder fallback.
+const projectRoot = process.env.PROJECT_ROOT || fileURLToPath(new URL('.', import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({

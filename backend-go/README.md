@@ -29,6 +29,7 @@ docker-compose up -d
 ```
 
 This will start:
+
 - PostgreSQL with pgvector
 - Redis
 - GhostWriter API server
@@ -36,18 +37,21 @@ This will start:
 ### Manual Setup
 
 1. **Install dependencies**:
+
 ```bash
 cd backend-go
 go mod download
 ```
 
 2. **Configure environment**:
+
 ```bash
 cp .env.template .env
 # Edit .env with your configuration
 ```
 
 3. **Run the server**:
+
 ```bash
 go run cmd/server/main.go
 ```
@@ -57,11 +61,13 @@ go run cmd/server/main.go
 Copy `.env.template` to `.env` and configure:
 
 ### Required Settings
+
 - `DB_URL`: PostgreSQL connection string
 - `REDIS_URL`: Redis connection string
 - `OPENAI_API_KEY`: OpenAI API key for embeddings
 
 ### Optional Settings
+
 - `APNS_AUTH_MODE`: APNS authentication mode (`certificate` or `token`)
 - `APNS_KEY_PATH`: Path to APNS auth key (.p8 file)
 - `APNS_KEY_ID`: APNS Key ID
@@ -72,16 +78,19 @@ Copy `.env.template` to `.env` and configure:
 ## API Endpoints
 
 ### Health Check
+
 ```
 GET /health
 ```
 
 ### WebSocket Connection
+
 ```
 GET /ws
 ```
 
 WebSocket message format:
+
 ```json
 {
   "type": "text_sync",
@@ -93,6 +102,7 @@ WebSocket message format:
 ```
 
 ### Search Vault
+
 ```
 POST /vault/search
 Content-Type: application/json
@@ -107,6 +117,7 @@ Content-Type: application/json
 ```
 
 ### Get Entries
+
 ```
 GET /entries?user_id=uuid-here&limit=100
 ```
