@@ -11,7 +11,6 @@ npm run git:sync
 ```
 
 **What it does:**
-
 ```
 ┌─────────────────────────────────────┐
 │  1. Fetch all remote changes        │
@@ -29,7 +28,6 @@ npm run git:status
 ```
 
 **Shows:**
-
 - ✓ Current branch
 - ✓ All branches with tracking info
 - ✓ Uncommitted changes
@@ -43,7 +41,6 @@ npm run git:status
 ```
 
 **Menu options:**
-
 1. Full sync
 2. Quick status
 3. Update main only
@@ -114,41 +111,32 @@ npm run git:status
 ## 🔄 Branch States
 
 ### ✅ Up to Date
-
 ```
 Local:  A---B---C (main)
 Remote: A---B---C (origin/main)
 ```
-
 **Action:** None needed! You're synced.
 
 ### ⬇️ Behind Remote
-
 ```
 Local:  A---B (main)
 Remote: A---B---C---D (origin/main)
 ```
-
 **Action:** `git pull --rebase origin main`
 
 ### ⬆️ Ahead of Remote
-
 ```
 Local:  A---B---C---D (main)
 Remote: A---B (origin/main)
 ```
-
 **Action:** `git push origin main`
 
 ### ⚠️ Diverged
-
 ```
 Local:  A---B---C (main)
 Remote: A---B---X---Y (origin/main)
 ```
-
-**Action:**
-
+**Action:** 
 1. `git pull --rebase origin main` (recommended)
 2. Or `git pull origin main` (creates merge commit)
 
@@ -297,7 +285,6 @@ Follow conventional commits:
 ```
 
 **Types:**
-
 - `feat:` New feature
 - `fix:` Bug fix
 - `docs:` Documentation
@@ -307,7 +294,6 @@ Follow conventional commits:
 - `chore:` Maintenance
 
 **Examples:**
-
 ```bash
 git commit -m "feat(ocr): add tesseract support"
 git commit -m "fix(ui): resolve portal positioning bug"
@@ -327,24 +313,23 @@ Add to `~/.gitconfig`:
     co = checkout
     br = branch
     ci = commit
-
+    
     # GhostWriter specific
     sync = !./scripts/sync-branches.sh
     quick = !./scripts/git-status.sh
-
+    
     # Pretty log
     lg = log --oneline --graph --decorate --all
-
+    
     # Quick updates
     up = pull --rebase --autostash
-
+    
     # Stash helpers
     save = stash push -m
     pop = stash pop
 ```
 
 Then use:
-
 ```bash
 git sync    # Full synchronization
 git quick   # Quick status

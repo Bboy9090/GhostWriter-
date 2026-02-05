@@ -32,7 +32,6 @@ jobs:
 
       - name: Build project
         run: npm run build:skip-checks
-        run: npm run build
         env:
           NODE_ENV: production
 
