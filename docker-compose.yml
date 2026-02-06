@@ -1,18 +1,22 @@
+# GhostWriter full-stack: frontend, API, PostgreSQL, Redis
+# Copy .env.example to .env and set values. Never commit .env.
+
 services:
   vault-db:
     image: pgvector/pgvector:pg17
     container_name: ghostwriter-db
     restart: always
+    env_file: .env
     environment:
-      POSTGRES_USER: bobby_admin
-      POSTGRES_PASSWORD: bronx_password
-      POSTGRES_DB: ghostwriter_vault
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ghostwriter_vault}
     ports:
       - "5432:5432"
     volumes:
       - ghostwriter_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bobby_admin -d ghostwriter_vault"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -30,6 +34,7 @@ services:
       dockerfile: Dockerfile
     container_name: ghostwriter-api
     restart: always
+    env_file: .env
     depends_on:
       vault-db:
         condition: service_healthy
@@ -38,15 +43,32 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_URL: postgres://bobby_admin:bronx_password@vault-db:5432/ghostwriter_vault?sslmode=disable
+      DB_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@vault-db:5432/${POSTGRES_DB:-ghostwriter_vault}?sslmode=disable
       REDIS_URL: ghost-stream:6379
-      JWT_SECRET: scorpio_rising_secret_key
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 8080
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+  ghostwriter-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8080/ws}
+    container_name: ghostwriter-frontend
+    restart: always
+    depends_on:
+      - ghost-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
 
 volumes:
   ghostwriter_data:

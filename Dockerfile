@@ -1,39 +1,23 @@
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM pierrezemb/gostatic
-COPY --from=build /app/dist/ /srv/http/
-CMD ["-port","8080","-https-promote", "-enable-logging"]
-# ---------- Build stage ----------
+# Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-
+ARG VITE_API_URL=http://localhost:8080
+ARG VITE_WS_URL=ws://localhost:8080/ws
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_WS_URL=$VITE_WS_URL
 COPY package*.json ./
-RUN npm install
-
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# ---------- Runtime stage ----------
+# Runtime stage
 FROM node:20-alpine
 WORKDIR /app
-
 COPY package*.json ./
-RUN npm install --omit=dev
-
-# Copy built frontend
+RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
-
-# Copy server code
 COPY --from=builder /app/server ./server
-
 ENV NODE_ENV=production
 ENV PORT=3000
-
 EXPOSE 3000
-
 CMD ["node", "server/index.js"]

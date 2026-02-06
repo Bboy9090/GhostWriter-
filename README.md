@@ -28,6 +28,8 @@ Click → Sign in → Deploy. See [ONE_CLICK_DEPLOY.md](./ONE_CLICK_DEPLOY.md) f
 
 Or follow the manual steps in [FREE_TIER_DEPLOYMENT.md](./FREE_TIER_DEPLOYMENT.md)
 
+**Keep Render free tier awake:** Add an [UptimeRobot](https://uptimerobot.com) monitor for `https://ghostwriter-api.onrender.com/health` (every 5 min), or use the GitHub Actions keep-alive workflow (set `RENDER_SERVICE_URL` secret).
+
 ### Deploy to Fly.io (FREE Tier Optimized)
 
 This app is configured for deployment on [Fly.io](https://fly.io) with Docker.
@@ -81,6 +83,21 @@ docker run -p 3000:3000 ghostwriter
 
 # Open in browser
 # http://localhost:3000
+```
+
+### Docker Compose (Full Stack: Frontend + API + DB + Redis)
+
+```bash
+# 1. Copy .env.example to .env and set values (never commit .env)
+cp .env.example .env
+
+# 2. Start all services
+docker-compose up -d
+
+# Frontend: http://localhost:3000
+# API: http://localhost:8080
+# PostgreSQL: localhost:5432
+# Redis: localhost:6379
 ```
 
 ### Architecture

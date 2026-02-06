@@ -1,10 +1,10 @@
 # See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
+# Disabled auto-deploy on push. Use "Run workflow" manually if deploying to Fly.io.
+# For Render/Vercel, use those platforms' GitHub integration instead.
 
 name: Fly Deploy
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 jobs:
   deploy:
     name: Deploy app

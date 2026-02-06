@@ -55,11 +55,8 @@ This guide helps you deploy GhostWriter quickly to production.
    git clone https://github.com/Bboy9090/GhostWriter-.git
    cd GhostWriter-
 
-   # Configure environment (backend)
-   cd backend-go
-   cp .env.template .env
-   # Edit .env with your OpenAI API key and other settings
-   cd ..
+   # Copy .env.example to .env and set values (never commit .env)
+   cp .env.example .env
 
    # Start all services
    docker-compose up -d
@@ -69,10 +66,17 @@ This guide helps you deploy GhostWriter quickly to production.
    ```
 
 3. **Services running**:
-   - Frontend: Build with `npm run build` and serve `dist/` folder
+   - Frontend: `http://localhost:3000`
    - Backend API: `http://localhost:8080`
    - PostgreSQL: `localhost:5432`
    - Redis: `localhost:6379`
+
+### Render Free Tier: Keep-Alive
+
+Render free tier sleeps after ~15 min inactivity. To keep it awake 24/7:
+
+- **UptimeRobot** (recommended): Add HTTP monitor for `https://your-api.onrender.com/health` every 5 min
+- **GitHub Actions**: Add `RENDER_SERVICE_URL` secret; `.github/workflows/keep-alive.yml` pings every 5 min
 
 ### Option 3: GitHub Actions (Automated) - CI/CD
 
