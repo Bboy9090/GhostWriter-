@@ -3,6 +3,14 @@
 # Deploy: https://render.com/deploy
 
 services:
+  # Redis / Key Value (must be in services, not databases)
+  - type: keyvalue
+    name: ghostwriter-redis
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: allow internal connections
+    plan: free
+
   # Frontend - Static Site
   - type: web
     name: ghostwriter
@@ -41,7 +49,7 @@ services:
           property: connectionString
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: ghostwriter-redis
           property: connectionString
     healthCheckPath: /health
@@ -51,8 +59,4 @@ databases:
   - name: ghostwriter-db
     databaseName: ghostwriter_vault
     user: ghostwriter_user
-    plan: free
-
-  # Redis Cache
-  - name: ghostwriter-redis
     plan: free
