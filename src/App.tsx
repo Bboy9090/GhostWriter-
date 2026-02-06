@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { Logo, LogoWithText } from './components/Logo'
@@ -34,6 +34,7 @@ import {
   CheckCircle,
 } from '@phosphor-icons/react'
 import { useIsMobile } from './hooks/use-mobile'
+import { usePopoutPortal } from './hooks/use-popout-portal'
 
 type CaptureEntry = {
   id: string
@@ -342,6 +343,35 @@ function App() {
   const [captureMode, setCaptureMode] = useState('balanced')
   const [searchQuery, setSearchQuery] = useState('')
   const isMobile = useIsMobile()
+
+  const selectedCaptureModeObj = captureModes.find(m => m.key === captureMode)
+
+  // Popout portal hook - allows the portal to float over other windows/apps
+  const handlePopoutToggle = useCallback(() => {
+    setPortalActive(prev => !prev)
+  }, [])
+  const handlePopoutOpenVault = useCallback(() => {
+    setActiveTab('vault')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.focus()
+  }, [])
+  const handlePopoutToggleVault = useCallback(() => {
+    setVaultUnlocked(prev => !prev)
+  }, [])
+
+  const { isPoppedOut, popOut, popIn } = usePopoutPortal({
+    state: {
+      isActive: portalActive,
+      vaultUnlocked,
+      stealthMode,
+      healerEnabled,
+      captureMode,
+      captureFps: selectedCaptureModeObj?.fps ?? 5,
+    },
+    onToggle: handlePopoutToggle,
+    onOpenVault: handlePopoutOpenVault,
+    onToggleVault: handlePopoutToggleVault,
+  })
 
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -906,6 +936,7 @@ function App() {
       <Analytics />
 
       {/* Floating Portal Toggle */}
+      {/* Floating Portal - can be popped out onto other windows */}
       <FloatingPortal
         isActive={portalActive}
         onToggle={handlePortalToggle}
@@ -913,6 +944,9 @@ function App() {
           setActiveTab('vault')
           window.scrollTo({ top: 0, behavior: 'smooth' })
         }}
+        isPoppedOut={isPoppedOut}
+        onPopOut={popOut}
+        onPopIn={popIn}
       />
 
       <div className="min-h-screen bg-background relative overflow-hidden">

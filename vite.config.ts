@@ -36,6 +36,10 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: {
+        main: resolve(projectRoot, 'index.html'),
+        portal: resolve(projectRoot, 'portal.html'),
+      },
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
