@@ -15,7 +15,8 @@ services:
   - type: web
     name: ghostwriter
     runtime: static
-    buildCommand: npm ci && npm run build
+    # NODE_ENV=development needed so npm ci installs devDependencies (vite, plugins)
+    buildCommand: NODE_ENV=development npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: NODE_ENV
