@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -18,7 +19,12 @@ type RedisClient struct {
 
 // NewRedisClient creates a new Redis client
 func NewRedisClient(redisURL string) (*RedisClient, error) {
-	opts, err := redis.ParseURL("redis://" + redisURL)
+	// Render provides full URL (redis://host:6379); local/docker use host:6379
+	url := redisURL
+	if !strings.HasPrefix(redisURL, "redis://") && !strings.HasPrefix(redisURL, "rediss://") {
+		url = "redis://" + redisURL
+	}
+	opts, err := redis.ParseURL(url)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing redis URL: %w", err)
 	}
