@@ -49,3 +49,72 @@
     -webkit-user-select: none;
   }
 }
+
+/* Mobile bottom navigation safe area */
+.mobile-bottom-nav {
+  padding-bottom: max(16px, var(--safe-area-inset-bottom, 0px));
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 640px) {
+  /* Stack header items vertically */
+  .mobile-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Full-width tabs on mobile */
+  .mobile-full-tabs [role='tablist'] {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-full-tabs [role='tablist']::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Larger touch targets */
+  .mobile-touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Mobile card padding */
+  .mobile-compact-card {
+    padding: 1rem;
+  }
+
+  /* Hide on mobile */
+  .mobile-hidden {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+@media (min-width: 641px) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+/* PWA standalone mode adjustments */
+@media (display-mode: standalone) {
+  .pt-safe-area-inset-top {
+    padding-top: max(44px, var(--safe-area-inset-top));
+  }
+
+  /* Extra bottom padding in PWA for home indicator */
+  .mobile-bottom-nav {
+    padding-bottom: max(24px, var(--safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Landscape mode optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-bottom-nav {
+    padding-bottom: max(8px, var(--safe-area-inset-bottom, 0px));
+  }
+}
