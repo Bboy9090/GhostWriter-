@@ -1,11 +1,14 @@
 {
   "name": "GhostWriter",
   "short_name": "GhostWriter",
-  "description": "Stealth screen text extraction and vault capture.",
+  "description": "Stealth screen text extraction and vault capture. Pop the portal out to float over any app.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b1b1f",
-  "theme_color": "#0b1b1f",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#0d0b1a",
+  "theme_color": "#0d0b1a",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "/ghostwriter-icon.svg",
@@ -18,5 +21,23 @@
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Portal (Always On Top)",
+      "short_name": "Portal",
+      "description": "Open the floating portal widget to place on top of other apps",
+      "url": "/portal.html",
+      "icons": [
+        {
+          "src": "/ghostwriter-icon.svg",
+          "sizes": "512x512",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

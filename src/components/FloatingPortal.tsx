@@ -2,7 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Logo } from './Logo'
 import { toast } from 'sonner'
-import { X, Minimize2, Maximize2, HelpCircle, Keyboard, Sparkles, Database } from 'lucide-react'
+import {
+  X,
+  Minimize2,
+  Maximize2,
+  HelpCircle,
+  Keyboard,
+  Sparkles,
+  Database,
+  ExternalLink,
+  Undo2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -14,6 +24,12 @@ interface FloatingPortalProps {
   position?: { x: number; y: number }
   onPositionChange?: (position: { x: number; y: number }) => void
   onOpenVault?: () => void
+  /** Whether the portal is currently popped out into a separate window */
+  isPoppedOut?: boolean
+  /** Pop the portal out into a separate always-on-top window */
+  onPopOut?: () => void
+  /** Bring the portal back from the separate window */
+  onPopIn?: () => void
 }
 
 export function FloatingPortal({
@@ -23,6 +39,9 @@ export function FloatingPortal({
   position: initialPosition,
   onPositionChange,
   onOpenVault,
+  isPoppedOut = false,
+  onPopOut,
+  onPopIn,
 }: FloatingPortalProps) {
   const isMobile = useIsMobile()
   const [isDragging, setIsDragging] = useState(false)
@@ -128,11 +147,23 @@ export function FloatingPortal({
         onOpenVault()
         toast.success('Opening vault...', { duration: 1500 })
       }
+
+      // P for pop out
+      if (e.code === 'KeyP' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        if (isPoppedOut && onPopIn) {
+          onPopIn()
+          toast.info('Portal returned', { duration: 1500 })
+        } else if (onPopOut) {
+          onPopOut()
+          toast.success('Portal popped out!', { duration: 2000 })
+        }
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, isMinimized, onOpenVault, handleToggle, position])
+  }, [isActive, isMinimized, onOpenVault, handleToggle, position, isPoppedOut, onPopIn, onPopOut])
 
   const dismissOnboarding = () => {
     setShowOnboarding(false)
@@ -613,6 +644,55 @@ export function FloatingPortal({
             </Tooltip>
           )}
 
+          {/* Pop Out / Pop In button */}
+          {(onPopOut || onPopIn) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    if (isPoppedOut && onPopIn) {
+                      onPopIn()
+                      toast.info('Portal returned', { duration: 1500 })
+                    } else if (onPopOut) {
+                      onPopOut()
+                      toast.success('Portal popped out — place it on any window!', {
+                        duration: 2500,
+                      })
+                    }
+                  }}
+                  className={cn(
+                    'rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500',
+                    buttonSize,
+                    isMobile
+                      ? 'active:bg-purple-500/20 active:text-purple-400 min-w-[44px] min-h-[44px] flex items-center justify-center'
+                      : 'hover:bg-purple-500/20 hover:text-purple-400',
+                    isPoppedOut && 'bg-purple-500/20 text-purple-400'
+                  )}
+                  aria-label={
+                    isPoppedOut ? 'Return portal to app' : 'Pop out portal onto other windows'
+                  }
+                >
+                  {isPoppedOut ? (
+                    <Undo2 className={iconSize} />
+                  ) : (
+                    <ExternalLink className={iconSize} />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}>
+                <p className="text-xs">
+                  {isPoppedOut ? 'Return to app' : 'Pop out (always on top)'}
+                </p>
+                {!isMobile && !isPoppedOut && (
+                  <p className="text-xs text-primary-foreground/60 mt-0.5">
+                    Place on top of other apps
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {onClose && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -673,6 +753,7 @@ export function FloatingPortal({
                   { label: 'Minimize', key: 'Esc' },
                   { label: 'Show help', key: 'H' },
                   { label: 'Open vault', key: 'V' },
+                  { label: 'Pop out / in', key: 'P' },
                 ].map(shortcut => (
                   <div key={shortcut.label} className="flex items-center justify-between">
                     <span className="text-muted-foreground">{shortcut.label}</span>
