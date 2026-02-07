@@ -13,6 +13,7 @@ import { Toaster } from './components/ui/sonner'
 import { IOSCapture } from './components/IOSCapture'
 import { FloatingPortal } from './components/FloatingPortal'
 import { GodModeExtractor } from './components/GodModeExtractor'
+import { CaptureFilters } from './components/CaptureFilters'
 import { toast } from 'sonner'
 import {
   Browser,
@@ -644,6 +645,9 @@ function App() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Capture Filters */}
+            <CaptureFilters />
           </div>
         )
 
@@ -794,7 +798,13 @@ function App() {
                     captureLog.map((entry, i) => (
                       <div
                         key={entry.id}
-                        className="rounded-xl border border-border/50 bg-card/30 p-3 sm:p-4 space-y-2 animate-fade-in-up"
+                        className={`rounded-xl border bg-card/30 p-3 sm:p-4 space-y-2 animate-fade-in-up ${
+                          entry.role === 'user'
+                            ? 'border-cyan-500/20 bg-cyan-500/5'
+                            : entry.role === 'assistant'
+                              ? 'border-purple-500/20 bg-purple-500/5'
+                              : 'border-border/50'
+                        }`}
                         style={{
                           animationDelay: `${Math.min(i, 5) * 60}ms`,
                           animationFillMode: 'backwards',
@@ -805,6 +815,17 @@ function App() {
                             <Badge variant="outline" className="text-[10px] sm:text-xs">
                               {entry.sourceApp}
                             </Badge>
+                            {entry.role && (
+                              <Badge
+                                className={`text-[9px] ${
+                                  entry.role === 'user'
+                                    ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+                                    : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                                }`}
+                              >
+                                {entry.role === 'user' ? '👤 You' : '🤖 AI'}
+                              </Badge>
+                            )}
                             <span className="text-[10px] sm:text-xs text-muted-foreground">
                               {entry.capturedAt}
                             </span>
@@ -818,7 +839,21 @@ function App() {
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {entry.tags.map(tag => (
-                            <Badge key={tag} variant="secondary" className="text-[10px]">
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className={`text-[10px] ${
+                                tag === 'sensitive'
+                                  ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                                  : tag === 'redacted'
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                    : tag === 'you'
+                                      ? 'bg-cyan-500/10 text-cyan-400'
+                                      : tag === 'ai'
+                                        ? 'bg-purple-500/10 text-purple-400'
+                                        : ''
+                              }`}
+                            >
                               {tag}
                             </Badge>
                           ))}
