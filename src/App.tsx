@@ -42,6 +42,10 @@ import {
   stopDemoCapture,
   clearCaptureEntries,
   addCaptureEntry,
+  getStorageStats,
+  downloadCaptures,
+  getMaxEntries,
+  setMaxEntries,
 } from './lib/capture-store'
 
 type CaptureEntry = {
@@ -294,6 +298,121 @@ function StatusLegend({
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+function StorageBar({ captureCount }: { captureCount: number }) {
+  const stats = useMemo(() => getStorageStats(), [captureCount])
+  const [showSettings, setShowSettings] = useState(false)
+  const [maxInput, setMaxInput] = useState(String(getMaxEntries()))
+
+  const barColor =
+    stats.percentFull >= 90
+      ? 'bg-red-500'
+      : stats.percentFull >= 80
+        ? 'bg-amber-500'
+        : stats.percentFull >= 50
+          ? 'bg-cyan-500'
+          : 'bg-emerald-500'
+
+  const handleSaveMax = () => {
+    const n = parseInt(maxInput, 10)
+    if (n >= 100) {
+      setMaxEntries(n)
+      toast.success(`Max entries set to ${n.toLocaleString()}`)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/30 p-3 space-y-2">
+      {/* Storage bar */}
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span className="font-medium">
+          Vault Storage: {stats.entryCount.toLocaleString()} / {stats.maxEntries.toLocaleString()}{' '}
+          entries
+        </span>
+        <span>{stats.sizeFormatted}</span>
+      </div>
+      <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`absolute left-0 top-0 bottom-0 ${barColor} rounded-full transition-all duration-500`}
+          style={{ width: `${Math.min(100, stats.percentFull)}%` }}
+        />
+      </div>
+
+      {/* Warning when near full */}
+      {stats.isNearFull && (
+        <div
+          className={`flex items-center gap-2 text-[10px] p-2 rounded-lg ${
+            stats.isFull
+              ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+              : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+          }`}
+        >
+          <Warning size={14} weight="fill" />
+          <span>
+            {stats.isFull
+              ? 'Vault is full! Export your data and clear to continue capturing.'
+              : `Vault is ${stats.percentFull}% full. Consider exporting and clearing soon.`}
+          </span>
+        </div>
+      )}
+
+      {/* Export / settings row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-[10px] h-7"
+          onClick={() => {
+            downloadCaptures('json')
+            toast.success('Captures exported as JSON')
+          }}
+          disabled={captureCount === 0}
+        >
+          Export JSON
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-[10px] h-7"
+          onClick={() => {
+            downloadCaptures('text')
+            toast.success('Captures exported as text')
+          }}
+          disabled={captureCount === 0}
+        >
+          Export Text
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-[10px] h-7 text-muted-foreground"
+          onClick={() => setShowSettings(!showSettings)}
+        >
+          {showSettings ? 'Hide limit' : 'Set limit'}
+        </Button>
+      </div>
+
+      {/* Max entries setting */}
+      {showSettings && (
+        <div className="flex items-center gap-2 pt-1">
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">Max entries:</span>
+          <Input
+            type="number"
+            min={100}
+            max={50000}
+            value={maxInput}
+            onChange={e => setMaxInput(e.target.value)}
+            className="text-xs bg-muted/30 border-border/50 w-28 h-7"
+          />
+          <Button size="sm" className="text-[10px] h-7" onClick={handleSaveMax}>
+            Save
+          </Button>
+          <span className="text-[10px] text-muted-foreground">100 — 50,000</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -764,6 +883,9 @@ function App() {
                     </Button>
                   )}
                 </div>
+
+                {/* Storage indicator + export */}
+                <StorageBar captureCount={captureLog.length} />
 
                 {/* Quick-add manual entry */}
                 <div className="flex gap-2">

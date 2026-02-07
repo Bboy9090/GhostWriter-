@@ -29,7 +29,45 @@ export interface CaptureEntry {
 
 const STORAGE_KEY = 'ghostwriter-capture-log'
 const CHANNEL_NAME = 'ghostwriter-captures'
-const MAX_ENTRIES = 200
+const SETTINGS_STORAGE_KEY = 'ghostwriter-capture-settings'
+
+/**
+ * Default max entries. User can change this via setMaxEntries().
+ * localStorage typically allows ~5-10 MB. Each entry averages ~300 bytes,
+ * so 10,000 entries ≈ 3 MB — comfortably within limits.
+ */
+let MAX_ENTRIES = loadMaxEntries()
+
+function loadMaxEntries(): number {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.maxEntries && typeof parsed.maxEntries === 'number') {
+        return Math.max(100, Math.min(50000, parsed.maxEntries))
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return 10000 // default: 10k entries
+}
+
+export function getMaxEntries(): number {
+  return MAX_ENTRIES
+}
+
+export function setMaxEntries(n: number): void {
+  MAX_ENTRIES = Math.max(100, Math.min(50000, n))
+  try {
+    const existing = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    const parsed = existing ? JSON.parse(existing) : {}
+    parsed.maxEntries = MAX_ENTRIES
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(parsed))
+  } catch {
+    /* ignore */
+  }
+}
 
 // ── helpers ──────────────────────────────────────────────────
 
@@ -179,6 +217,132 @@ export function getDroppedCount(): number {
 
 export function resetDroppedCount(): void {
   droppedCount = 0
+}
+
+// ── Storage measurement ──────────────────────────────────────
+
+export interface StorageStats {
+  /** Number of entries currently stored */
+  entryCount: number
+  /** Max entries allowed */
+  maxEntries: number
+  /** Percentage full (0-100) */
+  percentFull: number
+  /** Approximate size in bytes used by the capture log */
+  bytesUsed: number
+  /** Human-readable size string */
+  sizeFormatted: string
+  /** Whether the store is near full (>80%) */
+  isNearFull: boolean
+  /** Whether the store is at capacity */
+  isFull: boolean
+}
+
+export function getStorageStats(): StorageStats {
+  const entries = loadEntries()
+  const entryCount = entries.length
+  const maxEntries = MAX_ENTRIES
+  const percentFull = maxEntries > 0 ? Math.round((entryCount / maxEntries) * 100) : 0
+
+  let bytesUsed = 0
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    bytesUsed = raw ? new Blob([raw]).size : 0
+  } catch {
+    bytesUsed = 0
+  }
+
+  return {
+    entryCount,
+    maxEntries,
+    percentFull,
+    bytesUsed,
+    sizeFormatted: formatBytes(bytesUsed),
+    isNearFull: percentFull >= 80,
+    isFull: entryCount >= maxEntries,
+  }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+// ── Export / Download ────────────────────────────────────────
+
+/**
+ * Export all capture entries as a JSON string.
+ */
+export function exportCaptureJSON(): string {
+  const entries = loadEntries()
+  return JSON.stringify(
+    {
+      exportedAt: new Date().toISOString(),
+      entryCount: entries.length,
+      entries,
+    },
+    null,
+    2
+  )
+}
+
+/**
+ * Export capture entries as plain text (one entry per block).
+ */
+export function exportCaptureText(): string {
+  const entries = loadEntries()
+  return entries
+    .map(e => {
+      const rolePrefix = e.role === 'user' ? '[You] ' : e.role === 'assistant' ? '[AI] ' : ''
+      return `[${e.capturedAt}] ${e.sourceApp}\n${rolePrefix}${e.content}\nTags: ${e.tags.join(', ')}\n`
+    })
+    .join('\n---\n\n')
+}
+
+/**
+ * Trigger a file download with the given content.
+ */
+export function downloadCaptures(format: 'json' | 'text'): void {
+  const content = format === 'json' ? exportCaptureJSON() : exportCaptureText()
+  const ext = format === 'json' ? 'json' : 'txt'
+  const mime = format === 'json' ? 'application/json' : 'text/plain'
+  const filename = `ghostwriter-captures-${new Date().toISOString().slice(0, 10)}.${ext}`
+
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Import capture entries from a JSON export string.
+ * Merges with existing entries (deduplicates by id).
+ */
+export function importCaptureJSON(jsonStr: string): number {
+  try {
+    const parsed = JSON.parse(jsonStr)
+    const imported: CaptureEntry[] = parsed.entries ?? parsed
+    if (!Array.isArray(imported)) return 0
+
+    const existing = loadEntries()
+    const existingIds = new Set(existing.map(e => e.id))
+    const newEntries = imported.filter(e => e.id && !existingIds.has(e.id))
+    const merged = [...newEntries, ...existing]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, MAX_ENTRIES)
+
+    saveEntries(merged)
+    listeners.forEach(fn => fn(merged))
+    broadcast({ type: 'ENTRIES_SYNC', entries: merged })
+    return newEntries.length
+  } catch {
+    return 0
+  }
 }
 
 /**
