@@ -5,7 +5,13 @@
  * Every capture entry has a timestamp, source, text, confidence, and tags.
  * The store keeps the most recent MAX_ENTRIES and broadcasts new entries
  * so the popout portal and main app both see text flowing in real-time.
+ *
+ * All entries pass through the filter pipeline (capture-filters.ts) before
+ * being stored — noise is dropped, roles are labeled, sensitive content
+ * is flagged/redacted, duplicates are skipped.
  */
+
+import { applyFilters, loadFilterSettings } from './capture-filters'
 
 export interface CaptureEntry {
   id: string
@@ -15,6 +21,10 @@ export interface CaptureEntry {
   tags: string[]
   capturedAt: string // display string e.g. "09:42 AM"
   timestamp: number // epoch ms for sorting
+  /** Detected speaker role from AI chat */
+  role?: 'user' | 'assistant' | null
+  /** Whether entry was filtered/modified */
+  filtered?: boolean
 }
 
 const STORAGE_KEY = 'ghostwriter-capture-log'
@@ -96,8 +106,9 @@ export function getCaptureEntries(): CaptureEntry[] {
 }
 
 /**
- * Add a new capture entry. Persists to localStorage and broadcasts
- * to all other windows.
+ * Add a new capture entry. Runs through the filter pipeline first —
+ * returns null if the text was dropped by filters.
+ * Persists to localStorage and broadcasts to all other windows.
  */
 export function addCaptureEntry(
   content: string,
@@ -105,16 +116,47 @@ export function addCaptureEntry(
     sourceApp?: string
     confidence?: number
     tags?: string[]
+    /** Skip filters (e.g. for manual entries the user typed themselves) */
+    skipFilters?: boolean
   }
-): CaptureEntry {
+): CaptureEntry | null {
+  const sourceApp = options?.sourceApp ?? 'Portal'
+
+  // Run through filter pipeline unless explicitly skipped
+  let finalContent = content
+  let role: 'user' | 'assistant' | null = null
+  let extraTags: string[] = []
+  let wasFiltered = false
+
+  if (!options?.skipFilters) {
+    const settings = loadFilterSettings()
+    const result = applyFilters(content, sourceApp, settings)
+
+    if (result.text === null) {
+      // Text was dropped by filters — increment drop counter but don't store
+      droppedCount++
+      return null
+    }
+
+    finalContent = result.text
+    role = result.role
+    extraTags = result.addedTags
+    wasFiltered = finalContent !== content || extraTags.length > 0
+  }
+
+  const baseTags = options?.tags ?? autoTag(finalContent)
+  const allTags = [...new Set([...baseTags, ...extraTags])]
+
   const entry: CaptureEntry = {
     id: generateId(),
-    sourceApp: options?.sourceApp ?? 'Portal',
-    content,
+    sourceApp,
+    content: finalContent,
     confidence: options?.confidence ?? Math.round(85 + Math.random() * 14),
-    tags: options?.tags ?? autoTag(content),
+    tags: allTags,
     capturedAt: formatTime(new Date()),
     timestamp: Date.now(),
+    role,
+    filtered: wasFiltered,
   }
 
   const existing = loadEntries()
@@ -126,6 +168,17 @@ export function addCaptureEntry(
   listeners.forEach(fn => fn(updated))
 
   return entry
+}
+
+/** Count of entries dropped by filters (for stats display) */
+let droppedCount = 0
+
+export function getDroppedCount(): number {
+  return droppedCount
+}
+
+export function resetDroppedCount(): void {
+  droppedCount = 0
 }
 
 /**
