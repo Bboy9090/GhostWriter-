@@ -13,13 +13,15 @@
  *  - Compact design for small window / always-on-top
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   sendPortalMessage,
   onPortalMessage,
   type PortalState,
   type PortalMessage,
 } from '@/lib/portal-channel'
+import { useCaptureLog } from '@/hooks/use-capture-log'
+import { startDemoCapture, stopDemoCapture, clearCaptureEntries } from '@/lib/capture-store'
 import { Logo } from './Logo'
 
 const DEFAULT_STATE: PortalState = {
@@ -34,7 +36,24 @@ const DEFAULT_STATE: PortalState = {
 export function PortalStandalone() {
   const [state, setState] = useState<PortalState>(DEFAULT_STATE)
   const [connected, setConnected] = useState(false)
-  const [showExpanded, setShowExpanded] = useState(true)
+  const [showExpanded, setShowExpanded] = useState(false)
+  const captureEntries = useCaptureLog()
+  const logEndRef = useRef<HTMLDivElement>(null)
+
+  // Start/stop demo capture based on portal active state
+  useEffect(() => {
+    if (state.isActive) {
+      startDemoCapture()
+    } else {
+      stopDemoCapture()
+    }
+    return () => stopDemoCapture()
+  }, [state.isActive])
+
+  // Auto-scroll the capture log to the top when new entries arrive
+  useEffect(() => {
+    // no-op: newest entries are at the top, so no scroll needed
+  }, [captureEntries.length])
 
   // Listen for state updates from the main window
   useEffect(() => {
@@ -231,7 +250,172 @@ export function PortalStandalone() {
           <StatusPill label="Stealth" active={state.stealthMode} color="oklch(0.78 0.16 80)" />
         </div>
 
-        {/* Expandable details */}
+        {/* ── Live Capture Log ── */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: '10px',
+            border: '1px solid oklch(0.22 0.03 270 / 0.5)',
+            background: 'oklch(0.10 0.02 265)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Log header */}
+          <div
+            style={{
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid oklch(0.22 0.03 270 / 0.3)',
+              background: 'oklch(0.12 0.025 265)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: state.isActive ? 'oklch(0.72 0.22 160)' : 'oklch(0.40 0.02 260)',
+                  boxShadow: state.isActive ? '0 0 6px oklch(0.72 0.22 160 / 0.5)' : 'none',
+                }}
+              />
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'oklch(0.70 0.02 220)' }}>
+                Capture Log
+              </span>
+              <span style={{ fontSize: '10px', color: 'oklch(0.45 0.02 220)' }}>
+                ({captureEntries.length})
+              </span>
+            </div>
+            {captureEntries.length > 0 && (
+              <button
+                onClick={() => clearCaptureEntries()}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'oklch(0.50 0.02 220)',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = 'oklch(0.60 0.24 25)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = 'oklch(0.50 0.02 220)'
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable log entries */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+            }}
+          >
+            {captureEntries.length === 0 ? (
+              <div
+                style={{
+                  padding: '20px 12px',
+                  textAlign: 'center',
+                  color: 'oklch(0.40 0.02 220)',
+                  fontSize: '11px',
+                }}
+              >
+                {state.isActive ? 'Listening for text...' : 'Start capture to see text appear here'}
+              </div>
+            ) : (
+              captureEntries.slice(0, 50).map(entry => (
+                <div
+                  key={entry.id}
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    background: 'oklch(0.14 0.025 265)',
+                    border: '1px solid oklch(0.20 0.02 270 / 0.3)',
+                    fontSize: '11px',
+                    lineHeight: '1.4',
+                    animation: 'fadeIn 0.3s ease',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '3px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        color: 'oklch(0.72 0.22 160)',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        background: 'oklch(0.72 0.22 160 / 0.1)',
+                      }}
+                    >
+                      {entry.sourceApp}
+                    </span>
+                    <span style={{ fontSize: '9px', color: 'oklch(0.40 0.02 220)' }}>
+                      {entry.capturedAt}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      color: 'oklch(0.80 0.01 200)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                    }}
+                  >
+                    {entry.content}
+                  </div>
+                  {entry.tags.length > 0 && (
+                    <div
+                      style={{ display: 'flex', gap: '3px', marginTop: '3px', flexWrap: 'wrap' }}
+                    >
+                      {entry.tags.map(tag => (
+                        <span
+                          key={tag}
+                          style={{
+                            fontSize: '8px',
+                            padding: '1px 4px',
+                            borderRadius: '3px',
+                            background: 'oklch(0.18 0.03 270)',
+                            color: 'oklch(0.55 0.02 220)',
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={logEndRef} />
+          </div>
+        </div>
+
+        {/* Expandable controls */}
         <button
           onClick={() => setShowExpanded(!showExpanded)}
           style={{
@@ -245,26 +429,18 @@ export function PortalStandalone() {
             textAlign: 'left',
           }}
         >
-          {showExpanded ? '▾ Hide details' : '▸ Show details'}
+          {showExpanded ? '▾ Hide controls' : '▸ More controls'}
         </button>
 
         {showExpanded && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {/* Mode & FPS */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '8px',
-              }}
-            >
+            <div style={{ display: 'flex', gap: '8px' }}>
               <InfoCard
                 label="Mode"
                 value={state.captureMode.charAt(0).toUpperCase() + state.captureMode.slice(1)}
               />
               <InfoCard label="FPS" value={String(state.captureFps)} />
             </div>
-
-            {/* Action buttons */}
             <div style={{ display: 'flex', gap: '8px' }}>
               <ActionButton
                 label={state.vaultUnlocked ? '🔓 Lock Vault' : '🔒 Unlock'}
@@ -279,7 +455,7 @@ export function PortalStandalone() {
       {/* Footer */}
       <div
         style={{
-          padding: '8px 16px',
+          padding: '6px 16px',
           borderTop: '1px solid oklch(0.22 0.03 270 / 0.3)',
           background: 'oklch(0.08 0.03 260 / 0.8)',
           fontSize: '10px',
@@ -289,7 +465,7 @@ export function PortalStandalone() {
           zIndex: 1,
         }}
       >
-        Always-on-top portal — Place me on any window
+        {captureEntries.length} entries captured
       </div>
     </div>
   )

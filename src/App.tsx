@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { Logo, LogoWithText } from './components/Logo'
@@ -35,6 +35,13 @@ import {
 } from '@phosphor-icons/react'
 import { useIsMobile } from './hooks/use-mobile'
 import { usePopoutPortal } from './hooks/use-popout-portal'
+import { useCaptureLog } from './hooks/use-capture-log'
+import {
+  startDemoCapture,
+  stopDemoCapture,
+  clearCaptureEntries,
+  addCaptureEntry,
+} from './lib/capture-store'
 
 type CaptureEntry = {
   id: string
@@ -373,16 +380,42 @@ function App() {
     onToggleVault: handlePopoutToggleVault,
   })
 
+  // Live capture log — shared with popout portal via BroadcastChannel
+  const captureLog = useCaptureLog()
+
+  // Start/stop demo capture when portal is toggled
+  useEffect(() => {
+    if (portalActive) {
+      startDemoCapture()
+    } else {
+      stopDemoCapture()
+    }
+    return () => stopDemoCapture()
+  }, [portalActive])
+
+  // Search filters both static demo data and live capture log
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    if (!query) return captureFeed
-    return captureFeed.filter(
+    // Merge live captures + static feed for search
+    const allEntries = [
+      ...captureLog.map(e => ({
+        id: e.id,
+        sourceApp: e.sourceApp,
+        content: e.content,
+        confidence: e.confidence,
+        tags: e.tags,
+        capturedAt: e.capturedAt,
+      })),
+      ...captureFeed,
+    ]
+    if (!query) return allEntries
+    return allEntries.filter(
       entry =>
         entry.content.toLowerCase().includes(query) ||
         entry.sourceApp.toLowerCase().includes(query) ||
         entry.tags.some(tag => tag.toLowerCase().includes(query))
     )
-  }, [searchQuery])
+  }, [searchQuery, captureLog])
 
   const selectedCaptureMode =
     captureModes.find(mode => mode.key === captureMode) ?? captureModes[1]!
@@ -699,45 +732,100 @@ function App() {
               </Card>
             </div>
 
-            {/* Capture Feed */}
+            {/* Live Capture Feed */}
             <Card className="card-neon border-emerald-500/15 overflow-hidden">
               <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Camera size={20} weight="fill" className="text-emerald-400" />
-                  <h3 className="font-semibold">Recent Capture Feed</h3>
-                </div>
-                <div className="space-y-3">
-                  {captureFeed.map((entry, i) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-xl border border-border/50 bg-card/30 p-3 sm:p-4 space-y-2 animate-fade-in-up"
-                      style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Camera size={20} weight="fill" className="text-emerald-400" />
+                    <h3 className="font-semibold">Live Capture Feed</h3>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {captureLog.length} entries
+                    </Badge>
+                    {portalActive && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Live
+                      </span>
+                    )}
+                  </div>
+                  {captureLog.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => clearCaptureEntries()}
+                      className="text-muted-foreground text-xs h-7"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Badge variant="outline" className="text-[10px] sm:text-xs">
-                            {entry.sourceApp}
-                          </Badge>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">
-                            {entry.capturedAt}
-                          </span>
-                        </div>
-                        <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] sm:text-xs">
-                          {entry.confidence}% confident
-                        </Badge>
-                      </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                        {entry.content}
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+
+                {/* Quick-add manual entry */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Paste or type text to capture..."
+                    className="text-xs bg-muted/30 border-border/50"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const input = e.currentTarget
+                        const text = input.value.trim()
+                        if (text) {
+                          addCaptureEntry(text, { sourceApp: 'Manual' })
+                          input.value = ''
+                          toast.success('Text captured!')
+                        }
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                  {captureLog.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-muted-foreground/20 p-8 text-center">
+                      <Camera size={32} className="mx-auto mb-3 opacity-20" />
+                      <p className="text-sm text-muted-foreground">
+                        {portalActive
+                          ? 'Listening for text... entries will appear here in real-time'
+                          : 'Open the portal to start capturing text from your screen'}
                       </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {entry.tags.map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-[10px]">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
                     </div>
-                  ))}
+                  ) : (
+                    captureLog.map((entry, i) => (
+                      <div
+                        key={entry.id}
+                        className="rounded-xl border border-border/50 bg-card/30 p-3 sm:p-4 space-y-2 animate-fade-in-up"
+                        style={{
+                          animationDelay: `${Math.min(i, 5) * 60}ms`,
+                          animationFillMode: 'backwards',
+                        }}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="outline" className="text-[10px] sm:text-xs">
+                              {entry.sourceApp}
+                            </Badge>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">
+                              {entry.capturedAt}
+                            </span>
+                          </div>
+                          <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] sm:text-xs">
+                            {entry.confidence}% confident
+                          </Badge>
+                        </div>
+                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                          {entry.content}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {entry.tags.map(tag => (
+                            <Badge key={tag} variant="secondary" className="text-[10px]">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
