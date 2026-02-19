@@ -16,7 +16,7 @@ import {
   ShareNetwork,
   Trash,
   UploadSimple,
-  Warning
+  Warning,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -56,7 +56,7 @@ const DEFAULT_NOISE_PHRASES = [
   'Copied',
   'Feedback',
   'Thumbs up',
-  'Thumbs down'
+  'Thumbs down',
 ]
 const DEFAULT_USER_PATTERNS = ['User:', 'You:', 'Me:']
 const DEFAULT_ASSISTANT_PATTERNS = ['Assistant:', 'ChatGPT:', 'Gemini:', 'AI:']
@@ -86,7 +86,7 @@ function jaccardSimilarity(a: string, b: string) {
 function splitParagraphs(text: string) {
   return text
     .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
+    .map(paragraph => paragraph.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
 }
 
@@ -102,7 +102,7 @@ function healText(rawText: string) {
 function parsePatternList(value: string) {
   return value
     .split(',')
-    .map((entry) => entry.trim())
+    .map(entry => entry.trim())
     .filter(Boolean)
 }
 
@@ -113,7 +113,7 @@ function normalizeRolePrefix(
 ) {
   const lower = paragraph.toLowerCase()
   const matchPrefix = (patterns: string[]) =>
-    patterns.find((pattern) => lower.startsWith(pattern.toLowerCase()))
+    patterns.find(pattern => lower.startsWith(pattern.toLowerCase()))
 
   const userMatch = matchPrefix(userPatterns)
   if (userMatch) {
@@ -164,7 +164,7 @@ function formatOutput({
   sourceApp,
   includeSegmentTimestamps,
   autoHeadingEnabled,
-  headingWordCount
+  headingWordCount,
 }: {
   segments: Segment[]
   outputFormat: OutputFormat
@@ -183,12 +183,14 @@ function formatOutput({
         generatedAt: new Date().toISOString(),
         segments: segments.map((segment, index) => ({
           id: segment.id,
-          title: segment.title ?? (autoHeadingEnabled && segment.paragraphs[0]
-            ? buildHeading(segment.paragraphs[0], headingWordCount)
-            : `Segment ${index + 1}`),
+          title:
+            segment.title ??
+            (autoHeadingEnabled && segment.paragraphs[0]
+              ? buildHeading(segment.paragraphs[0], headingWordCount)
+              : `Segment ${index + 1}`),
           capturedAt: segment.capturedAt ?? null,
-          paragraphs: segment.paragraphs
-        }))
+          paragraphs: segment.paragraphs,
+        })),
       },
       null,
       2
@@ -198,7 +200,9 @@ function formatOutput({
   const lines: string[] = []
   if (includeHeader) {
     if (sessionName.trim()) {
-      lines.push(outputFormat === 'markdown' ? `# ${sessionName.trim()}` : `Session: ${sessionName.trim()}`)
+      lines.push(
+        outputFormat === 'markdown' ? `# ${sessionName.trim()}` : `Session: ${sessionName.trim()}`
+      )
     }
     if (sourceApp.trim()) {
       lines.push(`Source: ${sourceApp.trim()}`)
@@ -208,9 +212,11 @@ function formatOutput({
   }
 
   segments.forEach((segment, index) => {
-    const segmentTitle = segment.title ?? (autoHeadingEnabled && segment.paragraphs[0]
-      ? buildHeading(segment.paragraphs[0], headingWordCount)
-      : `Segment ${index + 1}`)
+    const segmentTitle =
+      segment.title ??
+      (autoHeadingEnabled && segment.paragraphs[0]
+        ? buildHeading(segment.paragraphs[0], headingWordCount)
+        : `Segment ${index + 1}`)
     if (segments.length > 1) {
       lines.push(outputFormat === 'markdown' ? `## ${segmentTitle}` : `=== ${segmentTitle} ===`)
       if (includeSegmentTimestamps && segment.capturedAt) {
@@ -219,7 +225,7 @@ function formatOutput({
       lines.push('')
     }
 
-    segment.paragraphs.forEach((paragraph) => {
+    segment.paragraphs.forEach(paragraph => {
       lines.push(formatParagraph(paragraph, outputFormat))
       lines.push('')
     })
@@ -229,7 +235,27 @@ function formatOutput({
 }
 
 async function loadImageToCanvas(file: File, maxWidth: number) {
-  const bitmap = await createImageBitmap(file)
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch (createBitmapError) {
+    // Fallback for HEIC/HEIF or unsupported formats: load via Image + object URL
+    const objectUrl = URL.createObjectURL(file)
+    try {
+      bitmap = await new Promise<ImageBitmap>((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => {
+          createImageBitmap(img).then(resolve).catch(reject)
+        }
+        img.onerror = () =>
+          reject(new Error(`Failed to load image: ${file.name}. Try converting HEIC to PNG/JPEG.`))
+        img.src = objectUrl
+      })
+    } finally {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }
+
   const scale = Math.min(1, maxWidth / bitmap.width)
   const width = Math.max(1, Math.floor(bitmap.width * scale))
   const height = Math.max(1, Math.floor(bitmap.height * scale))
@@ -238,6 +264,7 @@ async function loadImageToCanvas(file: File, maxWidth: number) {
   canvas.height = height
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) {
+    bitmap.close?.()
     throw new Error('Canvas not available for image processing.')
   }
   ctx.drawImage(bitmap, 0, 0, width, height)
@@ -252,7 +279,7 @@ function applyEnhancements(
   {
     enableEnhance,
     grayscale,
-    contrast
+    contrast,
   }: {
     enableEnhance: boolean
     grayscale: boolean
@@ -361,7 +388,7 @@ export function IOSCapture() {
   const [progress, setProgress] = useState(0)
   const [currentFile, setCurrentFile] = useState<string | null>(null)
   const [dedupeEnabled, setDedupeEnabled] = useState(true)
-  const [minChars, setMinChars] = useState(40)
+  const [minChars, setMinChars] = useState(15)
   const [similarityThreshold, setSimilarityThreshold] = useState(0.85)
   const [language, setLanguage] = useState('eng')
   const [frameIntervalMs, setFrameIntervalMs] = useState(900)
@@ -402,17 +429,16 @@ export function IOSCapture() {
     skippedDuplicate: 0,
     skippedNoise: 0,
     roleTagged: 0,
-    segments: 1
+    segments: 1,
   })
   const abortRef = useRef(false)
 
-  const canRun = !isProcessing && (
-    (inputMode === 'images' && files.length > 0) ||
-    (inputMode === 'video' && Boolean(videoFile))
-  )
+  const canRun =
+    !isProcessing &&
+    ((inputMode === 'images' && files.length > 0) || (inputMode === 'video' && Boolean(videoFile)))
 
   const sortedFiles = useMemo(() => {
-    const meta = imageMeta.length ? imageMeta : files.map((file) => ({ file, timestamp: null }))
+    const meta = imageMeta.length ? imageMeta : files.map(file => ({ file, timestamp: null }))
     return sortImageEntries(meta, sortMode)
   }, [files, imageMeta, sortMode])
 
@@ -429,7 +455,7 @@ export function IOSCapture() {
       skippedDuplicate: 0,
       skippedNoise: 0,
       roleTagged: 0,
-      segments: 1
+      segments: 1,
     })
   }
 
@@ -449,7 +475,7 @@ export function IOSCapture() {
     setFiles(nextFiles)
     setVideoFile(null)
     resetState()
-    if (nextFiles.some((file) => file.type.includes('heic') || file.type.includes('heif'))) {
+    if (nextFiles.some(file => file.type.includes('heic') || file.type.includes('heif'))) {
       toast.info('HEIC detected. Convert to PNG/JPEG if OCR misses text.')
     }
     if (autoSortEnabled) {
@@ -484,7 +510,7 @@ export function IOSCapture() {
       emitted: 0,
       skippedMotion: 0,
       skippedText: 0,
-      skippedDuplicate: 0
+      skippedDuplicate: 0,
     })
     abortRef.current = false
   }
@@ -514,7 +540,7 @@ export function IOSCapture() {
     try {
       await navigator.share({
         title: sessionName.trim() || 'GhostWriter Capture',
-        text
+        text,
       })
     } catch (error) {
       toast.error('Share failed.')
@@ -548,7 +574,7 @@ export function IOSCapture() {
         let timestamp: number | null = null
         try {
           const data = await exifrModule.parse(file, {
-            pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate']
+            pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate'],
           })
           const exifDate = data?.DateTimeOriginal || data?.CreateDate || data?.ModifyDate
           if (exifDate instanceof Date) {
@@ -613,7 +639,7 @@ export function IOSCapture() {
       skippedText: 0,
       skippedDuplicate: 0,
       skippedNoise: 0,
-      roleTagged: 0
+      roleTagged: 0,
     })
     abortRef.current = false
 
@@ -638,7 +664,7 @@ export function IOSCapture() {
         activeSegment = {
           id: `segment-${segments.length + 1}`,
           capturedAt,
-          paragraphs: []
+          paragraphs: [],
         }
         segments.push(activeSegment)
       }
@@ -648,7 +674,7 @@ export function IOSCapture() {
       activeSegment = {
         id: `segment-${segments.length + 1}`,
         capturedAt,
-        paragraphs: []
+        paragraphs: [],
       }
       segments.push(activeSegment)
     }
@@ -665,7 +691,7 @@ export function IOSCapture() {
       let dropped = 0
       const noisePhrases = noisePhraseInput
         .split('\n')
-        .map((entry) => entry.trim())
+        .map(entry => entry.trim())
         .filter(Boolean)
       const userPatterns = parsePatternList(userPatternInput)
       const assistantPatterns = parsePatternList(assistantPatternInput)
@@ -679,7 +705,7 @@ export function IOSCapture() {
 
         if (noiseFilterEnabled) {
           const lowered = paragraph.toLowerCase()
-          const isNoise = noisePhrases.some((phrase) => lowered.includes(phrase.toLowerCase()))
+          const isNoise = noisePhrases.some(phrase => lowered.includes(phrase.toLowerCase()))
           if (isNoise) {
             dropped += 1
             skippedNoise += 1
@@ -696,9 +722,9 @@ export function IOSCapture() {
           normalized = updated
         }
 
-          if (dedupeEnabled && dedupeWindow > 0) {
-          const isDuplicate = recentParagraphs.some((recent) =>
-            jaccardSimilarity(recent, normalized) >= similarityThreshold
+        if (dedupeEnabled && dedupeWindow > 0) {
+          const isDuplicate = recentParagraphs.some(
+            recent => jaccardSimilarity(recent, normalized) >= similarityThreshold
           )
           if (isDuplicate) {
             dropped += 1
@@ -717,6 +743,13 @@ export function IOSCapture() {
         kept += 1
       }
 
+      // When OCR found text but all paragraphs were filtered, include raw text so we don't lose extraction
+      if (kept === 0 && cleanedText.length > 0) {
+        consolidatedParagraphs.push(cleanedText)
+        ensureSegment(capturedAt)
+        activeSegment?.paragraphs.push(cleanedText)
+      }
+
       nextResults.push({
         id: `${label}-${Date.now()}`,
         name: label,
@@ -724,16 +757,16 @@ export function IOSCapture() {
         confidence,
         keptParagraphs: kept,
         droppedParagraphs: dropped,
-        capturedAt
+        capturedAt,
       })
     }
 
     try {
+      setCurrentFile('Loading OCR engine...')
       const { createWorker } = await import('tesseract.js')
-      const createdWorker = await createWorker()
+      // createWorker(lang) loads and initializes the language in one step
+      const createdWorker = await createWorker(language?.trim() || 'eng')
       worker = createdWorker
-      await createdWorker.loadLanguage(language)
-      await createdWorker.initialize(language)
 
       if (inputMode === 'images') {
         if (autoSortEnabled && files.length > 0 && imageMeta.length !== files.length) {
@@ -748,11 +781,27 @@ export function IOSCapture() {
           const entry = localImageEntries[index]
           const file = entry.file
           setCurrentFile(file.name)
-          const { canvas, ctx, width, height } = await loadImageToCanvas(file, imageMaxWidth)
+          let canvas: HTMLCanvasElement
+          let ctx: CanvasRenderingContext2D
+          let width: number
+          let height: number
+          try {
+            const loaded = await loadImageToCanvas(file, imageMaxWidth)
+            canvas = loaded.canvas
+            ctx = loaded.ctx
+            width = loaded.width
+            height = loaded.height
+          } catch (loadErr) {
+            const msg = loadErr instanceof Error ? loadErr.message : 'Unknown error'
+            toast.error(`Failed to load ${file.name}: ${msg}`)
+            console.error('Image load error:', loadErr)
+            setProgress(Math.round(((index + 1) / localImageEntries.length) * 100))
+            continue
+          }
           applyEnhancements(ctx, width, height, {
             enableEnhance: enhanceEnabled,
             grayscale: grayscaleEnabled,
-            contrast: contrastBoost
+            contrast: contrastBoost,
           })
           const { data } = await createdWorker.recognize(canvas)
           const rawText = (data.text ?? '').trim()
@@ -790,7 +839,10 @@ export function IOSCapture() {
 
         await new Promise<void>((resolve, reject) => {
           const onLoaded = () => resolve()
-          const onError = () => reject(new Error('Failed to load video metadata.'))
+          const onError = () => {
+            const errMsg = video.error?.message ?? 'Unknown'
+            reject(new Error(`Failed to load video. iPhone HEVC may need conversion. ${errMsg}`))
+          }
           video.addEventListener('loadedmetadata', onLoaded, { once: true })
           video.addEventListener('error', onError, { once: true })
           video.load()
@@ -798,7 +850,9 @@ export function IOSCapture() {
 
         const duration = Number.isFinite(video.duration) ? video.duration : 0
         if (duration <= 0) {
-          throw new Error('Video duration is unavailable or zero.')
+          throw new Error(
+            'Video duration is unavailable or zero. Try converting to MP4 (H.264) if using HEVC.'
+          )
         }
 
         const intervalSeconds = Math.max(frameIntervalMs / 1000, 0.25)
@@ -820,7 +874,7 @@ export function IOSCapture() {
           const time = Math.min(duration, index * intervalSeconds)
           setCurrentFile(`Frame ${index + 1} @ ${formatTimestamp(time)}`)
 
-          await new Promise<void>((resolve) => {
+          await new Promise<void>(resolve => {
             const onSeeked = () => resolve()
             video.addEventListener('seeked', onSeeked, { once: true })
             video.currentTime = time
@@ -835,7 +889,7 @@ export function IOSCapture() {
           applyEnhancements(ctx, width, height, {
             enableEnhance: enhanceEnabled,
             grayscale: grayscaleEnabled,
-            contrast: contrastBoost
+            contrast: contrastBoost,
           })
 
           motionCanvas.width = Math.max(1, Math.floor(width / MOTION_SCALE))
@@ -867,10 +921,14 @@ export function IOSCapture() {
         URL.revokeObjectURL(url)
       }
 
-      const finalSegments = segments.length ? segments : [{
-        id: 'segment-1',
-        paragraphs: consolidatedParagraphs
-      }]
+      const finalSegments = segments.length
+        ? segments
+        : [
+            {
+              id: 'segment-1',
+              paragraphs: consolidatedParagraphs,
+            },
+          ]
       const outputText = formatOutput({
         segments: finalSegments,
         outputFormat,
@@ -879,7 +937,7 @@ export function IOSCapture() {
         sourceApp,
         includeSegmentTimestamps,
         autoHeadingEnabled,
-        headingWordCount
+        headingWordCount,
       })
 
       setResults(nextResults)
@@ -892,7 +950,7 @@ export function IOSCapture() {
         skippedDuplicate,
         skippedNoise,
         roleTagged,
-        segments: finalSegments.length
+        segments: finalSegments.length,
       })
 
       if (abortRef.current) {
@@ -901,8 +959,9 @@ export function IOSCapture() {
         toast.success('OCR capture complete.')
       }
     } catch (error) {
-      toast.error('OCR failed. Check console for details.')
-      console.error(error)
+      const msg = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`OCR failed: ${msg}`)
+      console.error('OCR error:', error)
     } finally {
       if (worker) {
         await worker.terminate()
@@ -948,7 +1007,7 @@ export function IOSCapture() {
     includeSegmentTimestamps,
     enhanceEnabled,
     grayscaleEnabled,
-    contrastBoost
+    contrastBoost,
   ])
 
   return (
@@ -1055,7 +1114,8 @@ export function IOSCapture() {
                 <>
                   <Input type="file" accept="video/*" onChange={handleVideoFile} />
                   <div className="text-xs text-muted-foreground">
-                    Upload one screen recording. GhostWriter will sample frames at the interval below.
+                    Upload one screen recording. GhostWriter will sample frames at the interval
+                    below.
                   </div>
                 </>
               )}
@@ -1108,7 +1168,7 @@ export function IOSCapture() {
                     min={250}
                     max={3000}
                     value={frameIntervalMs}
-                    onChange={(event) => {
+                    onChange={event => {
                       const next = Number(event.target.value)
                       setFrameIntervalMs(Number.isFinite(next) ? next : 900)
                     }}
@@ -1121,7 +1181,7 @@ export function IOSCapture() {
                     min={10}
                     max={600}
                     value={maxFrames}
-                    onChange={(event) => {
+                    onChange={event => {
                       const next = Number(event.target.value)
                       setMaxFrames(Number.isFinite(next) ? next : 140)
                     }}
@@ -1135,7 +1195,7 @@ export function IOSCapture() {
                     max={0.05}
                     step={0.001}
                     value={deltaThreshold}
-                    onChange={(event) => {
+                    onChange={event => {
                       const next = Number(event.target.value)
                       setDeltaThreshold(Number.isFinite(next) ? next : 0.012)
                     }}
@@ -1150,7 +1210,7 @@ export function IOSCapture() {
                     min={1}
                     max={12}
                     value={sampleStep}
-                    onChange={(event) => {
+                    onChange={event => {
                       const next = Number(event.target.value)
                       setSampleStep(Number.isFinite(next) ? next : 4)
                     }}
@@ -1163,7 +1223,7 @@ export function IOSCapture() {
                     min={480}
                     max={1920}
                     value={maxWidth}
-                    onChange={(event) => {
+                    onChange={event => {
                       const next = Number(event.target.value)
                       setMaxWidth(Number.isFinite(next) ? next : 1280)
                     }}
@@ -1188,7 +1248,7 @@ export function IOSCapture() {
                 min={10}
                 max={200}
                 value={minChars}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setMinChars(Number.isFinite(next) ? next : 40)
                 }}
@@ -1202,7 +1262,7 @@ export function IOSCapture() {
                 max={0.99}
                 step={0.01}
                 value={similarityThreshold}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setSimilarityThreshold(Number.isFinite(next) ? next : 0.85)
                 }}
@@ -1215,7 +1275,7 @@ export function IOSCapture() {
               <p className="text-sm font-medium">Session name</p>
               <Input
                 value={sessionName}
-                onChange={(event) => setSessionName(event.target.value)}
+                onChange={event => setSessionName(event.target.value)}
                 placeholder="ChatGPT Project Threads"
               />
             </div>
@@ -1233,11 +1293,11 @@ export function IOSCapture() {
               <p className="text-sm font-medium">Source app</p>
               <Input
                 value={sourceApp}
-                onChange={(event) => setSourceApp(event.target.value)}
+                onChange={event => setSourceApp(event.target.value)}
                 placeholder="ChatGPT"
               />
               <div className="flex flex-wrap gap-2 pt-2">
-                {['ChatGPT', 'Gemini', 'Notes', 'Other'].map((label) => (
+                {['ChatGPT', 'Gemini', 'Notes', 'Other'].map(label => (
                   <Button
                     key={label}
                     size="sm"
@@ -1263,7 +1323,7 @@ export function IOSCapture() {
                 min={1}
                 max={20}
                 value={dedupeWindow}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setDedupeWindow(Number.isFinite(next) ? Math.max(1, next) : DEDUPE_WINDOW)
                 }}
@@ -1293,7 +1353,7 @@ export function IOSCapture() {
                 min={-30}
                 max={80}
                 value={contrastBoost}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setContrastBoost(Number.isFinite(next) ? Math.min(80, Math.max(-30, next)) : 20)
                 }}
@@ -1309,7 +1369,7 @@ export function IOSCapture() {
                 min={720}
                 max={2400}
                 value={imageMaxWidth}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setImageMaxWidth(Number.isFinite(next) ? Math.max(720, next) : 1600)
                 }}
@@ -1322,7 +1382,7 @@ export function IOSCapture() {
                 min={480}
                 max={1920}
                 value={maxWidth}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setMaxWidth(Number.isFinite(next) ? next : 1280)
                 }}
@@ -1334,7 +1394,7 @@ export function IOSCapture() {
             <div className="space-y-1 rounded-lg border p-3">
               <p className="text-sm font-medium">Output format</p>
               <div className="flex flex-wrap gap-2 pt-2">
-                {(['plain', 'markdown', 'json'] as OutputFormat[]).map((format) => (
+                {(['plain', 'markdown', 'json'] as OutputFormat[]).map(format => (
                   <Button
                     key={format}
                     size="sm"
@@ -1360,7 +1420,7 @@ export function IOSCapture() {
                 min={3}
                 max={16}
                 value={headingWordCount}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setHeadingWordCount(Number.isFinite(next) ? Math.max(3, next) : 8)
                 }}
@@ -1394,7 +1454,7 @@ export function IOSCapture() {
                 min={1}
                 max={60}
                 value={segmentGapMinutes}
-                onChange={(event) => {
+                onChange={event => {
                   const next = Number(event.target.value)
                   setSegmentGapMinutes(Number.isFinite(next) ? Math.max(1, next) : 8)
                 }}
@@ -1414,7 +1474,7 @@ export function IOSCapture() {
               <p className="text-sm font-medium">Noise phrases (one per line)</p>
               <Textarea
                 value={noisePhraseInput}
-                onChange={(event) => setNoisePhraseInput(event.target.value)}
+                onChange={event => setNoisePhraseInput(event.target.value)}
                 className="min-h-[140px]"
               />
             </div>
@@ -1432,12 +1492,12 @@ export function IOSCapture() {
               <p className="text-sm font-medium">Role patterns</p>
               <Input
                 value={userPatternInput}
-                onChange={(event) => setUserPatternInput(event.target.value)}
+                onChange={event => setUserPatternInput(event.target.value)}
                 placeholder="User:, You:, Me:"
               />
               <Input
                 value={assistantPatternInput}
-                onChange={(event) => setAssistantPatternInput(event.target.value)}
+                onChange={event => setAssistantPatternInput(event.target.value)}
                 placeholder="Assistant:, ChatGPT:, Gemini:"
               />
             </div>
@@ -1447,7 +1507,7 @@ export function IOSCapture() {
             <p className="text-sm font-medium">Language</p>
             <Input
               value={language}
-              onChange={(event) => setLanguage(event.target.value.trim() || 'eng')}
+              onChange={event => setLanguage(event.target.value.trim() || 'eng')}
               placeholder="eng"
             />
           </div>
@@ -1503,7 +1563,7 @@ export function IOSCapture() {
                     variant="outline"
                     size="sm"
                     disabled={chunkIndex === 0}
-                    onClick={() => setChunkIndex((prev) => Math.max(0, prev - 1))}
+                    onClick={() => setChunkIndex(prev => Math.max(0, prev - 1))}
                   >
                     <CaretLeft size={14} />
                   </Button>
@@ -1511,7 +1571,7 @@ export function IOSCapture() {
                     variant="outline"
                     size="sm"
                     disabled={chunkIndex === chunks.length - 1}
-                    onClick={() => setChunkIndex((prev) => Math.min(chunks.length - 1, prev + 1))}
+                    onClick={() => setChunkIndex(prev => Math.min(chunks.length - 1, prev + 1))}
                   >
                     <CaretRight size={14} />
                   </Button>
@@ -1525,7 +1585,7 @@ export function IOSCapture() {
                     min={500}
                     max={20000}
                     value={chunkSize}
-                    onChange={(event) => {
+                    onChange={event => {
                       const next = Number(event.target.value)
                       setChunkSize(Number.isFinite(next) ? Math.max(500, next) : 3000)
                     }}
@@ -1576,18 +1636,18 @@ export function IOSCapture() {
             </Badge>
           </div>
           <div className="space-y-3">
-            {results.map((result) => (
+            {results.map(result => (
               <div key={result.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm font-medium">{result.name}</div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Kept {result.keptParagraphs}</span>
-                <span>Dropped {result.droppedParagraphs}</span>
-                {result.confidence !== null && (
-                  <Badge variant="outline">{Math.round(result.confidence)}% conf</Badge>
-                )}
-                {result.capturedAt && <span>{result.capturedAt}</span>}
-              </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Kept {result.keptParagraphs}</span>
+                    <span>Dropped {result.droppedParagraphs}</span>
+                    {result.confidence !== null && (
+                      <Badge variant="outline">{Math.round(result.confidence)}% conf</Badge>
+                    )}
+                    {result.capturedAt && <span>{result.capturedAt}</span>}
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-3">
                   {result.text || 'No text detected.'}
