@@ -280,14 +280,14 @@ function applyEnhancements(
     enableEnhance,
     grayscale,
     contrast,
+    sharpen,
   }: {
     enableEnhance: boolean
     grayscale: boolean
     contrast: number
+    sharpen: boolean
   }
 ) {
-  if (!enableEnhance && !grayscale) return
-
   const imageData = ctx.getImageData(0, 0, width, height)
   const data = imageData.data
   const boundedContrast = Math.min(100, Math.max(-100, contrast))
@@ -317,6 +317,32 @@ function applyEnhancements(
   }
 
   ctx.putImageData(imageData, 0, 0)
+
+  if (sharpen) {
+    const sharpData = ctx.getImageData(0, 0, width, height)
+    const d = sharpData.data
+    const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0]
+    const side = 3
+    const half = Math.floor(side / 2)
+    const orig = new Uint8ClampedArray(d)
+
+    for (let y = half; y < height - half; y += 1) {
+      for (let x = half; x < width - half; x += 1) {
+        for (let c = 0; c < 3; c += 1) {
+          let sum = 0
+          for (let ky = -half; ky <= half; ky += 1) {
+            for (let kx = -half; kx <= half; kx += 1) {
+              const idx = ((y + ky) * width + (x + kx)) * 4 + c
+              const kIdx = (ky + half) * side + (kx + half)
+              sum += orig[idx] * kernel[kIdx]
+            }
+          }
+          d[(y * width + x) * 4 + c] = clampChannel(sum)
+        }
+      }
+    }
+    ctx.putImageData(sharpData, 0, 0)
+  }
 }
 
 function sortImageEntries(
@@ -420,7 +446,10 @@ export function IOSCapture() {
   const [enhanceEnabled, setEnhanceEnabled] = useState(true)
   const [grayscaleEnabled, setGrayscaleEnabled] = useState(true)
   const [contrastBoost, setContrastBoost] = useState(20)
+  const [sharpenEnabled, setSharpenEnabled] = useState(false)
+  const [ocrPsm, setOcrPsm] = useState(6)
   const [imageMaxWidth, setImageMaxWidth] = useState(1600)
+  const [dropActive, setDropActive] = useState(false)
   const [summary, setSummary] = useState({
     processed: 0,
     emitted: 0,
@@ -468,33 +497,104 @@ export function IOSCapture() {
     resetState()
   }
 
+  const addImageFiles = useCallback(
+    (nextFiles: File[]) => {
+      if (!nextFiles.length) return
+      setFiles(nextFiles)
+      setVideoFile(null)
+      resetState()
+      if (nextFiles.some(file => file.type.includes('heic') || file.type.includes('heif'))) {
+        toast.info('HEIC detected. Convert to PNG/JPEG if OCR misses text.')
+      }
+      if (autoSortEnabled) {
+        void buildImageMeta(nextFiles)
+      } else {
+        setImageMeta([])
+        setMetaMissingCount(0)
+      }
+    },
+    [autoSortEnabled]
+  )
+
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files
     if (!fileList) return
-    const nextFiles = Array.from(fileList)
-    setFiles(nextFiles)
-    setVideoFile(null)
-    resetState()
-    if (nextFiles.some(file => file.type.includes('heic') || file.type.includes('heif'))) {
-      toast.info('HEIC detected. Convert to PNG/JPEG if OCR misses text.')
-    }
-    if (autoSortEnabled) {
-      void buildImageMeta(nextFiles)
-    } else {
-      setImageMeta([])
-      setMetaMissingCount(0)
-    }
+    addImageFiles(Array.from(fileList))
+    event.target.value = ''
   }
 
-  const handleVideoFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files
-    if (!fileList || fileList.length === 0) return
-    setVideoFile(fileList[0])
+  const setVideoFromFile = useCallback((file: File) => {
+    setVideoFile(file)
     setFiles([])
     setImageMeta([])
     setMetaMissingCount(0)
     resetState()
+  }, [])
+
+  const handleVideoFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files
+    if (!fileList || fileList.length === 0) return
+    setVideoFromFile(fileList[0])
+    event.target.value = ''
   }
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDropActive(false)
+      const items = e.dataTransfer?.files
+      if (!items?.length) return
+      const imageFiles = Array.from(items).filter(f => f.type.startsWith('image/'))
+      const videoFiles = Array.from(items).filter(f => f.type.startsWith('video/'))
+      if (inputMode === 'images' && imageFiles.length > 0) {
+        addImageFiles(imageFiles)
+        if (videoFiles.length > 0)
+          toast.info('Dropped video ignored. Switch to Screen Recording mode.')
+      } else if (inputMode === 'video' && videoFiles.length > 0) {
+        setVideoFromFile(videoFiles[0])
+        if (imageFiles.length > 0) toast.info('Dropped images ignored. Switch to Screenshots mode.')
+      } else if (imageFiles.length > 0) {
+        addImageFiles(imageFiles)
+      } else if (videoFiles.length > 0) {
+        setVideoFromFile(videoFiles[0])
+      }
+    },
+    [inputMode, addImageFiles, setVideoFromFile]
+  )
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      const imageFiles: File[] = []
+      for (let i = 0; i < items.length; i += 1) {
+        const file = items[i]?.getAsFile()
+        if (file && file.type.startsWith('image/')) imageFiles.push(file)
+      }
+      if (imageFiles.length > 0 && inputMode === 'images') {
+        e.preventDefault()
+        addImageFiles([...files, ...imageFiles])
+        toast.success(`Pasted ${imageFiles.length} image(s)`)
+      }
+    },
+    [inputMode, files, addImageFiles]
+  )
+
+  useEffect(() => {
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [handlePaste])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canRun) {
+        e.preventDefault()
+        runOcr()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [canRun, runOcr])
 
   const handleClear = () => {
     setFiles([])
@@ -802,7 +902,11 @@ export function IOSCapture() {
             enableEnhance: enhanceEnabled,
             grayscale: grayscaleEnabled,
             contrast: contrastBoost,
+            sharpen: sharpenEnabled,
           })
+          if (ocrPsm >= 0 && ocrPsm <= 13) {
+            await createdWorker.setParameters({ tessedit_pageseg_mode: String(ocrPsm) })
+          }
           const { data } = await createdWorker.recognize(canvas)
           const rawText = (data.text ?? '').trim()
           const capturedAt = entry.timestamp
@@ -890,6 +994,7 @@ export function IOSCapture() {
             enableEnhance: enhanceEnabled,
             grayscale: grayscaleEnabled,
             contrast: contrastBoost,
+            sharpen: sharpenEnabled,
           })
 
           motionCanvas.width = Math.max(1, Math.floor(width / MOTION_SCALE))
@@ -905,6 +1010,9 @@ export function IOSCapture() {
             continue
           }
 
+          if (ocrPsm >= 0 && ocrPsm <= 13) {
+            await createdWorker.setParameters({ tessedit_pageseg_mode: String(ocrPsm) })
+          }
           const { data } = await createdWorker.recognize(canvas)
           const rawText = (data.text ?? '').trim()
           ensureSegment(formatTimestamp(time))
@@ -1008,6 +1116,8 @@ export function IOSCapture() {
     enhanceEnabled,
     grayscaleEnabled,
     contrastBoost,
+    sharpenEnabled,
+    ocrPsm,
   ])
 
   return (
@@ -1051,6 +1161,26 @@ export function IOSCapture() {
               Screen Recording
             </Button>
             <Badge variant="secondary">{inputMode === 'images' ? 'Batch OCR' : 'Frame OCR'}</Badge>
+          </div>
+
+          <div
+            className={`rounded-lg border-2 border-dashed p-4 transition-colors ${
+              dropActive
+                ? 'border-primary bg-primary/10'
+                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+            }`}
+            onDragOver={e => {
+              e.preventDefault()
+              setDropActive(true)
+            }}
+            onDragLeave={() => setDropActive(false)}
+            onDrop={handleDrop}
+          >
+            <div className="space-y-2 text-center text-sm text-muted-foreground">
+              {inputMode === 'images'
+                ? 'Drop screenshots here, or paste from clipboard (Ctrl+V)'
+                : 'Drop a screen recording here'}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -1124,6 +1254,7 @@ export function IOSCapture() {
                   <UploadSimple size={16} className="mr-1" />
                   Run OCR
                 </Button>
+                <span className="text-xs text-muted-foreground">⌘/Ctrl+Enter</span>
                 <Button onClick={handleStop} variant="outline" disabled={!isProcessing}>
                   Stop
                 </Button>
@@ -1250,7 +1381,7 @@ export function IOSCapture() {
                 value={minChars}
                 onChange={event => {
                   const next = Number(event.target.value)
-                  setMinChars(Number.isFinite(next) ? next : 40)
+                  setMinChars(Number.isFinite(next) ? next : 15)
                 }}
               />
             </div>
@@ -1346,6 +1477,13 @@ export function IOSCapture() {
               </div>
               <Switch checked={grayscaleEnabled} onCheckedChange={setGrayscaleEnabled} />
             </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Sharpen</p>
+                <p className="text-xs text-muted-foreground">Crispen edges</p>
+              </div>
+              <Switch checked={sharpenEnabled} onCheckedChange={setSharpenEnabled} />
+            </div>
             <div className="space-y-1 rounded-lg border p-3">
               <p className="text-sm font-medium">Contrast</p>
               <Input
@@ -1358,6 +1496,20 @@ export function IOSCapture() {
                   setContrastBoost(Number.isFinite(next) ? Math.min(80, Math.max(-30, next)) : 20)
                 }}
               />
+            </div>
+            <div className="space-y-1 rounded-lg border p-3">
+              <p className="text-sm font-medium">OCR PSM</p>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={ocrPsm}
+                onChange={e => setOcrPsm(Number(e.target.value))}
+              >
+                <option value={3}>3 - Auto</option>
+                <option value={6}>6 - Block (default)</option>
+                <option value={11}>11 - Sparse</option>
+                <option value={13}>13 - Raw line</option>
+              </select>
+              <p className="text-xs text-muted-foreground">Page segmentation</p>
             </div>
           </div>
 
@@ -1640,13 +1792,24 @@ export function IOSCapture() {
               <div key={result.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm font-medium">{result.name}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Kept {result.keptParagraphs}</span>
-                    <span>Dropped {result.droppedParagraphs}</span>
-                    {result.confidence !== null && (
-                      <Badge variant="outline">{Math.round(result.confidence)}% conf</Badge>
-                    )}
-                    {result.capturedAt && <span>{result.capturedAt}</span>}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2"
+                      onClick={() => handleCopyChunk(result.text)}
+                      disabled={!result.text}
+                    >
+                      <Copy size={14} />
+                    </Button>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Kept {result.keptParagraphs}</span>
+                      <span>Dropped {result.droppedParagraphs}</span>
+                      {result.confidence !== null && (
+                        <Badge variant="outline">{Math.round(result.confidence)}% conf</Badge>
+                      )}
+                      {result.capturedAt && <span>{result.capturedAt}</span>}
+                    </div>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-3">
