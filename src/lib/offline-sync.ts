@@ -115,7 +115,7 @@ export class OfflineSyncManager {
     
     const operationWithId = {
       ...operation,
-      id: `${operation.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      id: `${operation.type}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
     } as SyncOperation
     
     const existingIndex = queue.operations.findIndex(

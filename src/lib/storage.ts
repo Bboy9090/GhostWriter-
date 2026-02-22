@@ -182,14 +182,14 @@ export const storage = {
 
   async updateFriend(id: string, updates: Partial<Friend>): Promise<Friend[]> {
     const friends = await this.loadFriends()
-    const updated = friends.map(f => f.id === id ? { ...f, ...updates } : f)
+    const updated = friends.map(friend => friend.id === id ? { ...friend, ...updates } : friend)
     await this.saveFriends(updated)
     return updated
   },
 
   async removeFriend(id: string): Promise<Friend[]> {
     const friends = await this.loadFriends()
-    const updated = friends.filter(f => f.id !== id)
+    const updated = friends.filter(friend => friend.id !== id)
     await this.saveFriends(updated)
     return updated
   },
@@ -208,7 +208,7 @@ export const storage = {
   async loadMessages(conversationId?: string): Promise<Message[]> {
     const allMessages = await safeGet<Message[]>(KEYS.MESSAGES, [])
     if (conversationId) {
-      return allMessages.filter(m => m.conversationId === conversationId)
+      return allMessages.filter(message => message.conversationId === conversationId)
     }
     return allMessages
   },
@@ -262,8 +262,8 @@ export const storage = {
 
   async markNotificationRead(id: string): Promise<void> {
     const notifications = await this.loadNotifications()
-    const updated = notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
+    const updated = notifications.map(notification => 
+      notification.id === id ? { ...notification, isRead: true } : notification
     )
     await this.saveNotifications(updated)
   },
@@ -672,11 +672,11 @@ export async function hashPin(pin: string): Promise<string> {
   const data = encoder.encode(pin)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
 // URL parser for detecting stores
