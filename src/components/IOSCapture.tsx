@@ -461,6 +461,8 @@ export function IOSCapture() {
     segments: 1,
   })
   const abortRef = useRef(false)
+  const screenshotInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const canRun =
     !isProcessing &&
@@ -1163,8 +1165,7 @@ export function IOSCapture() {
             <Badge variant="secondary">{inputMode === 'images' ? 'Batch OCR' : 'Frame OCR'}</Badge>
           </div>
 
-          <label
-            htmlFor={inputMode === 'images' ? 'screenshot-upload' : 'video-upload'}
+          <div
             className={`block cursor-pointer rounded-lg border-2 border-dashed p-6 transition-colors ${
               dropActive
                 ? 'border-primary bg-primary/10'
@@ -1177,19 +1178,37 @@ export function IOSCapture() {
             onDragLeave={() => setDropActive(false)}
             onDrop={handleDrop}
           >
-            <div className="space-y-2 text-center">
-              <div className="text-sm font-medium">
-                {inputMode === 'images'
-                  ? 'Click or drop screenshots here'
-                  : 'Click or drop a screen recording here'}
+            <div className="space-y-4 text-center">
+              <div className="space-y-2">
+                <div className="text-sm font-medium">
+                  {inputMode === 'images'
+                    ? 'Drop screenshots here, or'
+                    : 'Drop a screen recording here, or'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {inputMode === 'images'
+                    ? 'Paste from clipboard (Ctrl+V)'
+                    : 'Upload one video file'}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {inputMode === 'images'
-                  ? 'Also: paste from clipboard (Ctrl+V)'
-                  : 'Upload one video file'}
-              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (inputMode === 'images') {
+                    screenshotInputRef.current?.click()
+                  } else {
+                    videoInputRef.current?.click()
+                  }
+                }}
+                className="font-medium"
+              >
+                <UploadSimple size={18} className="mr-2" />
+                {inputMode === 'images' ? 'Choose Photos' : 'Choose Recording'}
+              </Button>
             </div>
             <Input
+              ref={screenshotInputRef}
               id="screenshot-upload"
               type="file"
               multiple
@@ -1198,13 +1217,13 @@ export function IOSCapture() {
               className="sr-only"
             />
             <Input
-              id="video-upload"
+              ref={videoInputRef}
               type="file"
               accept="video/*"
               onChange={handleVideoFile}
               className="sr-only"
             />
-          </label>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
