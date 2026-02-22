@@ -1163,11 +1163,12 @@ export function IOSCapture() {
             <Badge variant="secondary">{inputMode === 'images' ? 'Batch OCR' : 'Frame OCR'}</Badge>
           </div>
 
-          <div
-            className={`rounded-lg border-2 border-dashed p-4 transition-colors ${
+          <label
+            htmlFor={inputMode === 'images' ? 'screenshot-upload' : 'video-upload'}
+            className={`block cursor-pointer rounded-lg border-2 border-dashed p-6 transition-colors ${
               dropActive
                 ? 'border-primary bg-primary/10'
-                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/30'
             }`}
             onDragOver={e => {
               e.preventDefault()
@@ -1176,18 +1177,39 @@ export function IOSCapture() {
             onDragLeave={() => setDropActive(false)}
             onDrop={handleDrop}
           >
-            <div className="space-y-2 text-center text-sm text-muted-foreground">
-              {inputMode === 'images'
-                ? 'Drop screenshots here, or paste from clipboard (Ctrl+V)'
-                : 'Drop a screen recording here'}
+            <div className="space-y-2 text-center">
+              <div className="text-sm font-medium">
+                {inputMode === 'images'
+                  ? 'Click or drop screenshots here'
+                  : 'Click or drop a screen recording here'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {inputMode === 'images'
+                  ? 'Also: paste from clipboard (Ctrl+V)'
+                  : 'Upload one video file'}
+              </div>
             </div>
-          </div>
+            <Input
+              id="screenshot-upload"
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFiles}
+              className="sr-only"
+            />
+            <Input
+              id="video-upload"
+              type="file"
+              accept="video/*"
+              onChange={handleVideoFile}
+              className="sr-only"
+            />
+          </label>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
               {inputMode === 'images' ? (
                 <>
-                  <Input type="file" multiple accept="image/*" onChange={handleFiles} />
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
