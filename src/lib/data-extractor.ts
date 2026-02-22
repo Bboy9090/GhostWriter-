@@ -745,7 +745,7 @@ export class DataExtractor {
   }
 
   private generateId(): string {
-    return `ext_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `ext_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
   }
 
   /**
@@ -783,62 +783,62 @@ export class DataExtractor {
   }
 
   private exportToMarkdown(data: ExtractedData): string {
-    let md = `# Extracted Data\n\n`
+    let markdownContent = `# Extracted Data\n\n`
 
     if (data.structured?.tables) {
       data.structured.tables.forEach(table => {
-        md += `\n## Table\n\n`
-        md += `| ${table.headers.join(' | ')} |\n`
-        md += `| ${table.headers.map(() => '---').join(' | ')} |\n`
+        markdownContent += `\n## Table\n\n`
+        markdownContent += `| ${table.headers.join(' | ')} |\n`
+        markdownContent += `| ${table.headers.map(() => '---').join(' | ')} |\n`
         table.rows.forEach(row => {
-          md += `| ${row.join(' | ')} |\n`
+          markdownContent += `| ${row.join(' | ')} |\n`
         })
       })
     }
 
     if (data.structured?.lists) {
       data.structured.lists.forEach((list, idx) => {
-        md += `\n## List ${idx + 1}\n\n`
+        markdownContent += `\n## List ${idx + 1}\n\n`
         list.items.forEach(item => {
-          md += `- ${item}\n`
+          markdownContent += `- ${item}\n`
         })
       })
     }
 
     if (data.structured?.forms) {
       data.structured.forms.forEach((form, idx) => {
-        md += `\n## Form ${idx + 1}\n\n`
+        markdownContent += `\n## Form ${idx + 1}\n\n`
         form.fields.forEach(field => {
-          md += `**${field.label}**: ${field.value}\n`
+          markdownContent += `**${field.label}**: ${field.value}\n`
         })
       })
     }
 
-    return md
+    return markdownContent
   }
 
   private exportToXML(data: ExtractedData): string {
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<extractedData>\n`
-    xml += `  <type>${data.type}</type>\n`
-    xml += `  <rawText><![CDATA[${data.rawText}]]></rawText>\n`
+    let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n<extractedData>\n`
+    xmlContent += `  <type>${data.type}</type>\n`
+    xmlContent += `  <rawText><![CDATA[${data.rawText}]]></rawText>\n`
 
     if (data.structured?.tables) {
-      xml += `  <tables>\n`
+      xmlContent += `  <tables>\n`
       data.structured.tables.forEach(table => {
-        xml += `    <table>\n`
-        xml += `      <headers>${table.headers.join(',')}</headers>\n`
-        xml += `      <rows>\n`
+        xmlContent += `    <table>\n`
+        xmlContent += `      <headers>${table.headers.join(',')}</headers>\n`
+        xmlContent += `      <rows>\n`
         table.rows.forEach(row => {
-          xml += `        <row>${row.join(',')}</row>\n`
+          xmlContent += `        <row>${row.join(',')}</row>\n`
         })
-        xml += `      </rows>\n`
-        xml += `    </table>\n`
+        xmlContent += `      </rows>\n`
+        xmlContent += `    </table>\n`
       })
-      xml += `  </tables>\n`
+      xmlContent += `  </tables>\n`
     }
 
-    xml += `</extractedData>`
-    return xml
+    xmlContent += `</extractedData>`
+    return xmlContent
   }
 
   /**
