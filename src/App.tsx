@@ -2,6 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { Logo, LogoWithText } from './components/Logo'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './components/ui/dropdown-menu'
 import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
@@ -33,6 +41,8 @@ import {
   Vault,
   Ghost,
   CheckCircle,
+  BookOpen,
+  ListBullets,
 } from '@phosphor-icons/react'
 import { useIsMobile } from './hooks/use-mobile'
 import { usePopoutPortal } from './hooks/use-popout-portal'
@@ -1459,39 +1469,59 @@ function App() {
                   </span>
                 </button>
               ))}
-            {/* More menu for iOS and Ops */}
-            <div className="relative group">
-              <button
-                onClick={() => {
-                  // Toggle between iOS and Ops, or show the one not currently active
-                  if (activeTab === 'ios') setActiveTab('ops')
-                  else setActiveTab('ios')
-                }}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-[56px] ${
-                  ['ios', 'ops'].includes(activeTab) ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                <div
-                  className={`relative ${['ios', 'ops'].includes(activeTab) ? 'scale-110' : ''} transition-transform`}
-                >
-                  {activeTab === 'ops' ? (
-                    <GearSix size={22} weight="fill" />
-                  ) : (
-                    <DeviceMobile size={22} weight={activeTab === 'ios' ? 'fill' : 'regular'} />
-                  )}
-                  {['ios', 'ops'].includes(activeTab) && (
-                    <div className="absolute -inset-1 rounded-full bg-primary/10 -z-10" />
-                  )}
-                </div>
-                <span
-                  className={`text-[10px] font-medium ${
+            {/* More menu: iPhone Capture, Ops, Guide */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-[56px] ${
                     ['ios', 'ops'].includes(activeTab) ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
-                  {activeTab === 'ops' ? 'Ops' : 'More'}
-                </span>
-              </button>
-            </div>
+                  <div
+                    className={`relative ${['ios', 'ops'].includes(activeTab) ? 'scale-110' : ''} transition-transform`}
+                  >
+                    <ListBullets
+                      size={22}
+                      weight={['ios', 'ops'].includes(activeTab) ? 'fill' : 'regular'}
+                    />
+                    {['ios', 'ops'].includes(activeTab) && (
+                      <div className="absolute -inset-1 rounded-full bg-primary/10 -z-10" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] font-medium ${
+                      ['ios', 'ops'].includes(activeTab) ? 'text-primary' : 'text-muted-foreground'
+                    }`}
+                  >
+                    More
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[200px]">
+                <DropdownMenuLabel>Capture & Tools</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setActiveTab('ios')}>
+                  <DeviceMobile size={18} className="mr-2" />
+                  iPhone Capture
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab('ops')}>
+                  <GearSix size={18} className="mr-2" />
+                  Ops & Deployment
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setActiveTab('ios')
+                    toast.info(
+                      'Scroll down for upload area. Tap to select screenshots or recordings.'
+                    )
+                  }}
+                >
+                  <BookOpen size={18} className="mr-2" />
+                  Capture help
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </nav>
       </div>
