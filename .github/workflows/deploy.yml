@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-      url: ${{ steps.deploy.outputs.url }}
+      url: ${{ steps.deploy.outputs.url || steps.deploy-preview.outputs.url }}
     
     steps:
       - name: Checkout code
@@ -35,27 +35,27 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Pull Vercel project config
+        run: npx vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Deploy to Vercel (Production)
         id: deploy
         if: github.ref == 'refs/heads/main'
         run: |
-          npm install -g vercel
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
-          echo "url=$(cat deployment-url.txt)" >> $GITHUB_OUTPUT
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | tee deploy-output.txt
+          url=$(grep -oE 'https://[^[:space:]]+\.vercel\.app' deploy-output.txt | tail -1 || echo "")
+          echo "url=$url" >> $GITHUB_OUTPUT
 
       - name: Deploy to Vercel (Preview)
         id: deploy-preview
         if: github.ref != 'refs/heads/main'
         run: |
-          npm install -g vercel
-          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
-          echo "url=$(cat deployment-url.txt)" >> $GITHUB_OUTPUT
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | tee deploy-output.txt
+          url=$(grep -oE 'https://[^[:space:]]+\.vercel\.app' deploy-output.txt | tail -1 || echo "")
+          echo "url=$url" >> $GITHUB_OUTPUT
 
       - name: Comment PR with deployment URL
         if: github.event_name == 'pull_request'
@@ -63,7 +63,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const url = fs.readFileSync('deployment-url.txt', 'utf8').trim();
+            const output = fs.readFileSync('deploy-output.txt', 'utf8');
+            const match = output.match(/https:\/\/[^\s]+\.vercel\.app/);
+            const url = match ? match[0] : 'Check Vercel dashboard';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
