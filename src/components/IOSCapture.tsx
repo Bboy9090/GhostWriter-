@@ -1190,8 +1190,9 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
             <Badge variant="secondary">{inputMode === 'images' ? 'Batch OCR' : 'Frame OCR'}</Badge>
           </div>
 
-          <div
-            className={`block cursor-pointer rounded-lg border-2 border-dashed p-6 transition-colors ${
+          <label
+            htmlFor={inputMode === 'images' ? 'screenshot-upload' : 'video-upload'}
+            className={`block cursor-pointer rounded-lg border-2 border-dashed p-6 transition-colors min-h-[120px] ${
               dropActive
                 ? 'border-primary bg-primary/10'
                 : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/30'
@@ -1207,48 +1208,40 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
               <div className="space-y-2">
                 <div className="text-sm font-medium">
                   {inputMode === 'images'
-                    ? 'Drop screenshots here, or'
-                    : 'Drop a screen recording here, or'}
+                    ? 'Drop screenshots here, or tap to browse'
+                    : 'Drop a screen recording here, or tap to browse'}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {inputMode === 'images'
-                    ? 'Paste from clipboard (Ctrl+V)'
-                    : 'Upload one video file'}
+                    ? 'Paste from clipboard (Ctrl+V) · PNG, JPEG, HEIC'
+                    : 'MOV, MP4, M4V from Photos'}
                 </div>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  if (inputMode === 'images') {
-                    screenshotInputRef.current?.click()
-                  } else {
-                    videoInputRef.current?.click()
-                  }
-                }}
-                className="font-medium"
-              >
-                <UploadSimple size={18} className="mr-2" />
-                {inputMode === 'images' ? 'Choose Photos' : 'Choose Recording'}
-              </Button>
+              <div className="flex justify-center">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 min-h-[48px]">
+                  <UploadSimple size={20} />
+                  {inputMode === 'images' ? 'Choose Screenshots' : 'Choose Recording'}
+                </span>
+              </div>
             </div>
             <Input
               ref={screenshotInputRef}
               id="screenshot-upload"
               type="file"
               multiple
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               onChange={handleFiles}
               className="sr-only"
             />
             <Input
               ref={videoInputRef}
+              id="video-upload"
               type="file"
-              accept="video/*"
+              accept="video/*,.mov,.mp4,.m4v"
               onChange={handleVideoFile}
               className="sr-only"
             />
-          </div>
+          </label>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
