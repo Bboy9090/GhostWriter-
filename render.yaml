@@ -1,6 +1,9 @@
 # Render.com Blueprint for GhostWriter
 # This file enables one-click deployment on Render.com
 # Deploy: https://render.com/deploy
+#
+# Deployment order: databases + redis first, then API, then static site
+# (static site needs ghostwriter-api host for VITE_* env vars)
 
 services:
   # Redis / Key Value (must be in services, not databases)
@@ -11,28 +14,7 @@ services:
         description: allow internal connections
     plan: free
 
-  # Frontend - Static Site
-  - type: web
-    name: ghostwriter
-    runtime: static
-    # NODE_ENV=development so npm ci installs devDependencies (vite, tailwind)
-    buildCommand: NODE_ENV=development npm ci && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: VITE_API_URL
-        fromService:
-          type: web
-          name: ghostwriter-api
-          property: host
-      - key: VITE_WS_URL
-        fromService:
-          type: web
-          name: ghostwriter-api
-          property: host
-
-  # Backend API - Go Service
+  # Backend API - Go Service (must deploy before static site for fromService refs)
   - type: web
     name: ghostwriter-api
     runtime: go
@@ -54,6 +36,26 @@ services:
           name: ghostwriter-redis
           property: connectionString
     healthCheckPath: /health
+
+  # Frontend - Static Site (after API so fromService can resolve)
+  - type: web
+    name: ghostwriter
+    runtime: static
+    buildCommand: NODE_ENV=development npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: ghostwriter-api
+          property: host
+      - key: VITE_WS_URL
+        fromService:
+          type: web
+          name: ghostwriter-api
+          property: host
 
 databases:
   # PostgreSQL Database
