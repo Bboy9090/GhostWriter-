@@ -3,13 +3,6 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { Logo, LogoWithText } from './components/Logo'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './components/ui/dialog'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -479,7 +472,7 @@ function PipelineNode({ step, index }: { step: PipelineStep; index: number }) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('overview')
-  const [captureHelpOpen, setCaptureHelpOpen] = useState(false)
+  const [showCaptureHelp, setShowCaptureHelp] = useState(false)
   const [portalActive, setPortalActive] = useState(true)
   const [vaultUnlocked, setVaultUnlocked] = useState(true)
   const [stealthMode, setStealthMode] = useState(true)
@@ -1075,7 +1068,10 @@ function App() {
       case 'ios':
         return (
           <div className="animate-fade-in">
-            <IOSCapture />
+            <IOSCapture
+              showHelp={showCaptureHelp}
+              onHelpDismiss={() => setShowCaptureHelp(false)}
+            />
           </div>
         )
 
@@ -1517,7 +1513,12 @@ function App() {
                   Ops & Deployment
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setCaptureHelpOpen(true)}>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setActiveTab('ios')
+                    setShowCaptureHelp(true)
+                  }}
+                >
                   <BookOpen size={18} className="mr-2" />
                   Capture help
                 </DropdownMenuItem>
@@ -1525,52 +1526,6 @@ function App() {
             </DropdownMenu>
           </div>
         </nav>
-
-        <Dialog open={captureHelpOpen} onOpenChange={setCaptureHelpOpen}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>iPhone Capture Help</DialogTitle>
-              <DialogDescription>
-                How to extract text from screenshots and screen recordings
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="font-medium mb-2">Screenshots</p>
-                <p className="text-muted-foreground">
-                  Take screenshots while scrolling through a thread, then tap &quot;Choose
-                  Photos&quot; to upload. GhostWriter orders them by time and extracts text with
-                  OCR.
-                </p>
-              </div>
-              <div>
-                <p className="font-medium mb-2">Screen Recording</p>
-                <p className="text-muted-foreground">
-                  Record your screen while scrolling, then upload the video. GhostWriter samples
-                  frames and extracts text from each.
-                </p>
-              </div>
-              <div>
-                <p className="font-medium mb-2">Tips</p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                  <li>Use &quot;Sort by Time&quot; for best order</li>
-                  <li>Enable deduplication for scrolling chats</li>
-                  <li>Convert HEIC to PNG/JPEG if OCR misses text</li>
-                </ul>
-              </div>
-              <Button
-                onClick={() => {
-                  setCaptureHelpOpen(false)
-                  setActiveTab('ios')
-                }}
-                className="w-full"
-              >
-                <DeviceMobile size={18} className="mr-2" />
-                Open iPhone Capture
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </>
   )

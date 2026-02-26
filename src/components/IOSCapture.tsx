@@ -17,6 +17,7 @@ import {
   Trash,
   UploadSimple,
   Warning,
+  X,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -400,7 +401,12 @@ function computeMotionScore(prev: ImageData | null, next: ImageData, sampleStep:
   return samples === 0 ? 0 : totalDiff / samples
 }
 
-export function IOSCapture() {
+type IOSCaptureProps = {
+  showHelp?: boolean
+  onHelpDismiss?: () => void
+}
+
+export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps) {
   const [inputMode, setInputMode] = useState<InputMode>('images')
   const [sortMode, setSortMode] = useState<SortMode>('auto')
   const [files, setFiles] = useState<File[]>([])
@@ -1124,6 +1130,25 @@ export function IOSCapture() {
 
   return (
     <div className="space-y-6">
+      {showHelp && onHelpDismiss && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-2 flex-1">
+                <h4 className="font-medium text-sm">Capture Help</h4>
+                <p className="text-xs text-muted-foreground">
+                  Tap &quot;Choose Photos&quot; below to upload screenshots, or drop a screen
+                  recording. Use &quot;Sort by Time&quot; for best order. Enable deduplication for
+                  scrolling chats. Convert HEIC to PNG/JPEG if OCR misses text.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={onHelpDismiss} className="shrink-0">
+                <X size={18} />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center gap-3">
