@@ -186,7 +186,7 @@ export function FloatingPortal({
     touchStartTime.current = Date.now()
 
     const target = e.target as HTMLElement
-    if (target.closest('svg') || target.closest('button')) return
+    if (target.closest('button')) return
 
     setIsDragging(true)
     const rect = portalRef.current?.getBoundingClientRect()
@@ -229,7 +229,7 @@ export function FloatingPortal({
     if (e.button !== 0) return
 
     const target = e.target as HTMLElement
-    if (target.closest('svg') || target.closest('button')) return
+    if (target.closest('button')) return
 
     setIsDragging(true)
     const rect = portalRef.current?.getBoundingClientRect()
@@ -330,7 +330,7 @@ export function FloatingPortal({
     <motion.div
       ref={portalRef}
       className={cn(
-        'fixed z-[9999] select-none',
+        'fixed z-[9999] select-none pointer-events-none',
         'flex flex-col items-center gap-2',
         isMobile ? 'cursor-grab active:cursor-grabbing' : 'cursor-move',
         isMobile && 'pb-safe-area-inset-bottom'
@@ -338,7 +338,6 @@ export function FloatingPortal({
       style={{
         left: position.x,
         top: position.y,
-        touchAction: 'none',
         WebkitUserSelect: 'none',
         userSelect: 'none',
       }}
@@ -358,7 +357,7 @@ export function FloatingPortal({
       <AnimatePresence>
         {showOnboarding && !isMinimized && (
           <motion.div
-            className="absolute left-1/2 -translate-x-1/2 -top-28 w-64 z-[10000]"
+            className="absolute left-1/2 -translate-x-1/2 -top-28 w-64 z-[10000] pointer-events-auto"
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.9 }}
@@ -370,7 +369,8 @@ export function FloatingPortal({
                 <div className="flex-1">
                   <h3 className="font-semibold text-sm mb-1">Welcome to the Wormhole!</h3>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Click the ghost to start capturing. Drag to reposition. Hover for controls.
+                    Click the ghost to toggle capture. Drag to move. Use &quot;Pop out&quot; (↗) to
+                    float over other windows.
                   </p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                     <Keyboard className="h-3 w-3" />
@@ -406,7 +406,7 @@ export function FloatingPortal({
         <TooltipTrigger asChild>
           <motion.div
             className={cn(
-              'relative rounded-full',
+              'relative rounded-full pointer-events-auto',
               portalSize,
               'backdrop-blur-xl',
               isActive ? 'shadow-2xl brightness-110' : 'grayscale-[0.3] brightness-90',
@@ -415,6 +415,7 @@ export function FloatingPortal({
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2'
             )}
             style={{
+              touchAction: 'none',
               background: isActive
                 ? 'radial-gradient(circle at 50% 50%, oklch(0.15 0.04 260 / 0.95), oklch(0.08 0.03 260 / 0.9))'
                 : 'oklch(0.12 0.02 260 / 0.85)',
@@ -556,7 +557,7 @@ export function FloatingPortal({
       {!isMinimized && (isHovered || isMobile) && (
         <motion.div
           className={cn(
-            'flex gap-1 rounded-xl backdrop-blur-xl border border-border/30 shadow-lg',
+            'flex gap-1 rounded-xl backdrop-blur-xl border border-border/30 shadow-lg pointer-events-auto',
             isMobile ? 'p-1.5 gap-1.5' : 'p-1'
           )}
           style={{
@@ -725,7 +726,7 @@ export function FloatingPortal({
       <AnimatePresence>
         {showHelp && !isMinimized && (
           <motion.div
-            className="absolute left-1/2 -translate-x-1/2 -top-44 w-72 z-[10000]"
+            className="absolute left-1/2 -translate-x-1/2 -top-44 w-72 z-[10000] pointer-events-auto"
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.9 }}
