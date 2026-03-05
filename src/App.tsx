@@ -491,7 +491,7 @@ function App() {
   const handlePopoutOpenVault = useCallback(() => {
     setActiveTab('vault')
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    window.focus()
+    // Do not focus the main window so the user can stay in their target window
   }, [])
   const handlePopoutToggleVault = useCallback(() => {
     setVaultUnlocked(prev => !prev)
@@ -1447,7 +1447,7 @@ function App() {
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bottom-nav mobile-bottom-nav">
           <div className="flex items-center justify-around px-2 py-1">
             {navItems
-              .filter(item => !['ios', 'ops'].includes(item.key))
+              .filter(item => item.key !== 'ops')
               .map(item => (
                 <button
                   key={item.key}
@@ -1469,32 +1469,32 @@ function App() {
                       activeTab === item.key ? 'text-primary' : 'text-muted-foreground'
                     }`}
                   >
-                    {item.label}
+                    {item.key === 'ios' ? 'Upload' : item.label}
                   </span>
                 </button>
               ))}
-            {/* More menu: iPhone Capture, Ops, Guide */}
+            {/* More menu: Ops, Capture help */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-[56px] ${
-                    ['ios', 'ops'].includes(activeTab) ? 'text-primary' : 'text-muted-foreground'
+                    activeTab === 'ops' ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
                   <div
-                    className={`relative ${['ios', 'ops'].includes(activeTab) ? 'scale-110' : ''} transition-transform`}
+                    className={`relative ${activeTab === 'ops' ? 'scale-110' : ''} transition-transform`}
                   >
                     <ListBullets
                       size={22}
-                      weight={['ios', 'ops'].includes(activeTab) ? 'fill' : 'regular'}
+                      weight={activeTab === 'ops' ? 'fill' : 'regular'}
                     />
-                    {['ios', 'ops'].includes(activeTab) && (
+                    {activeTab === 'ops' && (
                       <div className="absolute -inset-1 rounded-full bg-primary/10 -z-10" />
                     )}
                   </div>
                   <span
                     className={`text-[10px] font-medium ${
-                      ['ios', 'ops'].includes(activeTab) ? 'text-primary' : 'text-muted-foreground'
+                      activeTab === 'ops' ? 'text-primary' : 'text-muted-foreground'
                     }`}
                   >
                     More

@@ -78,6 +78,8 @@ export function FloatingPortal({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const portalRef = useRef<HTMLDivElement>(null)
   const touchStartTime = useRef<number>(0)
+  const hasMovedRef = useRef(false)
+  const skipNextClickRef = useRef(false)
 
   const handleToggle = useCallback(
     (e?: React.MouseEvent | React.TouchEvent) => {
@@ -188,6 +190,7 @@ export function FloatingPortal({
     const target = e.target as HTMLElement
     if (target.closest('button')) return
 
+    hasMovedRef.current = false
     setIsDragging(true)
     const rect = portalRef.current?.getBoundingClientRect()
     if (rect) {
@@ -203,6 +206,7 @@ export function FloatingPortal({
     (e: TouchEvent) => {
       if (!isDragging) return
       e.preventDefault()
+      hasMovedRef.current = true
 
       const touch = e.touches[0]
       if (!touch) return
@@ -222,6 +226,7 @@ export function FloatingPortal({
   )
 
   const handleTouchEnd = () => {
+    skipNextClickRef.current = hasMovedRef.current
     setIsDragging(false)
   }
 
@@ -231,6 +236,7 @@ export function FloatingPortal({
     const target = e.target as HTMLElement
     if (target.closest('button')) return
 
+    hasMovedRef.current = false
     setIsDragging(true)
     const rect = portalRef.current?.getBoundingClientRect()
     if (rect) {
@@ -244,6 +250,7 @@ export function FloatingPortal({
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging) return
+      hasMovedRef.current = true
 
       const newX = e.clientX - dragStart.x
       const newY = e.clientY - dragStart.y
@@ -260,6 +267,7 @@ export function FloatingPortal({
   )
 
   const handleMouseUp = () => {
+    skipNextClickRef.current = hasMovedRef.current
     setIsDragging(false)
   }
 
@@ -433,10 +441,18 @@ export function FloatingPortal({
             onMouseEnter={() => !isMobile && setIsHovered(true)}
             onMouseLeave={() => !isMobile && setIsHovered(false)}
             onClick={e => {
-              if (!isDragging) handleToggle(e)
+              if (skipNextClickRef.current) {
+                skipNextClickRef.current = false
+                return
+              }
+              handleToggle(e)
             }}
             onTouchEnd={e => {
-              if (!isDragging) handleToggle(e)
+              if (skipNextClickRef.current) {
+                skipNextClickRef.current = false
+                return
+              }
+              handleToggle(e)
             }}
             role="button"
             aria-label={isActive ? 'Click to pause capture' : 'Click to start capture'}

@@ -239,9 +239,7 @@ export function usePopoutPortal({
     if (popup) {
       popupRef.current = popup
       setIsPoppedOut(true)
-
-      // Keep focus on the popup
-      popup.focus()
+      // Do not focus the popup so the user can stay in their target window and scroll/click there
 
       // Listen for the popup closing
       const checkClosed = setInterval(() => {
@@ -258,12 +256,8 @@ export function usePopoutPortal({
    * Main popOut function: tries PiP first, falls back to popup.
    */
   const popOut = useCallback(async () => {
-    // If already popped out, just focus
-    if (isPoppedOut) {
-      popupRef.current?.focus()
-      pipWindowRef.current?.focus()
-      return
-    }
+    // If already popped out, nothing to do (don't steal focus from the user's target window)
+    if (isPoppedOut) return
 
     // Try Document PiP first (true always-on-top)
     const pipSuccess = await popOutViaPip()
