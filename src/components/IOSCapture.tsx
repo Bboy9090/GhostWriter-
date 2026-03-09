@@ -404,9 +404,11 @@ function computeMotionScore(prev: ImageData | null, next: ImageData, sampleStep:
 type IOSCaptureProps = {
   showHelp?: boolean
   onHelpDismiss?: () => void
+  /** Sync OCR output to capture store/vault. Called after each successful OCR run. */
+  onSyncToVault?: (text: string, metadata?: { sourceApp?: string; confidence?: number }) => void
 }
 
-export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps) {
+export function IOSCapture({ showHelp = false, onHelpDismiss, onSyncToVault }: IOSCaptureProps) {
   const [inputMode, setInputMode] = useState<InputMode>('images')
   const [sortMode, setSortMode] = useState<SortMode>('auto')
   const [files, setFiles] = useState<File[]>([])
@@ -1069,6 +1071,16 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
         segments: finalSegments.length,
       })
 
+      if (onSyncToVault && outputText.trim()) {
+        const avgConf = nextResults.length
+          ? nextResults.reduce((s, r) => s + (r.confidence ?? 0), 0) / nextResults.length
+          : 85
+        onSyncToVault(outputText, {
+          sourceApp: sourceApp.trim() || 'iPhone Capture',
+          confidence: Math.round(avgConf),
+        })
+      }
+
       if (abortRef.current) {
         toast.info('OCR stopped early.')
       } else {
@@ -1126,6 +1138,8 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
     contrastBoost,
     sharpenEnabled,
     ocrPsm,
+    onSyncToVault,
+    sourceApp,
   ])
 
   return (

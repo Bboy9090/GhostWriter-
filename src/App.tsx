@@ -43,6 +43,7 @@ import {
   CheckCircle,
   BookOpen,
   ListBullets,
+  UploadSimple,
 } from '@phosphor-icons/react'
 import { useIsMobile } from './hooks/use-mobile'
 import { usePopoutPortal } from './hooks/use-popout-portal'
@@ -223,14 +224,14 @@ const captureModes = [
   { key: 'turbo', label: 'Turbo', fps: 10, delta: '3.5%', icon: '⚡' },
 ]
 
-// Mobile bottom nav items
+// Nav items - "Upload" = iPhone Capture (screenshots/recordings)
 const navItems = [
   { key: 'overview', label: 'Home', icon: House },
   { key: 'portal', label: 'Portal', icon: Eye },
   { key: 'extractor', label: 'God Mode', icon: Sparkle },
   { key: 'vault', label: 'Vault', icon: Vault },
   { key: 'search', label: 'Search', icon: MagnifyingGlass },
-  { key: 'ios', label: 'iOS', icon: DeviceMobile },
+  { key: 'ios', label: 'Upload', icon: UploadSimple },
   { key: 'ops', label: 'Ops', icon: GearSix },
 ]
 
@@ -1067,10 +1068,18 @@ function App() {
 
       case 'ios':
         return (
-          <div className="animate-fade-in">
+          <div id="upload-capture-section" className="animate-fade-in">
             <IOSCapture
               showHelp={showCaptureHelp}
               onHelpDismiss={() => setShowCaptureHelp(false)}
+              onSyncToVault={(text, meta) => {
+                const entry = addCaptureEntry(text, {
+                  sourceApp: meta?.sourceApp ?? 'iPhone Capture',
+                  confidence: meta?.confidence,
+                  skipFilters: false,
+                })
+                if (entry) toast.success('OCR output synced to vault')
+              }}
             />
           </div>
         )
@@ -1307,6 +1316,21 @@ function App() {
                   GhostWriter captures screen text in real time, heals it on-device, and syncs a
                   clean, searchable memory vault with hybrid semantic retrieval.
                 </p>
+                <Button
+                  onClick={() => {
+                    setActiveTab('ios')
+                    setTimeout(() => {
+                      document.getElementById('upload-capture-section')?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      })
+                    }, 50)
+                  }}
+                  className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
+                >
+                  <DeviceMobile size={18} className="mr-2" />
+                  Upload Screenshots & Recordings
+                </Button>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/25 text-[10px] sm:text-xs">
                     On-device OCR
@@ -1447,7 +1471,7 @@ function App() {
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bottom-nav mobile-bottom-nav">
           <div className="flex items-center justify-around px-2 py-1">
             {navItems
-              .filter(item => !['ios', 'ops'].includes(item.key))
+              .filter(item => item.key !== 'ops')
               .map(item => (
                 <button
                   key={item.key}
