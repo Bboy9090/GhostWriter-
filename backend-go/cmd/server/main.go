@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -21,8 +22,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	maxRetries    = 10
+	retryInterval = 3 * time.Second
+)
+
 func main() {
-	// Load .env file if it exists
+	// Load .env file if it exists (ignored in production where env vars are set directly)
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
@@ -33,27 +39,39 @@ func main() {
 	port := getEnv("PORT", "8080")
 	openaiAPIKey := getEnv("OPENAI_API_KEY", "")
 
-	// Initialize database
-	db, err := database.NewDatabase(dbURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+	log.Printf("GhostWriter API starting up on 0.0.0.0:%s", port)
+	log.Printf("Database URL configured: %v", dbURL != "")
+	log.Printf("Redis URL configured: %v", redisURL != "")
+
+	// Initialize database with retry logic so the service survives a slow DB start
+	var db *database.Database
+	if err := retry(maxRetries, retryInterval, func() error {
+		var err error
+		db, err = database.NewDatabase(dbURL)
+		return err
+	}); err != nil {
+		log.Fatalf("FATAL: could not connect to database after %d attempts: %v", maxRetries, err)
 	}
 	defer db.Close()
 
 	// Initialize schema
 	ctx := context.Background()
 	if err := db.InitSchema(ctx); err != nil {
-		log.Fatalf("Failed to initialize database schema: %v", err)
+		log.Fatalf("FATAL: failed to initialize database schema: %v", err)
 	}
 
-	// Initialize Redis
-	redisClient, err := redis.NewRedisClient(redisURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+	// Initialize Redis with retry logic
+	var redisClient *redis.RedisClient
+	if err := retry(maxRetries, retryInterval, func() error {
+		var err error
+		redisClient, err = redis.NewRedisClient(redisURL)
+		return err
+	}); err != nil {
+		log.Fatalf("FATAL: could not connect to Redis after %d attempts: %v", maxRetries, err)
 	}
 	defer redisClient.Close()
 
-	// Initialize embedding service
+	// Initialize embedding service (optional – only when API key is provided)
 	var embeddingService *embeddings.EmbeddingService
 	if openaiAPIKey != "" {
 		embeddingService = embeddings.NewEmbeddingService(openaiAPIKey)
@@ -73,6 +91,7 @@ func main() {
 		topic := getEnv("APNS_TOPIC", "com.ghostwriter.app")
 		production := getEnv("APNS_PRODUCTION", "false") == "true"
 
+		var err error
 		apnsClient, err = apns.NewAPNSClient(authMode, certPath, keyPath, keyID, teamID, topic, production)
 		if err != nil {
 			log.Printf("Warning: Failed to initialize APNS: %v", err)
@@ -109,27 +128,42 @@ func main() {
 	// WebSocket route
 	app.Get("/ws", websocket.New(handler.HandleWebSocket))
 
-	// Graceful shutdown
+	// Start server – bind to 0.0.0.0 so it is reachable inside containers/VMs
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
 	go func() {
-		if err := app.Listen(":" + port); err != nil {
+		log.Printf("Listening on %s", listenAddr)
+		if err := app.Listen(listenAddr); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	log.Printf("GhostWriter API server started on port %s", port)
-
-	// Wait for interrupt signal
+	// Wait for interrupt signal for graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	log.Println("Shutting down server gracefully...")
 
 	if err := app.Shutdown(); err != nil {
 		log.Fatalf("Server shutdown error: %v", err)
 	}
 
-	log.Println("Server exited")
+	log.Println("Server exited cleanly")
+}
+
+// retry calls fn up to attempts times, sleeping interval between each failure.
+func retry(attempts int, interval time.Duration, fn func() error) error {
+	var err error
+	for i := 1; i <= attempts; i++ {
+		if err = fn(); err == nil {
+			return nil
+		}
+		if i < attempts {
+			log.Printf("Attempt %d/%d failed: %v – retrying in %s", i, attempts, err, interval)
+			time.Sleep(interval)
+		}
+	}
+	return err
 }
 
 func getEnv(key, defaultValue string) string {
