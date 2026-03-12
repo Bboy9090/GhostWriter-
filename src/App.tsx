@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { Logo, LogoWithText } from './components/Logo'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './components/ui/dropdown-menu'
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from './components/ui/sheet'
 import { Badge } from './components/ui/badge'
 import { Button } from './components/ui/button'
 import { Card, CardContent } from './components/ui/card'
@@ -25,24 +24,23 @@ import { CaptureFilters } from './components/CaptureFilters'
 import { toast } from 'sonner'
 import {
   Browser,
-  Camera,
+  Check,
+  Copy,
   DeviceMobile,
+  GearSix,
+  Ghost,
   Lightning,
-  Lock,
   LockOpen,
   MagnifyingGlass,
+  PencilSimple,
   Share,
   Sparkle,
+  UploadSimple,
+  Vault,
   Warning,
   Folder,
-  House,
-  GearSix,
   Eye,
-  Vault,
-  Ghost,
-  CheckCircle,
-  BookOpen,
-  ListBullets,
+  X,
 } from '@phosphor-icons/react'
 import { useIsMobile } from './hooks/use-mobile'
 import { usePopoutPortal } from './hooks/use-popout-portal'
@@ -168,40 +166,6 @@ const captureFeed: CaptureEntry[] = [
   },
 ]
 
-const featureHighlights = [
-  {
-    title: 'Stealth Overlay',
-    description: 'Floating portal UI stays above other apps without recording.',
-    tag: 'Portal UI',
-    icon: '👻',
-    gradient: 'from-emerald-500/10 via-transparent to-cyan-500/10',
-    borderColor: 'border-emerald-500/20',
-  },
-  {
-    title: 'On-Device Healer',
-    description: 'Gemma-class LLM cleanup keeps paragraphs intact and readable.',
-    tag: 'Healer',
-    icon: '🧠',
-    gradient: 'from-purple-500/10 via-transparent to-pink-500/10',
-    borderColor: 'border-purple-500/20',
-  },
-  {
-    title: 'Hybrid Search',
-    description: 'RRF merges keyword and vector search into one ranking.',
-    tag: 'Oracle',
-    icon: '🔮',
-    gradient: 'from-cyan-500/10 via-transparent to-blue-500/10',
-    borderColor: 'border-cyan-500/20',
-  },
-  {
-    title: 'Zero-Knowledge Vault',
-    description: 'Raw frames never leave the device. Only healed text syncs.',
-    tag: 'Security',
-    icon: '🔐',
-    gradient: 'from-amber-500/10 via-transparent to-orange-500/10',
-    borderColor: 'border-amber-500/20',
-  },
-]
 
 const vaultStats = [
   { label: 'Vault Entries', value: '128,440', detail: '+1,482 today', color: 'text-emerald-400' },
@@ -223,94 +187,6 @@ const captureModes = [
   { key: 'turbo', label: 'Turbo', fps: 10, delta: '3.5%', icon: '⚡' },
 ]
 
-// Mobile bottom nav items
-const navItems = [
-  { key: 'overview', label: 'Home', icon: House },
-  { key: 'portal', label: 'Portal', icon: Eye },
-  { key: 'extractor', label: 'God Mode', icon: Sparkle },
-  { key: 'vault', label: 'Vault', icon: Vault },
-  { key: 'search', label: 'Search', icon: MagnifyingGlass },
-  { key: 'ios', label: 'iOS', icon: DeviceMobile },
-  { key: 'ops', label: 'Ops', icon: GearSix },
-]
-
-function StatusLegend({
-  portalActive,
-  vaultUnlocked,
-  healerEnabled,
-  stealthMode,
-}: {
-  portalActive: boolean
-  vaultUnlocked: boolean
-  healerEnabled: boolean
-  stealthMode: boolean
-}) {
-  const items = [
-    {
-      label: 'Portal',
-      active: portalActive,
-      activeColor: 'bg-emerald-500',
-      inactiveColor: 'bg-zinc-600',
-      glowColor: 'shadow-emerald-500/50',
-      icon: Ghost,
-    },
-    {
-      label: 'Vault',
-      active: vaultUnlocked,
-      activeColor: 'bg-cyan-500',
-      inactiveColor: 'bg-zinc-600',
-      glowColor: 'shadow-cyan-500/50',
-      icon: Vault,
-    },
-    {
-      label: 'Healer',
-      active: healerEnabled,
-      activeColor: 'bg-purple-500',
-      inactiveColor: 'bg-zinc-600',
-      glowColor: 'shadow-purple-500/50',
-      icon: Sparkle,
-    },
-    {
-      label: 'Stealth',
-      active: stealthMode,
-      activeColor: 'bg-amber-500',
-      inactiveColor: 'bg-zinc-600',
-      glowColor: 'shadow-amber-500/50',
-      icon: CheckCircle,
-    },
-  ]
-
-  return (
-    <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
-      {items.map(item => (
-        <div
-          key={item.label}
-          className="flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full bg-card/80 border border-border/50 backdrop-blur-sm"
-        >
-          <div className="relative">
-            <div
-              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-500 ${
-                item.active ? `${item.activeColor} shadow-lg ${item.glowColor}` : item.inactiveColor
-              }`}
-            />
-            {item.active && (
-              <div
-                className={`absolute inset-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${item.activeColor} animate-ping opacity-50`}
-              />
-            )}
-          </div>
-          <item.icon
-            size={12}
-            className={item.active ? 'text-foreground' : 'text-muted-foreground'}
-          />
-          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-            {item.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 function StorageBar({ captureCount }: { captureCount: number }) {
   const stats = useMemo(() => getStorageStats(), [captureCount])
@@ -470,8 +346,35 @@ function PipelineNode({ step, index }: { step: PipelineStep; index: number }) {
   )
 }
 
+// Pulse indicator states
+type GhostPulseState = 'active' | 'saved' | 'idle'
+
+function GhostPulseIndicator({ state }: { state: GhostPulseState }) {
+  return (
+    <div className="relative flex items-center justify-center w-10 h-10">
+      {/* Outer glow ring */}
+      {state === 'saved' && (
+        <div className="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping" />
+      )}
+      {state === 'active' && (
+        <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse" />
+      )}
+      <Ghost
+        size={24}
+        weight={state === 'idle' ? 'regular' : 'fill'}
+        className={
+          state === 'saved'
+            ? 'text-emerald-400 transition-colors duration-300'
+            : state === 'active'
+              ? 'text-primary animate-pulse'
+              : 'text-muted-foreground/40 transition-colors duration-500'
+        }
+      />
+    </div>
+  )
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState('overview')
   const [showCaptureHelp, setShowCaptureHelp] = useState(false)
   const [portalActive, setPortalActive] = useState(true)
   const [vaultUnlocked, setVaultUnlocked] = useState(true)
@@ -480,6 +383,13 @@ function App() {
   const [healerEnabled, setHealerEnabled] = useState(true)
   const [captureMode, setCaptureMode] = useState('balanced')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showDevDrawer, setShowDevDrawer] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editedTexts, setEditedTexts] = useState<Record<string, string>>({})
+  const [ghostPulse, setGhostPulse] = useState<GhostPulseState>('idle')
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [devActiveTab, setDevActiveTab] = useState('pipeline')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
 
   const selectedCaptureModeObj = captureModes.find(m => m.key === captureMode)
@@ -489,9 +399,7 @@ function App() {
     setPortalActive(prev => !prev)
   }, [])
   const handlePopoutOpenVault = useCallback(() => {
-    setActiveTab('vault')
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    // Do not focus the main window so the user can stay in their target window
   }, [])
   const handlePopoutToggleVault = useCallback(() => {
     setVaultUnlocked(prev => !prev)
@@ -514,6 +422,27 @@ function App() {
   // Live capture log — shared with popout portal via BroadcastChannel
   const captureLog = useCaptureLog()
 
+  // Update ghost pulse when new capture arrives
+  const prevCaptureCount = useRef(captureLog.length)
+  useEffect(() => {
+    if (captureLog.length > prevCaptureCount.current) {
+      setGhostPulse('saved')
+      const savedTimer = setTimeout(() => {
+        setGhostPulse(portalActive ? 'active' : 'idle')
+      }, 1500)
+      prevCaptureCount.current = captureLog.length
+      return () => clearTimeout(savedTimer)
+    }
+    return undefined
+  }, [captureLog.length, portalActive])
+
+  // Update pulse state when portal active state changes
+  useEffect(() => {
+    if (ghostPulse !== 'saved') {
+      setGhostPulse(portalActive ? 'active' : 'idle')
+    }
+  }, [portalActive]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Start/stop demo capture when portal is toggled
   useEffect(() => {
     if (portalActive) {
@@ -527,7 +456,7 @@ function App() {
   // Search filters both static demo data and live capture log
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    // Merge live captures + static feed for search
+    // Merge live captures + static feed, newest first
     const allEntries = [
       ...captureLog.map(e => ({
         id: e.id,
@@ -555,138 +484,159 @@ function App() {
   const selectedDelta = selectedCaptureMode?.delta ?? '2.0%'
   const selectedKey = selectedCaptureMode?.key ?? 'balanced'
 
-  const togglePortal = () => {
-    setPortalActive(prev => {
-      const next = !prev
-      toast.success(
-        next ? '👻 Portal opened. Streaming live frames.' : 'Portal closed. Capture paused.'
-      )
-      return next
-    })
-  }
-
   const handlePortalToggle = (active: boolean) => {
     setPortalActive(active)
+    toast.success(
+      active ? '👻 Portal opened. Streaming live frames.' : 'Portal closed. Capture paused.'
+    )
   }
 
-  const toggleVault = () => {
-    setVaultUnlocked(prev => {
-      const next = !prev
-      toast.success(next ? '🔓 Vault unlocked for sync.' : '🔒 Vault locked. Sync paused.')
-      return next
-    })
+  const handleDropzoneFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const file = files[0]
+    if (!file) return
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      toast.error('Please drop an image or video file.')
+      return
+    }
+    toast.success(`Processing: ${file.name}`)
+    addCaptureEntry(`[File uploaded: ${file.name}]`, { sourceApp: 'Upload' })
   }
 
-  // Tab content renderer
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    handleDropzoneFiles(e.dataTransfer.files)
+  }
+
+  const getTextForEntry = (id: string, content: string) =>
+    editedTexts[id] !== undefined ? editedTexts[id] : content
+
+  const devNavItems = [
+    { key: 'pipeline', label: 'Pipeline', icon: Lightning },
+    { key: 'portal', label: 'Portal', icon: Eye },
+    { key: 'vault', label: 'Vault', icon: Vault },
+    { key: 'ops', label: 'Ops', icon: Browser },
+    { key: 'extractor', label: 'God Mode', icon: Sparkle },
+    { key: 'ios', label: 'iOS Upload', icon: DeviceMobile },
+  ]
+
+  const renderDevContent = () => {
+    switch (devActiveTab) {
+      case 'pipeline':
         return (
-          <div className="space-y-6 animate-fade-in">
-            {/* Feature Highlights - Stacked on mobile, grid on desktop */}
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-              {featureHighlights.map((feature, i) => (
-                <Card
-                  key={feature.title}
-                  className={`card-hover card-neon overflow-hidden border ${feature.borderColor} bg-gradient-to-br ${feature.gradient} animate-fade-in-up`}
-                  style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'backwards' }}
-                >
-                  <CardContent className="p-4 sm:p-5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{feature.icon}</span>
-                        <h3 className="font-semibold text-sm sm:text-base">{feature.title}</h3>
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] sm:text-xs">
-                        {feature.tag}
-                      </Badge>
+          <div className="space-y-4">
+            {/* Telemetry metrics */}
+            <Card className="card-neon overflow-hidden border-cyan-500/15">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Portal Telemetry</h3>
+                  <Badge
+                    variant="secondary"
+                    className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px]"
+                  >
+                    {selectedFps} FPS
+                  </Badge>
+                </div>
+                {[
+                  {
+                    label: 'Frame delta gate',
+                    value: '2.1%',
+                    progress: 72,
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    label: 'OCR queue',
+                    value: '1.2 frames',
+                    progress: 38,
+                    color: 'text-cyan-400',
+                  },
+                  {
+                    label: 'Dedup hit rate',
+                    value: '92%',
+                    progress: 92,
+                    color: 'text-purple-400',
+                  },
+                ].map(item => (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>{item.label}</span>
+                      <span className={`font-medium ${item.color}`}>{item.value}</span>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <Progress value={item.progress} className="mt-1 h-1.5" />
+                  </div>
+                ))}
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-purple-500/5 border border-purple-500/15 rounded-lg p-2">
+                  <Sparkle size={12} className="text-purple-400" weight="fill" />
+                  Healer batch runs every 10 seconds.
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Pipeline + Vault side by side on desktop, stacked on mobile */}
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* Phase-Shift Pipeline */}
-              <Card className="card-neon border-emerald-500/15 overflow-hidden">
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Lightning size={20} weight="fill" className="text-emerald-400" />
-                    <h3 className="font-semibold">Phase-Shift Pipeline</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {pipelineSteps.map((step, i) => (
-                      <PipelineNode key={step.title} step={step} index={i} />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Phase-Shift Pipeline */}
+            <Card className="card-neon border-emerald-500/15 overflow-hidden">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Lightning size={16} weight="fill" className="text-emerald-400" />
+                  <h3 className="font-semibold text-sm">Phase-Shift Pipeline</h3>
+                </div>
+                <div className="space-y-2">
+                  {pipelineSteps.map((step, i) => (
+                    <PipelineNode key={step.title} step={step} index={i} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Vault Snapshot */}
-              <Card className="card-neon border-purple-500/15 overflow-hidden">
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Folder size={20} weight="fill" className="text-purple-400" />
-                    <h3 className="font-semibold">Vault Snapshot</h3>
-                  </div>
-                  <div className="grid gap-3 grid-cols-2">
-                    {vaultStats.map((stat, i) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-xl border border-border/50 bg-card/50 p-3 sm:p-4 space-y-1 animate-fade-in-up"
-                        style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'backwards' }}
-                      >
-                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">
-                          {stat.label}
-                        </p>
-                        <p className={`text-lg sm:text-2xl font-bold ${stat.color}`}>
-                          {stat.value}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          {stat.detail}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  <Separator className="opacity-30" />
-                  <div className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground bg-amber-500/5 border border-amber-500/15 rounded-lg p-3">
-                    <Warning size={16} className="mt-0.5 text-amber-400 flex-shrink-0" />
-                    <span>
-                      FLAG_SECURE windows stay dark unless running a rooted bridge module.
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Vault Snapshot */}
+            <Card className="card-neon border-purple-500/15 overflow-hidden">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Folder size={16} weight="fill" className="text-purple-400" />
+                  <h3 className="font-semibold text-sm">Vault Snapshot</h3>
+                </div>
+                <div className="grid gap-2 grid-cols-2">
+                  {vaultStats.map(stat => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl border border-border/50 bg-card/50 p-3 space-y-1"
+                    >
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        {stat.label}
+                      </p>
+                      <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
+                      <p className="text-[10px] text-muted-foreground">{stat.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <Separator className="opacity-30" />
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-amber-500/5 border border-amber-500/15 rounded-lg p-3">
+                  <Warning size={14} className="mt-0.5 text-amber-400 flex-shrink-0" />
+                  <span>FLAG_SECURE windows stay dark unless running a rooted bridge module.</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )
 
       case 'portal':
         return (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-4">
             <Card className="card-neon border-emerald-500/15 overflow-hidden">
-              <CardContent className="p-4 sm:p-6 space-y-6">
+              <CardContent className="p-4 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <h3 className="font-semibold text-base sm:text-lg">Portal Controls</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Overlay-first policy for Android 15+
-                    </p>
+                    <h3 className="font-semibold text-sm">Portal Controls</h3>
+                    <p className="text-xs text-muted-foreground">Overlay-first policy for Android 15+</p>
                   </div>
                   <Badge
                     variant="secondary"
-                    className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
                   >
                     MediaProjection
                   </Badge>
                 </div>
-
-                {/* Control toggles */}
-                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+                <div className="grid gap-3 grid-cols-1">
                   {[
                     {
                       label: 'Stealth Mode',
@@ -712,22 +662,18 @@ function App() {
                   ].map(toggle => (
                     <div
                       key={toggle.label}
-                      className={`flex items-center justify-between rounded-xl border ${toggle.color} bg-card/50 p-3 sm:p-4`}
+                      className={`flex items-center justify-between rounded-xl border ${toggle.color} bg-card/50 p-3`}
                     >
                       <div>
                         <p className="font-medium text-sm">{toggle.label}</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          {toggle.desc}
-                        </p>
+                        <p className="text-[10px] text-muted-foreground">{toggle.desc}</p>
                       </div>
                       <Switch checked={toggle.checked} onCheckedChange={toggle.onChange} />
                     </div>
                   ))}
                 </div>
-
-                {/* Capture Mode */}
                 <div>
-                  <p className="text-sm font-medium mb-3">Capture Mode</p>
+                  <p className="text-sm font-medium mb-2">Capture Mode</p>
                   <div className="flex flex-wrap gap-2">
                     {captureModes.map(mode => (
                       <Button
@@ -735,7 +681,6 @@ function App() {
                         variant={captureMode === mode.key ? 'default' : 'outline'}
                         onClick={() => setCaptureMode(mode.key)}
                         size="sm"
-                        className={captureMode === mode.key ? 'shadow-lg shadow-primary/20' : ''}
                       >
                         <span className="mr-1">{mode.icon}</span>
                         {mode.label} ({mode.fps} FPS)
@@ -743,12 +688,9 @@ function App() {
                     ))}
                   </div>
                 </div>
-
                 <Separator className="opacity-30" />
-
-                {/* Status cards */}
-                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 sm:p-4 space-y-2">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
                     <p className="text-sm font-medium flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       Overlay Status
@@ -760,7 +702,7 @@ function App() {
                       Active
                     </Badge>
                   </div>
-                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 sm:p-4 space-y-2">
+                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
                     <p className="text-sm font-medium flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-cyan-500" />
                       Capture Notes
@@ -775,36 +717,23 @@ function App() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Capture Filters */}
             <CaptureFilters />
-          </div>
-        )
-
-      case 'extractor':
-        return (
-          <div className="animate-fade-in">
-            <GodModeExtractor />
           </div>
         )
 
       case 'vault':
         return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+          <div className="space-y-4">
+            <div className="grid gap-4 grid-cols-1">
               <Card className="card-neon border-purple-500/15 overflow-hidden">
-                <CardContent className="p-4 sm:p-6 space-y-4">
+                <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Folder size={20} weight="fill" className="text-purple-400" />
-                    <h3 className="font-semibold">Vault Policies</h3>
+                    <Folder size={16} weight="fill" className="text-purple-400" />
+                    <h3 className="font-semibold text-sm">Vault Policies</h3>
                   </div>
-                  <div className="space-y-3 text-sm">
+                  <div className="space-y-2 text-sm">
                     {[
-                      {
-                        label: 'Retention Window',
-                        value: '30 days encrypted',
-                        color: 'text-emerald-400',
-                      },
+                      { label: 'Retention Window', value: '30 days encrypted', color: 'text-emerald-400' },
                       { label: 'Vector Index', value: 'HNSW cosine', color: 'text-cyan-400' },
                       { label: 'Zero-Knowledge', value: 'No raw frames', color: 'text-purple-400' },
                     ].map(item => (
@@ -812,17 +741,13 @@ function App() {
                         key={item.label}
                         className="flex items-center justify-between p-2 rounded-lg bg-muted/20"
                       >
-                        <span className="text-muted-foreground text-xs sm:text-sm">
-                          {item.label}
-                        </span>
-                        <span className={`font-medium text-xs sm:text-sm ${item.color}`}>
-                          {item.value}
-                        </span>
+                        <span className="text-muted-foreground text-xs">{item.label}</span>
+                        <span className={`font-medium text-xs ${item.color}`}>{item.value}</span>
                       </div>
                     ))}
                   </div>
                   <Separator className="opacity-30" />
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Index build</span>
                       <span className="text-emerald-400 font-medium">78%</span>
@@ -833,12 +758,12 @@ function App() {
               </Card>
 
               <Card className="card-neon border-cyan-500/15 overflow-hidden">
-                <CardContent className="p-4 sm:p-6 space-y-4">
+                <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Share size={20} weight="fill" className="text-cyan-400" />
-                    <h3 className="font-semibold">Sync Channels</h3>
+                    <Share size={16} weight="fill" className="text-cyan-400" />
+                    <h3 className="font-semibold text-sm">Sync Channels</h3>
                   </div>
-                  <div className="space-y-3 text-sm">
+                  <div className="space-y-2 text-sm">
                     {[
                       { label: 'WebSocket', value: 'Connected', color: 'text-emerald-400' },
                       { label: 'Redis Streams', value: '2.1k msgs/sec', color: 'text-cyan-400' },
@@ -848,330 +773,104 @@ function App() {
                         key={item.label}
                         className="flex items-center justify-between p-2 rounded-lg bg-muted/20"
                       >
-                        <span className="text-muted-foreground text-xs sm:text-sm">
-                          {item.label}
-                        </span>
-                        <span className={`font-medium text-xs sm:text-sm ${item.color}`}>
-                          {item.value}
-                        </span>
+                        <span className="text-muted-foreground text-xs">{item.label}</span>
+                        <span className={`font-medium text-xs ${item.color}`}>{item.value}</span>
                       </div>
                     ))}
                   </div>
                   <Separator className="opacity-30" />
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-3">
-                    <LockOpen size={14} className="text-emerald-400" />
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-2">
+                    <LockOpen size={12} className="text-emerald-400" />
                     Vault encryption keys stay on device.
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Live Capture Feed */}
-            <Card className="card-neon border-emerald-500/15 overflow-hidden">
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Camera size={20} weight="fill" className="text-emerald-400" />
-                    <h3 className="font-semibold">Live Capture Feed</h3>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {captureLog.length} entries
-                    </Badge>
-                    {portalActive && (
-                      <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Live
-                      </span>
-                    )}
-                  </div>
-                  {captureLog.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => clearCaptureEntries()}
-                      className="text-muted-foreground text-xs h-7"
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                </div>
-
-                {/* Storage indicator + export */}
-                <StorageBar captureCount={captureLog.length} />
-
-                {/* Quick-add manual entry */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Paste or type text to capture..."
-                    className="text-xs bg-muted/30 border-border/50"
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        const input = e.currentTarget
-                        const text = input.value.trim()
-                        if (text) {
-                          addCaptureEntry(text, { sourceApp: 'Manual' })
-                          input.value = ''
-                          toast.success('Text captured!')
-                        }
-                      }
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                  {captureLog.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-muted-foreground/20 p-8 text-center">
-                      <Camera size={32} className="mx-auto mb-3 opacity-20" />
-                      <p className="text-sm text-muted-foreground">
-                        {portalActive
-                          ? 'Listening for text... entries will appear here in real-time'
-                          : 'Open the portal to start capturing text from your screen'}
-                      </p>
-                    </div>
-                  ) : (
-                    captureLog.map((entry, i) => (
-                      <div
-                        key={entry.id}
-                        className={`rounded-xl border bg-card/30 p-3 sm:p-4 space-y-2 animate-fade-in-up ${
-                          entry.role === 'user'
-                            ? 'border-cyan-500/20 bg-cyan-500/5'
-                            : entry.role === 'assistant'
-                              ? 'border-purple-500/20 bg-purple-500/5'
-                              : 'border-border/50'
-                        }`}
-                        style={{
-                          animationDelay: `${Math.min(i, 5) * 60}ms`,
-                          animationFillMode: 'backwards',
-                        }}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Badge variant="outline" className="text-[10px] sm:text-xs">
-                              {entry.sourceApp}
-                            </Badge>
-                            {entry.role && (
-                              <Badge
-                                className={`text-[9px] ${
-                                  entry.role === 'user'
-                                    ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
-                                    : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
-                                }`}
-                              >
-                                {entry.role === 'user' ? '👤 You' : '🤖 AI'}
-                              </Badge>
-                            )}
-                            <span className="text-[10px] sm:text-xs text-muted-foreground">
-                              {entry.capturedAt}
-                            </span>
-                          </div>
-                          <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] sm:text-xs">
-                            {entry.confidence}% confident
-                          </Badge>
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                          {entry.content}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {entry.tags.map(tag => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className={`text-[10px] ${
-                                tag === 'sensitive'
-                                  ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                                  : tag === 'redacted'
-                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                    : tag === 'you'
-                                      ? 'bg-cyan-500/10 text-cyan-400'
-                                      : tag === 'ai'
-                                        ? 'bg-purple-500/10 text-purple-400'
-                                        : ''
-                              }`}
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )
-
-      case 'search':
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <Card className="card-neon border-cyan-500/15 overflow-hidden">
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <MagnifyingGlass size={20} weight="fill" className="text-cyan-400" />
-                  <h3 className="font-semibold">Semantic Vault Search</h3>
-                </div>
-                <div className="relative">
-                  <MagnifyingGlass
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  />
-                  <Input
-                    value={searchQuery}
-                    onChange={event => setSearchQuery(event.target.value)}
-                    placeholder="Search by concept, source, or tag..."
-                    className="pl-10 bg-muted/30 border-border/50 focus:border-cyan-500/50"
-                  />
-                </div>
-                <div className="grid gap-3">
-                  {filteredEntries.map((entry, i) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-xl border border-border/50 bg-card/30 p-3 sm:p-4 space-y-2 animate-fade-in-up"
-                      style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Badge variant="outline" className="text-[10px] sm:text-xs">
-                            {entry.sourceApp}
-                          </Badge>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">
-                            {entry.capturedAt}
-                          </span>
-                        </div>
-                        <Badge variant="secondary" className="text-[10px] sm:text-xs">
-                          {entry.confidence}% match
-                        </Badge>
-                      </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                        {entry.content}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {entry.tags.map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-[10px]">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  {filteredEntries.length === 0 && (
-                    <div className="rounded-xl border border-dashed border-muted-foreground/20 p-8 text-center text-sm text-muted-foreground">
-                      <MagnifyingGlass size={32} className="mx-auto mb-3 opacity-30" />
-                      No matches yet. Try a broader concept or remove filters.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )
-
-      case 'ios':
-        return (
-          <div className="animate-fade-in">
-            <IOSCapture
-              showHelp={showCaptureHelp}
-              onHelpDismiss={() => setShowCaptureHelp(false)}
-            />
+            {/* Storage + export controls */}
+            <StorageBar captureCount={captureLog.length} />
           </div>
         )
 
       case 'ops':
         return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-              <Card className="card-neon border-emerald-500/15 overflow-hidden">
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Browser size={20} weight="fill" className="text-emerald-400" />
-                    <h3 className="font-semibold">Service Health</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {serviceHealth.map((service, i) => (
-                      <div
-                        key={service.name}
-                        className="flex items-center justify-between rounded-xl border border-border/50 bg-card/30 p-3 animate-fade-in-up"
-                        style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
-                      >
-                        <div>
-                          <p className="font-medium text-sm font-mono">{service.name}</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {service.detail}
-                          </p>
-                        </div>
-                        <Badge
-                          className={
-                            service.status === 'healthy'
-                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                              : service.status === 'degraded'
-                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                : 'bg-red-500/15 text-red-400 border-red-500/30'
-                          }
-                        >
-                          <span
-                            className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              service.status === 'healthy'
-                                ? 'bg-emerald-400'
-                                : service.status === 'degraded'
-                                  ? 'bg-amber-400'
-                                  : 'bg-red-400'
-                            }`}
-                          />
-                          {service.status.toUpperCase()}
-                        </Badge>
+          <div className="space-y-4">
+            <Card className="card-neon border-emerald-500/15 overflow-hidden">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Browser size={16} weight="fill" className="text-emerald-400" />
+                  <h3 className="font-semibold text-sm">Service Health</h3>
+                </div>
+                <div className="space-y-2">
+                  {serviceHealth.map((service, i) => (
+                    <div
+                      key={service.name}
+                      className="flex items-center justify-between rounded-xl border border-border/50 bg-card/30 p-3 animate-fade-in-up"
+                      style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
+                    >
+                      <div>
+                        <p className="font-medium text-sm font-mono">{service.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{service.detail}</p>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <Badge
+                        className={
+                          service.status === 'healthy'
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : service.status === 'degraded'
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : 'bg-red-500/15 text-red-400 border-red-500/30'
+                        }
+                      >
+                        <span
+                          className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            service.status === 'healthy'
+                              ? 'bg-emerald-400'
+                              : service.status === 'degraded'
+                                ? 'bg-amber-400'
+                                : 'bg-red-400'
+                          }`}
+                        />
+                        {service.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card className="card-neon border-cyan-500/15 overflow-hidden">
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Lightning size={20} weight="fill" className="text-cyan-400" />
-                    <h3 className="font-semibold">Quick Start</h3>
-                  </div>
-                  <div className="space-y-3 text-sm">
-                    <div className="rounded-xl border border-border/50 bg-muted/30 p-3 font-mono text-xs text-emerald-400">
-                      $ docker-compose up -d
-                    </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Grant overlay + media projection permissions on-device.
-                    </p>
-                    <div className="rounded-xl border border-border/50 bg-muted/30 p-3 font-mono text-xs text-cyan-400">
-                      $ ./ghostwriter portal --mode {selectedKey}
-                    </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Scroll in any app and watch the vault fill in real time.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="card-neon border-cyan-500/15 overflow-hidden">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Lightning size={16} weight="fill" className="text-cyan-400" />
+                  <h3 className="font-semibold text-sm">Quick Start</h3>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-3 font-mono text-xs text-emerald-400">
+                  $ docker-compose up -d
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Grant overlay + media projection permissions on-device.
+                </p>
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-3 font-mono text-xs text-cyan-400">
+                  $ ./ghostwriter portal --mode {selectedKey}
+                </div>
+              </CardContent>
+            </Card>
 
             <Card className="card-neon border-purple-500/15 overflow-hidden">
-              <CardContent className="p-4 sm:p-6 space-y-4">
+              <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Share size={20} weight="fill" className="text-purple-400" />
-                  <h3 className="font-semibold">Deployment Notes</h3>
+                  <Share size={16} weight="fill" className="text-purple-400" />
+                  <h3 className="font-semibold text-sm">Deployment Notes</h3>
                 </div>
                 <ul className="space-y-2">
                   {[
-                    {
-                      text: 'Postgres 17 + pgvector with HNSW indexing for semantic recall.',
-                      icon: '🗃️',
-                    },
-                    {
-                      text: 'Redis Streams fan out updates to every connected portal.',
-                      icon: '📡',
-                    },
-                    {
-                      text: 'Fallback to keyword search if embeddings are unavailable.',
-                      icon: '🔍',
-                    },
+                    { text: 'Postgres 17 + pgvector with HNSW indexing for semantic recall.', icon: '🗃️' },
+                    { text: 'Redis Streams fan out updates to every connected portal.', icon: '📡' },
+                    { text: 'Fallback to keyword search if embeddings are unavailable.', icon: '🔍' },
                   ].map((item, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground p-2 rounded-lg bg-muted/10"
+                      className="flex items-start gap-2 text-xs text-muted-foreground p-2 rounded-lg bg-muted/10"
                     >
                       <span>{item.icon}</span>
                       <span>{item.text}</span>
@@ -1180,6 +879,23 @@ function App() {
                 </ul>
               </CardContent>
             </Card>
+          </div>
+        )
+
+      case 'extractor':
+        return (
+          <div>
+            <GodModeExtractor />
+          </div>
+        )
+
+      case 'ios':
+        return (
+          <div>
+            <IOSCapture
+              showHelp={showCaptureHelp}
+              onHelpDismiss={() => setShowCaptureHelp(false)}
+            />
           </div>
         )
 
@@ -1194,19 +910,55 @@ function App() {
       <SpeedInsights />
       <Analytics />
 
-      {/* Floating Portal Toggle */}
       {/* Floating Portal - can be popped out onto other windows */}
       <FloatingPortal
         isActive={portalActive}
         onToggle={handlePortalToggle}
         onOpenVault={() => {
-          setActiveTab('vault')
           window.scrollTo({ top: 0, behavior: 'smooth' })
         }}
         isPoppedOut={isPoppedOut}
         onPopOut={popOut}
         onPopIn={popIn}
       />
+
+      {/* Developer Drawer (Settings) */}
+      <Sheet open={showDevDrawer} onOpenChange={setShowDevDrawer}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-xl overflow-y-auto"
+        >
+          <SheetHeader className="pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <GearSix size={18} weight="fill" className="text-muted-foreground" />
+              Developer Settings
+            </SheetTitle>
+            <SheetDescription>
+              Pipeline diagnostics, vault stats, portal controls, and deployment tools.
+            </SheetDescription>
+          </SheetHeader>
+
+          {/* Dev drawer tab navigation */}
+          <div className="flex flex-wrap gap-1 mb-4 p-1 rounded-xl bg-muted/30 border border-border/30">
+            {devNavItems.map(item => (
+              <button
+                key={item.key}
+                onClick={() => setDevActiveTab(item.key)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  devActiveTab === item.key
+                    ? 'bg-primary text-primary-foreground shadow'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <item.icon size={13} weight={devActiveTab === item.key ? 'fill' : 'regular'} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {renderDevContent()}
+        </SheetContent>
+      </Sheet>
 
       <div className="min-h-screen bg-background relative overflow-hidden">
         {/* Background ambient orbs */}
@@ -1225,307 +977,333 @@ function App() {
           />
         </div>
 
-        {/* Header */}
+        {/* ── Header: 3-column minimal layout ── */}
         <header className="sticky top-0 z-50 glass-strong border-b border-border/30">
-          <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              {/* Logo */}
-              <LogoWithText size={isMobile ? 32 : 38} />
-
-              {/* Status Legend - hidden on very small screens, shown in header on desktop */}
-              <div className="hidden sm:flex items-center gap-3">
-                <StatusLegend
-                  portalActive={portalActive}
-                  vaultUnlocked={vaultUnlocked}
-                  healerEnabled={healerEnabled}
-                  stealthMode={stealthMode}
-                />
+          <div className="container mx-auto px-3 sm:px-4 py-3">
+            <div className="grid grid-cols-3 items-center gap-2">
+              {/* Left: Branding */}
+              <div className="flex items-center">
+                <LogoWithText size={isMobile ? 30 : 36} />
               </div>
 
-              {/* Action buttons */}
-              <div className="flex items-center gap-2">
+              {/* Center: Ghost Pulse Indicator */}
+              <div className="flex justify-center">
+                <GhostPulseIndicator state={ghostPulse} />
+              </div>
+
+              {/* Right: Settings gear */}
+              <div className="flex justify-end">
                 <Button
+                  variant="ghost"
                   size="sm"
-                  onClick={togglePortal}
-                  className={
-                    portalActive
-                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
-                      : 'bg-muted hover:bg-muted/80'
-                  }
+                  onClick={() => setShowDevDrawer(true)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Open developer settings"
                 >
-                  <Lightning size={16} className="mr-1" />
-                  <span className="hidden sm:inline">
-                    {portalActive ? 'Close Portal' : 'Open Portal'}
-                  </span>
-                  <span className="sm:hidden">{portalActive ? 'Close' : 'Open'}</span>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={toggleVault}
-                  className="border-border/50"
-                >
-                  {vaultUnlocked ? <LockOpen size={16} /> : <Lock size={16} />}
-                  <span className="hidden sm:inline ml-1">{vaultUnlocked ? 'Lock' : 'Unlock'}</span>
+                  <GearSix size={20} />
                 </Button>
               </div>
-            </div>
-
-            {/* Mobile-only status legend below header */}
-            <div className="sm:hidden mt-3 overflow-x-auto">
-              <StatusLegend
-                portalActive={portalActive}
-                vaultUnlocked={vaultUnlocked}
-                healerEnabled={healerEnabled}
-                stealthMode={stealthMode}
-              />
             </div>
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="relative z-10 container mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8">
-          {/* Hero section */}
-          <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.2fr_0.8fr] mb-6 sm:mb-8">
-            {/* Main hero card */}
-            <Card className="card-neon overflow-hidden border-emerald-500/15 relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/5 to-transparent rounded-bl-full" />
-              <CardContent className="p-4 sm:p-6 space-y-4 relative">
-                <div className="flex items-center gap-3">
-                  <Logo size={isMobile ? 36 : 44} animated={false} />
-                  <div>
-                    <p className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">
-                      GhostWriter Portal
-                    </p>
-                    <h1 className="text-lg sm:text-2xl font-bold">
-                      <span className="gradient-text-ghost">Screen Text Extraction</span>{' '}
-                      <span className="text-foreground">Command Center</span>
-                    </h1>
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  GhostWriter captures screen text in real time, heals it on-device, and syncs a
-                  clean, searchable memory vault with hybrid semantic retrieval.
+        {/* ── Main Content ── */}
+        <main className="relative z-10 container mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-10 space-y-6">
+
+          {/* 1. Primary Action Zone */}
+          <div className="space-y-3">
+            {/* Dropzone */}
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Drop screenshot or recording here or click to browse"
+              className={`rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 py-10 px-6 text-center
+                ${
+                  isDragOver
+                    ? 'border-primary bg-primary/5 scale-[1.01]'
+                    : 'border-border/50 hover:border-primary/50 hover:bg-muted/20'
+                }`}
+              onDragOver={e => {
+                e.preventDefault()
+                setIsDragOver(true)
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+              }}
+            >
+              <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center">
+                <UploadSimple
+                  size={28}
+                  className={isDragOver ? 'text-primary' : 'text-muted-foreground'}
+                  weight="duotone"
+                />
+              </div>
+              <div>
+                <p className="font-semibold text-sm sm:text-base">
+                  Drop Screenshot / Recording Here
                 </p>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/25 text-[10px] sm:text-xs">
-                    On-device OCR
-                  </Badge>
-                  <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/25 text-[10px] sm:text-xs">
-                    LLM Healer
-                  </Badge>
-                  <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/25 text-[10px] sm:text-xs">
-                    Hybrid Search
-                  </Badge>
-                  <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/25 text-[10px] sm:text-xs">
-                    Stealth Overlay
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                  or{' '}
+                  <span className="underline underline-offset-2 text-primary/80 hover:text-primary">
+                    Browse
+                  </span>{' '}
+                  to select a file
+                </p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                className="sr-only"
+                onChange={e => handleDropzoneFiles(e.target.files)}
+              />
+            </div>
 
-            {/* Telemetry card */}
-            <Card className="card-neon overflow-hidden border-cyan-500/15 relative">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cyan-500/5 to-transparent rounded-bl-full" />
-              <CardContent className="p-4 sm:p-6 space-y-4 relative">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider">
-                      Live Capture
-                    </p>
-                    <h2 className="text-base sm:text-lg font-semibold">Portal Telemetry</h2>
-                  </div>
-                  <Badge
-                    variant="secondary"
-                    className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px] sm:text-xs"
-                  >
-                    {selectedFps} FPS
-                  </Badge>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    {
-                      label: 'Frame delta gate',
-                      value: '2.1%',
-                      progress: 72,
-                      color: 'text-emerald-400',
-                    },
-                    {
-                      label: 'OCR queue',
-                      value: '1.2 frames',
-                      progress: 38,
-                      color: 'text-cyan-400',
-                    },
-                    {
-                      label: 'Dedup hit rate',
-                      value: '92%',
-                      progress: 92,
-                      color: 'text-purple-400',
-                    },
-                  ].map(item => (
-                    <div key={item.label}>
-                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
-                        <span>{item.label}</span>
-                        <span className={`font-medium ${item.color}`}>{item.value}</span>
-                      </div>
-                      <Progress value={item.progress} className="mt-1.5 h-1.5" />
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground bg-purple-500/5 border border-purple-500/15 rounded-lg p-2.5">
-                  <Sparkle size={14} className="text-purple-400" weight="fill" />
-                  Healer batch runs every 10 seconds.
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Desktop tab navigation */}
-          <div className="hidden sm:block mb-6">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-card/50 border border-border/30 backdrop-blur-sm w-fit">
-              {navItems.map(item => (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveTab(item.key)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === item.key
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <item.icon size={16} weight={activeTab === item.key ? 'fill' : 'regular'} />
-                  {item.label}
-                </button>
-              ))}
+            {/* Always-On Screen Capture toggle */}
+            <div className="flex items-center gap-3 px-1 py-2 rounded-xl border border-border/30 bg-card/30">
+              <Switch
+                checked={portalActive}
+                onCheckedChange={handlePortalToggle}
+                id="always-on-capture"
+              />
+              <label htmlFor="always-on-capture" className="flex-1 cursor-pointer">
+                <p className="text-sm font-medium">Always-On Screen Capture</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {portalActive
+                    ? 'Background portal is actively reading your screen'
+                    : 'Background capture is paused'}
+                </p>
+              </label>
+              {portalActive && (
+                <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Tab Content */}
-          {renderTabContent()}
+          {/* 2. Vault Feed */}
+          <div className="space-y-3">
+            {/* Search bar */}
+            <div className="relative">
+              <MagnifyingGlass
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search vault by concept, source, or tag…"
+                className="pl-9 bg-muted/30 border-border/50 focus:border-primary/50 h-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Feed header row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold">Vault Feed</h2>
+                <Badge variant="secondary" className="text-[10px]">
+                  {filteredEntries.length} entries
+                </Badge>
+              </div>
+              {captureLog.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearCaptureEntries()}
+                  className="text-muted-foreground text-xs h-7"
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
+
+            {/* Manual entry quick-add */}
+            <Input
+              placeholder="Paste or type text to add to vault… (press Enter)"
+              className="text-xs bg-muted/30 border-border/50 h-9"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  const input = e.currentTarget
+                  const text = input.value.trim()
+                  if (text) {
+                    addCaptureEntry(text, { sourceApp: 'Manual' })
+                    input.value = ''
+                    toast.success('Text captured!')
+                  }
+                }
+              }}
+            />
+
+            {/* Entries list */}
+            <div className="space-y-3">
+              {filteredEntries.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-muted-foreground/20 p-10 text-center">
+                  <Ghost size={36} className="mx-auto mb-3 opacity-15" />
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery
+                      ? 'No matches found. Try a different search term.'
+                      : portalActive
+                        ? 'Listening for text… entries will appear here in real-time.'
+                        : 'Enable Always-On Capture or drop a file above to start.'}
+                  </p>
+                </div>
+              ) : (
+                filteredEntries.map((entry, i) => {
+                  const isEditing = editingId === entry.id
+                  const displayText = getTextForEntry(entry.id, entry.content)
+                  return (
+                    <div
+                      key={entry.id}
+                      className="rounded-2xl border border-border/50 bg-card/30 p-4 space-y-3 animate-fade-in-up"
+                      style={{
+                        animationDelay: `${Math.min(i, 5) * 60}ms`,
+                        animationFillMode: 'backwards',
+                      }}
+                    >
+                      {/* Card header: source + time */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">
+                            {entry.sourceApp}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {entry.capturedAt}
+                          </span>
+                        </div>
+                        <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px]">
+                          {entry.confidence}%
+                        </Badge>
+                      </div>
+
+                      {/* Editable text area */}
+                      {isEditing ? (
+                        <textarea
+                          autoFocus
+                          className="w-full rounded-xl border border-primary/40 bg-muted/30 p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 min-h-[80px]"
+                          value={displayText}
+                          onChange={e =>
+                            setEditedTexts(prev => ({ ...prev, [entry.id]: e.target.value }))
+                          }
+                          onBlur={() => setEditingId(null)}
+                        />
+                      ) : (
+                        <p className="text-sm text-foreground/90 leading-relaxed">{displayText}</p>
+                      )}
+
+                      {/* Tags */}
+                      {entry.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {entry.tags.map(tag => (
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className={`text-[10px] ${
+                                tag === 'sensitive'
+                                  ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                                  : tag === 'redacted'
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                    : ''
+                              }`}
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quick-action buttons: Copy · Edit · Source */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[11px] gap-1"
+                          onClick={() => {
+                            navigator.clipboard.writeText(displayText)
+                            toast.success('Copied to clipboard')
+                          }}
+                        >
+                          <Copy size={12} />
+                          Copy
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`h-7 text-[11px] gap-1 ${isEditing ? 'border-primary text-primary' : ''}`}
+                          onClick={() => setEditingId(isEditing ? null : entry.id)}
+                        >
+                          {isEditing ? <Check size={12} /> : <PencilSimple size={12} />}
+                          {isEditing ? 'Done' : 'Edit'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-[11px] gap-1 text-muted-foreground"
+                          onClick={() =>
+                            toast(`Source: ${entry.sourceApp}`, {
+                              description: `Captured at ${entry.capturedAt} · ${entry.confidence}% confidence`,
+                            })
+                          }
+                        >
+                          <Eye size={12} />
+                          Source
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
         </main>
 
         {/* Footer - desktop only */}
-        <footer className="hidden sm:block border-t border-border/30 mt-12 py-8 relative z-10">
+        <footer className="hidden sm:block border-t border-border/30 mt-8 py-6 relative z-10">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Logo size={28} animated={false} />
-                <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Logo size={24} animated={false} />
+                <div className="text-xs text-muted-foreground">
                   GhostWriter <span className="opacity-40">|</span> Capture the thought, leave no
                   trace.
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Badge
                   variant="secondary"
-                  className="bg-purple-500/10 text-purple-400 border-purple-500/25"
+                  className="bg-purple-500/10 text-purple-400 border-purple-500/25 text-[10px]"
                 >
                   Stealth Protocol
                 </Badge>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-xs text-destructive hover:text-destructive/80"
+                  onClick={() => {
+                    clearCaptureEntries()
+                    toast.success('Vault cleared.')
+                  }}
                 >
-                  <Browser size={16} className="mr-1" />
-                  Overlay Guide
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive/80"
-                >
-                  <Warning size={16} className="mr-1" />
+                  <Warning size={14} className="mr-1" />
                   Clear Trace
                 </Button>
               </div>
             </div>
           </div>
         </footer>
-
-        {/* Mobile Bottom Navigation */}
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bottom-nav mobile-bottom-nav">
-          <div className="flex items-center justify-around px-2 py-1">
-            {navItems
-              .filter(item => item.key !== 'ops')
-              .map(item => (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveTab(item.key)}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-[56px] ${
-                    activeTab === item.key ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  <div
-                    className={`relative ${activeTab === item.key ? 'scale-110' : ''} transition-transform`}
-                  >
-                    <item.icon size={22} weight={activeTab === item.key ? 'fill' : 'regular'} />
-                    {activeTab === item.key && (
-                      <div className="absolute -inset-1 rounded-full bg-primary/10 -z-10" />
-                    )}
-                  </div>
-                  <span
-                    className={`text-[10px] font-medium ${
-                      activeTab === item.key ? 'text-primary' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {item.key === 'ios' ? 'Upload' : item.label}
-                  </span>
-                </button>
-              ))}
-            {/* More menu: Ops, Capture help */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-[56px] ${
-                    activeTab === 'ops' ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  <div
-                    className={`relative ${activeTab === 'ops' ? 'scale-110' : ''} transition-transform`}
-                  >
-                    <ListBullets
-                      size={22}
-                      weight={activeTab === 'ops' ? 'fill' : 'regular'}
-                    />
-                    {activeTab === 'ops' && (
-                      <div className="absolute -inset-1 rounded-full bg-primary/10 -z-10" />
-                    )}
-                  </div>
-                  <span
-                    className={`text-[10px] font-medium ${
-                      activeTab === 'ops' ? 'text-primary' : 'text-muted-foreground'
-                    }`}
-                  >
-                    More
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[200px]">
-                <DropdownMenuLabel>Capture & Tools</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setActiveTab('ios')}>
-                  <DeviceMobile size={18} className="mr-2" />
-                  iPhone Capture
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveTab('ops')}>
-                  <GearSix size={18} className="mr-2" />
-                  Ops & Deployment
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setActiveTab('ios')
-                    setShowCaptureHelp(true)
-                  }}
-                >
-                  <BookOpen size={18} className="mr-2" />
-                  Capture help
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </nav>
       </div>
     </>
   )
