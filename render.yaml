@@ -26,10 +26,17 @@ services:
         value: 8080
       - key: JWT_SECRET
         generateValue: true  # Generates 32-byte cryptographically secure random string
+      # ── Database ────────────────────────────────────────────────────────────
+      # Set MONGODB_URI to a mongodb:// or mongodb+srv:// connection string to
+      # use MongoDB (e.g. from MongoDB Atlas or Railway).
+      # Leave it unset to fall back to DB_URL (Render's managed PostgreSQL below).
+      - key: MONGODB_URI
+        sync: false          # user must supply the value in the Render dashboard
       - key: DB_URL
         fromDatabase:
           name: ghostwriter-db
           property: connectionString
+      # ────────────────────────────────────────────────────────────────────────
       - key: REDIS_URL
         fromService:
           type: keyvalue
