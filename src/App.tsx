@@ -422,9 +422,9 @@ function App() {
   // Live capture log — shared with popout portal via BroadcastChannel
   const captureLog = useCaptureLog()
 
-  // Update ghost pulse when new capture arrives
+  // Update ghost pulse when new capture arrives — briefly glows green, then returns to active/idle
   const prevCaptureCount = useRef(captureLog.length)
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (captureLog.length > prevCaptureCount.current) {
       setGhostPulse('saved')
       const savedTimer = setTimeout(() => {
@@ -433,15 +433,12 @@ function App() {
       prevCaptureCount.current = captureLog.length
       return () => clearTimeout(savedTimer)
     }
-    return undefined
   }, [captureLog.length, portalActive])
 
   // Update pulse state when portal active state changes
   useEffect(() => {
-    if (ghostPulse !== 'saved') {
-      setGhostPulse(portalActive ? 'active' : 'idle')
-    }
-  }, [portalActive]) // eslint-disable-line react-hooks/exhaustive-deps
+    setGhostPulse(portalActive ? 'active' : 'idle')
+  }, [portalActive])
 
   // Start/stop demo capture when portal is toggled
   useEffect(() => {
@@ -1031,7 +1028,10 @@ function App() {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
               }}
             >
               <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center">
