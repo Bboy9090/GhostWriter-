@@ -12,20 +12,17 @@ services:
     ipAllowList:
       - source: 0.0.0.0/0
         description: allow internal connections
-    plan: free
+    plan: starter
 
-  # Backend API - Go Service (must deploy before static site for fromService refs)
+  # Backend API - Docker-based Go service
   - type: web
     name: ghostwriter-api
-    runtime: go
-    rootDir: backend-go
-    buildCommand: go build -o bin/ghostwriter ./cmd/server
-    startCommand: ./bin/ghostwriter
+    runtime: docker
+    dockerfilePath: ./backend-go/Dockerfile
+    dockerContext: ./backend-go
     envVars:
-      - key: PORT
-        value: 8080
       - key: JWT_SECRET
-        generateValue: true  # Generates 32-byte cryptographically secure random string
+        generateValue: true
       - key: DB_URL
         fromDatabase:
           name: ghostwriter-db
@@ -36,6 +33,7 @@ services:
           name: ghostwriter-redis
           property: connectionString
     healthCheckPath: /health
+    plan: starter
 
   # Frontend - Static Site (after API so fromService can resolve)
   - type: web
@@ -62,4 +60,5 @@ databases:
   - name: ghostwriter-db
     databaseName: ghostwriter_vault
     user: ghostwriter_user
-    plan: free
+    plan: starter
+    postgresMajorVersion: 16
