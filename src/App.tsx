@@ -41,6 +41,7 @@ import {
   Folder,
   Eye,
   X,
+  PuzzlePiece,
 } from '@phosphor-icons/react'
 import { useIsMobile } from './hooks/use-mobile'
 import { usePopoutPortal } from './hooks/use-popout-portal'
@@ -619,6 +620,54 @@ function App() {
       case 'portal':
         return (
           <div className="space-y-4">
+            <Card className="card-neon border-cyan-500/20 overflow-hidden bg-gradient-to-br from-cyan-500/5 to-emerald-500/5">
+              <CardContent className="p-4 sm:p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-cyan-500/15 p-2.5">
+                    <PuzzlePiece size={24} weight="fill" className="text-cyan-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm sm:text-base">Get the Browser Extension</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      Capture without focus switching. Portal stays in a side panel while you scroll the page – no more clicking back and forth.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        className="bg-cyan-600 hover:bg-cyan-700"
+                        onClick={() =>
+                          window.open(
+                            'https://github.com/Bboy9090/GhostWriter-/tree/main#-browser-extension-side-panel',
+                            '_blank',
+                            'noopener'
+                          )
+                        }
+                      >
+                        <PuzzlePiece size={16} weight="fill" className="mr-1.5" />
+                        Get extension
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          window.open(
+                            'https://github.com/Bboy9090/GhostWriter-/blob/main/extension/README.md',
+                            '_blank',
+                            'noopener'
+                          )
+                        }
+                      >
+                        Install steps
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      Chrome/Edge: chrome://extensions → Developer mode → Load unpacked → select{' '}
+                      <code className="bg-muted px-1 rounded text-[10px]">extension</code> folder
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             <Card className="card-neon border-emerald-500/15 overflow-hidden">
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1006,6 +1055,31 @@ function App() {
 
         {/* ── Main Content ── */}
         <main className="relative z-10 container mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-10 space-y-6">
+
+          {/* Extension CTA – visible on main page */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <PuzzlePiece size={20} weight="fill" className="text-cyan-400" />
+              <span className="text-sm font-medium">No focus switching?</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                Get the browser extension – portal stays in side panel while you scroll
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+              onClick={() =>
+                window.open(
+                  'https://github.com/Bboy9090/GhostWriter-/blob/main/extension/README.md',
+                  '_blank',
+                  'noopener'
+                )
+              }
+            >
+              Get extension
+            </Button>
+          </div>
 
           {/* 1. Primary Action Zone */}
           <div className="space-y-3">

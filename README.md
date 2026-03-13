@@ -108,6 +108,13 @@ Output in `dist/`.
 
 ---
 
+## 🔌 Browser Extension (side-panel)
+
+Capture text without focus switching – side panel stays visible while you scroll the page.
+
+- **Desktop:** Load `extension/` folder in `chrome://extensions` (Developer mode)
+- **Mobile:** Add GhostWriter to Home Screen for Upload flow (see [extension/README.md](./extension/README.md))
+
 ## 📂 Key Files
 
 | Path                                | Purpose                                  |

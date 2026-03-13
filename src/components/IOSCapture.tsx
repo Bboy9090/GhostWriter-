@@ -44,6 +44,8 @@ type Segment = {
 
 const DEDUPE_WINDOW = 8
 const MOTION_SCALE = 8
+/** Max OCR workers for parallel image processing. Keeps speed high without overloading. */
+const OCR_CONCURRENCY = Math.min(6, Math.max(2, (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4) - 1)
 const PARAGRAPH_TOKEN = '__GW_PARA__'
 const DEFAULT_NOISE_PHRASES = [
   'Regenerate response',
@@ -506,28 +508,36 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
   }
 
   const addImageFiles = useCallback(
-    (nextFiles: File[]) => {
+    (nextFiles: File[], append = false) => {
       if (!nextFiles.length) return
-      setFiles(nextFiles)
+      const merged = append ? [...files, ...nextFiles] : nextFiles
+      setFiles(merged)
       setVideoFile(null)
-      resetState()
+      if (!append) resetState()
       if (nextFiles.some(file => file.type.includes('heic') || file.type.includes('heif'))) {
         toast.info('HEIC detected. Convert to PNG/JPEG if OCR misses text.')
       }
       if (autoSortEnabled) {
-        void buildImageMeta(nextFiles)
-      } else {
+        void buildImageMeta(merged)
+      } else if (!append) {
         setImageMeta([])
         setMetaMissingCount(0)
       }
     },
-    [autoSortEnabled]
+    [autoSortEnabled, files]
   )
 
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files
     if (!fileList) return
-    addImageFiles(Array.from(fileList))
+    const added = Array.from(fileList)
+    addImageFiles(added, true)
+    if (added.length > 0) {
+      const total = files.length + added.length
+      toast.success(
+        total > added.length ? `Added ${added.length} (${total} total)` : `Selected ${added.length} file(s)`
+      )
+    }
     event.target.value = ''
   }
 
@@ -555,19 +565,23 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
       const imageFiles = Array.from(items).filter(f => f.type.startsWith('image/'))
       const videoFiles = Array.from(items).filter(f => f.type.startsWith('video/'))
       if (inputMode === 'images' && imageFiles.length > 0) {
-        addImageFiles(imageFiles)
+        addImageFiles(imageFiles, true)
+        const total = files.length + imageFiles.length
+        toast.success(
+          total > imageFiles.length ? `Added ${imageFiles.length} (${total} total)` : `Added ${imageFiles.length} file(s)`
+        )
         if (videoFiles.length > 0)
           toast.info('Dropped video ignored. Switch to Screen Recording mode.')
       } else if (inputMode === 'video' && videoFiles.length > 0) {
         setVideoFromFile(videoFiles[0])
         if (imageFiles.length > 0) toast.info('Dropped images ignored. Switch to Screenshots mode.')
       } else if (imageFiles.length > 0) {
-        addImageFiles(imageFiles)
+        addImageFiles(imageFiles, true)
       } else if (videoFiles.length > 0) {
         setVideoFromFile(videoFiles[0])
       }
     },
-    [inputMode, addImageFiles, setVideoFromFile]
+    [inputMode, addImageFiles, setVideoFromFile, files]
   )
 
   const handlePaste = useCallback(
@@ -581,7 +595,7 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
       }
       if (imageFiles.length > 0 && inputMode === 'images') {
         e.preventDefault()
-        addImageFiles([...files, ...imageFiles])
+        addImageFiles(imageFiles, true)
         toast.success(`Pasted ${imageFiles.length} image(s)`)
       }
     },
@@ -675,27 +689,32 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
     setMetaMissingCount(0)
     try {
       const exifrModule = await import('exifr')
-      const nextMeta = []
-      let missing = 0
+      const EXIF_CONCURRENCY = 12
+      const nextMeta: Array<{ file: File; timestamp: number | null }> = []
 
-      for (const file of nextFiles) {
-        let timestamp: number | null = null
-        try {
-          const data = await exifrModule.parse(file, {
-            pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate'],
+      for (let i = 0; i < nextFiles.length; i += EXIF_CONCURRENCY) {
+        const chunk = nextFiles.slice(i, i + EXIF_CONCURRENCY)
+        const chunkResults = await Promise.all(
+          chunk.map(async file => {
+            let timestamp: number | null = null
+            try {
+              const data = await exifrModule.parse(file, {
+                pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate'],
+              })
+              const exifDate = data?.DateTimeOriginal || data?.CreateDate || data?.ModifyDate
+              if (exifDate instanceof Date) {
+                timestamp = exifDate.getTime()
+              }
+            } catch {
+              timestamp = null
+            }
+            return { file, timestamp }
           })
-          const exifDate = data?.DateTimeOriginal || data?.CreateDate || data?.ModifyDate
-          if (exifDate instanceof Date) {
-            timestamp = exifDate.getTime()
-          }
-        } catch {
-          timestamp = null
-        }
-
-        if (!timestamp) missing += 1
-        nextMeta.push({ file, timestamp })
+        )
+        nextMeta.push(...chunkResults)
       }
 
+      const missing = nextMeta.filter(m => !m.timestamp).length
       setImageMeta(nextMeta)
       setMetaMissingCount(missing)
       return { meta: nextMeta, missing }
@@ -872,11 +891,17 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
     try {
       setCurrentFile('Loading OCR engine...')
       const { createWorker } = await import('tesseract.js')
-      // createWorker(lang) loads and initializes the language in one step
-      const createdWorker = await createWorker(language?.trim() || 'eng')
-      worker = createdWorker
+      const lang = language?.trim() || 'eng'
 
       if (inputMode === 'images') {
+        const concurrency = Math.min(OCR_CONCURRENCY, localImageEntries.length)
+        const workers = await Promise.all(
+          Array.from({ length: concurrency }, () => createWorker(lang))
+        )
+        worker = {
+          terminate: () => Promise.all(workers.map(w => w.terminate())),
+        }
+
         if (autoSortEnabled && files.length > 0 && imageMeta.length !== files.length) {
           const metaResult = await buildImageMeta(files)
           if (metaResult?.meta) {
@@ -884,64 +909,83 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
           }
         }
 
-        for (let index = 0; index < localImageEntries.length; index += 1) {
+        const batchSize = concurrency
+        for (let batchStart = 0; batchStart < localImageEntries.length; batchStart += batchSize) {
           if (abortRef.current) break
-          const entry = localImageEntries[index]
-          const file = entry.file
-          setCurrentFile(file.name)
-          let canvas: HTMLCanvasElement
-          let ctx: CanvasRenderingContext2D
-          let width: number
-          let height: number
-          try {
-            const loaded = await loadImageToCanvas(file, imageMaxWidth)
-            canvas = loaded.canvas
-            ctx = loaded.ctx
-            width = loaded.width
-            height = loaded.height
-          } catch (loadErr) {
-            const msg = loadErr instanceof Error ? loadErr.message : 'Unknown error'
-            toast.error(`Failed to load ${file.name}: ${msg}`)
-            console.error('Image load error:', loadErr)
-            setProgress(Math.round(((index + 1) / localImageEntries.length) * 100))
-            continue
-          }
-          applyEnhancements(ctx, width, height, {
-            enableEnhance: enhanceEnabled,
-            grayscale: grayscaleEnabled,
-            contrast: contrastBoost,
-            sharpen: sharpenEnabled,
-          })
-          if (ocrPsm >= 0 && ocrPsm <= 13) {
-            await createdWorker.setParameters({ tessedit_pageseg_mode: String(ocrPsm) })
-          }
-          const { data } = await createdWorker.recognize(canvas)
-          const rawText = (data.text ?? '').trim()
-          const capturedAt = entry.timestamp
-            ? new Date(entry.timestamp).toLocaleString()
-            : new Date(file.lastModified).toLocaleString()
-
-          if (autoSegmentEnabled && entry.timestamp && lastCaptureTimestamp !== null) {
-            const gapMinutes = (entry.timestamp - lastCaptureTimestamp) / 60000
-            if (gapMinutes >= segmentGapMinutes) {
-              startSegment(capturedAt)
-            }
-          }
-
-          if (entry.timestamp) {
-            lastCaptureTimestamp = entry.timestamp
-          }
-          ensureSegment(capturedAt)
-          ingestParagraphs(
-            rawText,
-            file.name,
-            typeof data.confidence === 'number' ? data.confidence : null,
-            capturedAt
+          const batch = localImageEntries.slice(batchStart, batchStart + batchSize)
+          setCurrentFile(
+            batch.length > 1
+              ? `${batch[0].file.name} … +${batch.length - 1} more`
+              : batch[0].file.name
           )
-          processed += 1
-          setProgress(Math.round(((index + 1) / localImageEntries.length) * 100))
+
+          const batchResults = await Promise.all(
+            batch.map(async (entry, i) => {
+              const w = workers[i % workers.length]
+              const file = entry.file
+              try {
+                const loaded = await loadImageToCanvas(file, imageMaxWidth)
+                applyEnhancements(loaded.ctx, loaded.width, loaded.height, {
+                  enableEnhance: enhanceEnabled,
+                  grayscale: grayscaleEnabled,
+                  contrast: contrastBoost,
+                  sharpen: sharpenEnabled,
+                })
+                if (ocrPsm >= 0 && ocrPsm <= 13) {
+                  await w.setParameters({ tessedit_pageseg_mode: String(ocrPsm) })
+                }
+                const { data } = await w.recognize(loaded.canvas)
+                return { entry, data, error: null }
+              } catch (err) {
+                return { entry, data: null, error: err }
+              }
+            })
+          )
+
+          for (const { entry, data, error } of batchResults) {
+            const file = entry.file
+            if (error) {
+              const msg = error instanceof Error ? error.message : 'Unknown error'
+              toast.error(`Failed ${file.name}: ${msg}`)
+              continue
+            }
+            if (!data) continue
+            const rawText = (data.text ?? '').trim()
+            const capturedAt = entry.timestamp
+              ? new Date(entry.timestamp).toLocaleString()
+              : new Date(file.lastModified).toLocaleString()
+
+            if (autoSegmentEnabled && entry.timestamp && lastCaptureTimestamp !== null) {
+              const gapMinutes = (entry.timestamp - lastCaptureTimestamp) / 60000
+              if (gapMinutes >= segmentGapMinutes) {
+                startSegment(capturedAt)
+              }
+            }
+            if (entry.timestamp) {
+              lastCaptureTimestamp = entry.timestamp
+            }
+            ensureSegment(capturedAt)
+            ingestParagraphs(
+              rawText,
+              file.name,
+              typeof data.confidence === 'number' ? data.confidence : null,
+              capturedAt
+            )
+            processed += 1
+          }
+          setProgress(
+            Math.round(
+              (Math.min(batchStart + batchSize, localImageEntries.length) /
+                localImageEntries.length) *
+                100
+            )
+          )
         }
+
+        await Promise.all(workers.map(w => w.terminate()))
       } else if (inputMode === 'video' && videoFile) {
+        const createdWorker = await createWorker(lang)
+        worker = createdWorker
         const video = document.createElement('video')
         const url = URL.createObjectURL(videoFile)
         video.src = url
