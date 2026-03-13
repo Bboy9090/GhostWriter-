@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -33,12 +34,18 @@ func main() {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	// Get configuration from environment
-	dbURL := getEnv("DB_URL", "postgres://bobby_admin:bronx_password@localhost:5432/ghostwriter_vault?sslmode=disable")
+	// Get configuration from environment.
+	// MONGODB_URI takes precedence over DB_URL when both are set,
+	// and DB_URL may be a MongoDB URI when migrating from Railway.
+	dbURL := resolveDatabaseURL()
 	redisURL := getEnv("REDIS_URL", "localhost:6379")
 	port := getEnv("PORT", "8080")
 	openaiAPIKey := getEnv("OPENAI_API_KEY", "")
 
+	// Initialize database (auto-detects PostgreSQL vs MongoDB from URI scheme)
+	db, err := database.NewDatabaseFromURL(dbURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	log.Printf("GhostWriter API starting up on 0.0.0.0:%s", port)
 	log.Printf("Database URL configured: %v", dbURL != "")
 	log.Printf("Redis URL configured: %v", redisURL != "")
@@ -131,6 +138,7 @@ func main() {
 	// Start server – bind to 0.0.0.0 so it is reachable inside containers/VMs
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
 	go func() {
+		if err := app.Listen("0.0.0.0:" + port); err != nil {
 		log.Printf("Listening on %s", listenAddr)
 		if err := app.Listen(listenAddr); err != nil {
 			log.Fatalf("Server error: %v", err)
@@ -171,4 +179,19 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// resolveDatabaseURL returns the database connection URL, preferring MONGODB_URI
+// when it is set. If only DB_URL is provided it is returned as-is (the factory
+// handles both PostgreSQL DSNs and MongoDB URIs).
+func resolveDatabaseURL() string {
+	if mongoURI := os.Getenv("MONGODB_URI"); mongoURI != "" {
+		log.Println("Using MONGODB_URI for database connection")
+		return mongoURI
+	}
+	dbURL := getEnv("DB_URL", "postgres://bobby_admin:bronx_password@localhost:5432/ghostwriter_vault?sslmode=disable")
+	if strings.HasPrefix(dbURL, "mongodb://") || strings.HasPrefix(dbURL, "mongodb+srv://") {
+		log.Println("DB_URL contains a MongoDB URI; using MongoDB driver")
+	}
+	return dbURL
 }
