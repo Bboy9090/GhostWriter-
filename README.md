@@ -68,14 +68,26 @@ flyctl deploy
 
 ## 💻 Run Locally
 
-**Prerequisites:** Node.js 20+, npm
+**Prerequisites:** Node.js 20+, Docker
+
+### One-click (recommended)
+
+Starts Postgres, Redis, API, and frontend dev server:
+
+```bash
+npm run start
+```
+
+Opens at `http://localhost:5173` with API at `http://localhost:8080`.
+
+### Frontend only (no backend)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`
+Open `http://localhost:5173`. OCR and captures work; vault sync needs the backend.
 
 **Build:**
 
@@ -172,6 +184,13 @@ flyctl deploy
 - **iOS:** Vision OCR, WebSocket client (see `ios-native/`)
 
 ---
+
+## 🔌 Browser Extension (side-panel)
+
+Capture text without focus switching – side panel stays visible while you scroll the page.
+
+- **Desktop:** Load `extension/` folder in `chrome://extensions` (Developer mode)
+- **Mobile:** Add GhostWriter to Home Screen for Upload flow (see [extension/README.md](./extension/README.md))
 
 ## 📂 Key Files
 
