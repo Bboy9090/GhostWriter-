@@ -42,19 +42,16 @@ func main() {
 	port := getEnv("PORT", "8080")
 	openaiAPIKey := getEnv("OPENAI_API_KEY", "")
 
-	// Initialize database (auto-detects PostgreSQL vs MongoDB from URI scheme)
-	db, err := database.NewDatabaseFromURL(dbURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
 	log.Printf("GhostWriter API starting up on 0.0.0.0:%s", port)
 	log.Printf("Database URL configured: %v", dbURL != "")
 	log.Printf("Redis URL configured: %v", redisURL != "")
 
-	// Initialize database with retry logic so the service survives a slow DB start
-	var db *database.Database
+	// Initialize database with retry logic so the service survives a slow DB start.
+	// NewDatabaseFromURL auto-detects PostgreSQL vs MongoDB from the URI scheme.
+	var db database.DB
 	if err := retry(maxRetries, retryInterval, func() error {
 		var err error
-		db, err = database.NewDatabase(dbURL)
+		db, err = database.NewDatabaseFromURL(dbURL)
 		return err
 	}); err != nil {
 		log.Fatalf("FATAL: could not connect to database after %d attempts: %v", maxRetries, err)
@@ -138,7 +135,6 @@ func main() {
 	// Start server – bind to 0.0.0.0 so it is reachable inside containers/VMs
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
 	go func() {
-		if err := app.Listen("0.0.0.0:" + port); err != nil {
 		log.Printf("Listening on %s", listenAddr)
 		if err := app.Listen(listenAddr); err != nil {
 			log.Fatalf("Server error: %v", err)
