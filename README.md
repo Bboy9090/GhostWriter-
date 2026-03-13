@@ -68,14 +68,26 @@ flyctl deploy
 
 ## 💻 Run Locally
 
-**Prerequisites:** Node.js 20+, npm
+**Prerequisites:** Node.js 20+, Docker
+
+### One-click (recommended)
+
+Starts Postgres, Redis, API, and frontend dev server:
+
+```bash
+npm run start
+```
+
+Opens at `http://localhost:5173` with API at `http://localhost:8080`.
+
+### Frontend only (no backend)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`
+Open `http://localhost:5173`. OCR and captures work; vault sync needs the backend.
 
 **Build:**
 
@@ -87,6 +99,83 @@ Output in `dist/`.
 
 ---
 
+## 🖥️ Backend – Run & Deploy
+
+### Run backend locally
+
+**Prerequisites:** Go 1.22+, Docker (for PostgreSQL + Redis)
+
+```bash
+# 1. Start dependencies
+docker compose up vault-db ghost-stream -d
+
+# 2. Copy env template and fill in your values
+cp backend-go/.env.template backend-go/.env
+
+# 3. Build & run
+cd backend-go
+go build -o server ./cmd/server
+./server
+```
+
+The API listens on `0.0.0.0:8080` by default. Set the `PORT` environment variable to override: `PORT=9000 ./server`.
+
+**Health check:**
+
+```bash
+curl http://localhost:8080/health
+# {"service":"ghostwriter-api","status":"healthy","timestamp":"..."}
+```
+
+### Run the full stack with Docker Compose
+
+```bash
+# Build and start all services
+docker compose up --build
+
+# Services:
+#   ghostwriter-frontend  → http://localhost:3000
+#   ghost-api             → http://localhost:8080
+#   vault-db (PostgreSQL) → localhost:5432
+#   ghost-stream (Redis)  → localhost:6379
+```
+
+### Environment variables (backend)
+
+| Variable | Required | Description |
+|---|---|---|
+| `PORT` | No | Port to listen on (default `8080`) |
+| `DB_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Redis connection string or `host:port` |
+| `JWT_SECRET` | Yes | ≥32-char secret for signing tokens |
+| `OPENAI_API_KEY` | No | Enables semantic embeddings |
+| `APNS_*` | No | Apple Push Notification settings |
+
+### Deploy backend to Render.com
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Bboy9090/GhostWriter-)
+
+The `render.yaml` Blueprint deploys the full stack (PostgreSQL + Redis + Go API + static frontend) in one click.  
+The backend builds from `backend-go/Dockerfile`. Render automatically injects `PORT`, `DB_URL`, and `REDIS_URL` from the linked services.
+
+**Health check URL:** `https://<your-render-host>/health`
+
+**Keep awake (starter plan):** Add an [UptimeRobot](https://uptimerobot.com) monitor pointing to the `/health` endpoint (every 5 min) to prevent Render from spinning down idle services.
+
+**Troubleshooting:** [RENDER_TROUBLESHOOTING.md](./RENDER_TROUBLESHOOTING.md)
+
+### Deploy backend to Fly.io
+
+```bash
+cd backend-go
+flyctl auth login
+flyctl launch          # follow prompts (app name, region)
+flyctl secrets set DB_URL="<postgres-url>" REDIS_URL="<redis-url>" JWT_SECRET="<secret>"
+flyctl deploy
+```
+
+---
+
 ## 🏗️ Architecture
 
 - **Frontend:** React + TypeScript + Vite
@@ -95,6 +184,13 @@ Output in `dist/`.
 - **iOS:** Vision OCR, WebSocket client (see `ios-native/`)
 
 ---
+
+## 🔌 Browser Extension (side-panel)
+
+Capture text without focus switching – side panel stays visible while you scroll the page.
+
+- **Desktop:** Load `extension/` folder in `chrome://extensions` (Developer mode)
+- **Mobile:** Add GhostWriter to Home Screen for Upload flow (see [extension/README.md](./extension/README.md))
 
 ## 📂 Key Files
 

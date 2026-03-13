@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>GhostWriter Portal</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">👻</div>
+      <h1>GhostWriter</h1>
+      <p class="subtitle">Capture text from this tab. Scroll the main page – no focus switching.</p>
+    </header>
+
+    <main class="main">
+      <button id="toggle" class="toggle" aria-pressed="false">
+        <span class="toggle-indicator" aria-hidden="true"></span>
+        <span class="toggle-label">Start capture</span>
+      </button>
+
+      <div class="status" id="status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="statusText">Inactive</span>
+      </div>
+
+      <div class="entries" id="entries">
+        <p class="entries-empty" id="entriesEmpty">Entries will appear here as you scroll the page.</p>
+        <ul class="entries-list" id="entriesList"></ul>
+      </div>
+
+      <div class="actions">
+        <button id="openVault" class="btn btn-secondary">Open vault</button>
+        <button id="clear" class="btn btn-ghost">Clear</button>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Works best on ChatGPT, Gemini, docs. Add GhostWriter to Home Screen for mobile.</p>
+    </footer>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
