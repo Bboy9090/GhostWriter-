@@ -427,7 +427,7 @@ function App() {
   const prevCaptureCount = useRef(captureLog.length)
   useEffect((): void | (() => void) => {
     if (captureLog.length > prevCaptureCount.current) {
-      setGhostPulse('saved')
+      queueMicrotask(() => setGhostPulse('saved'))
       const savedTimer = setTimeout(() => {
         setGhostPulse(portalActive ? 'active' : 'idle')
       }, 1500)
@@ -438,7 +438,7 @@ function App() {
 
   // Update pulse state when portal active state changes
   useEffect(() => {
-    setGhostPulse(portalActive ? 'active' : 'idle')
+    queueMicrotask(() => setGhostPulse(portalActive ? 'active' : 'idle'))
   }, [portalActive])
 
   // Start/stop demo capture when portal is toggled

@@ -101,6 +101,7 @@ export function FriendsPanel({
 
   const getLastActiveText = (lastActive?: number) => {
     if (!lastActive) return 'Never'
+    // eslint-disable-next-line react-hooks/purity -- time-ago display
     const diff = Date.now() - lastActive
     if (diff < 60000) return 'Just now'
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
@@ -174,6 +175,7 @@ export function FriendsPanel({
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span className={`w-2 h-2 rounded-full ${
+                            // eslint-disable-next-line react-hooks/purity -- last-active indicator needs current time
                             friend.lastActive && Date.now() - friend.lastActive < 300000 
                               ? 'bg-green-500' 
                               : 'bg-gray-400'

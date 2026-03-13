@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Play, 
   Pause, 
@@ -30,6 +30,13 @@ export function BatchSyncControl() {
   const [isOnline, setIsOnline] = useState(offlineSyncManager.getOnlineStatus())
   const [showDetails, setShowDetails] = useState(false)
 
+  const updateQueueData = useCallback(async () => {
+    const size = await offlineSyncManager.getQueueSize()
+    const ops = await offlineSyncManager.getQueueOperations()
+    setQueueSize(size)
+    setOperations(ops)
+  }, [])
+
   useEffect(() => {
     const unsubscribeProgress = offlineSyncManager.onProgressUpdate((newProgress) => {
       setProgress(newProgress)
@@ -39,11 +46,9 @@ export function BatchSyncControl() {
       setIsOnline(online)
     })
 
-    const unsubscribeSync = offlineSyncManager.onSyncComplete(() => {
-      updateQueueData()
-    })
+    const unsubscribeSync = offlineSyncManager.onSyncComplete(updateQueueData)
 
-    updateQueueData()
+    void updateQueueData()
 
     const interval = setInterval(updateQueueData, 5000)
 
@@ -53,14 +58,7 @@ export function BatchSyncControl() {
       unsubscribeSync()
       clearInterval(interval)
     }
-  }, [])
-
-  const updateQueueData = async () => {
-    const size = await offlineSyncManager.getQueueSize()
-    const ops = await offlineSyncManager.getQueueOperations()
-    setQueueSize(size)
-    setOperations(ops)
-  }
+  }, [updateQueueData])
 
   const handlePause = async () => {
     await offlineSyncManager.pauseSync()
@@ -123,6 +121,7 @@ export function BatchSyncControl() {
   }
 
   const formatTimestamp = (timestamp: number) => {
+    // eslint-disable-next-line react-hooks/purity -- time-ago display needs current time
     const now = Date.now()
     const diff = now - timestamp
     const seconds = Math.floor(diff / 1000)

@@ -28,22 +28,23 @@ const categories = [
 ]
 
 export function UsageForm({ open, onClose, onSave, cards, editUsage }: UsageFormProps) {
-  const [formData, setFormData] = useState<UsageEntry>({
+  const [formData, setFormData] = useState<UsageEntry>(() => ({
     id: '',
     cardId: '',
     amount: 0,
     merchant: '',
     category: 'Other',
-    date: Date.now(),
+    date: 0,
     notes: ''
-  })
+  }))
 
   const [amountInput, setAmountInput] = useState('')
   const [dateInput, setDateInput] = useState('')
 
   useEffect(() => {
-    if (editUsage) {
-      setFormData(editUsage)
+    queueMicrotask(() => {
+      if (editUsage) {
+        setFormData(editUsage)
       setAmountInput(editUsage.amount.toString())
       setDateInput(new Date(editUsage.date).toISOString().split('T')[0])
     } else {
@@ -60,6 +61,7 @@ export function UsageForm({ open, onClose, onSave, cards, editUsage }: UsageForm
       setAmountInput('')
       setDateInput(now.toISOString().split('T')[0])
     }
+    })
   }, [editUsage, cards, open])
 
   const handleSubmit = (e: React.FormEvent) => {

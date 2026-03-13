@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { offlineSyncManager } from '@/lib/offline-sync'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,11 @@ export function OfflineIndicator({ compact = false }: OfflineIndicatorProps) {
   const [queueSize, setQueueSize] = useState(0)
   const [syncing, setSyncing] = useState(false)
   const [showSyncSuccess, setShowSyncSuccess] = useState(false)
+
+  const updateQueueSize = useCallback(async () => {
+    const size = await offlineSyncManager.getQueueSize()
+    setQueueSize(size)
+  }, [])
 
   useEffect(() => {
     const unsubscribe = offlineSyncManager.onStatusChange((online) => {
@@ -32,25 +37,20 @@ export function OfflineIndicator({ compact = false }: OfflineIndicatorProps) {
       }
     })
 
-    updateQueueSize()
+    queueMicrotask(() => { void updateQueueSize() })
 
     return () => {
       unsubscribe()
       unsubscribeSync()
     }
-  }, [])
+  }, [updateQueueSize])
 
   useEffect(() => {
     if (isOnline && queueSize > 0 && !syncing) {
-      setSyncing(true)
+      queueMicrotask(() => setSyncing(true))
       offlineSyncManager.processSyncQueue()
     }
   }, [isOnline, queueSize, syncing])
-
-  const updateQueueSize = async () => {
-    const size = await offlineSyncManager.getQueueSize()
-    setQueueSize(size)
-  }
 
   if (compact) {
     return (

@@ -41,6 +41,7 @@ interface TimeSeriesPoint {
 
 export function StatsDashboard({ cards, usage }: StatsDashboardProps) {
   const stats = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- period filter needs current time
     const now = Date.now()
     const oneDay = 24 * 60 * 60 * 1000
     const thirtyDaysAgo = now - 30 * oneDay

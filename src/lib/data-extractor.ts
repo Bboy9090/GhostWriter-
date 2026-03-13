@@ -509,7 +509,7 @@ export class DataExtractor {
     }
 
     // Date
-    const datePattern = /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g
+    const datePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g
     while ((match = datePattern.exec(text)) !== null) {
       entities.push({
         type: 'date',
@@ -638,7 +638,7 @@ export class DataExtractor {
 
   private isList(text: string): boolean {
     const listPatterns = [
-      /^\d+[\.\)]\s+/,
+      /^\d+[.)]\s+/,
       /^[-*•]\s+/,
       /^[\s]*[•◦▪▫]\s+/
     ]

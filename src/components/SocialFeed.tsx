@@ -93,6 +93,7 @@ export function SocialFeed({
   }
 
   const formatTime = (timestamp: number) => {
+    // eslint-disable-next-line react-hooks/purity -- time-ago display
     const diff = Date.now() - timestamp
     if (diff < 60000) return 'Just now'
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m`

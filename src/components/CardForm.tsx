@@ -39,9 +39,10 @@ export function CardForm({ open, onClose, onSave, editCard }: CardFormProps) {
   const [newTag, setNewTag] = useState('')
 
   useEffect(() => {
-    if (editCard) {
-      setFormData(editCard)
-    } else {
+    queueMicrotask(() => {
+      if (editCard) {
+        setFormData(editCard)
+      } else {
       setFormData({
         id: generateId(),
         label: '',
@@ -55,7 +56,8 @@ export function CardForm({ open, onClose, onSave, editCard }: CardFormProps) {
         notes: '',
         sourceUrl: '',
       })
-    }
+      }
+    })
   }, [editCard, open])
 
   const handleSubmit = (e: React.FormEvent) => {

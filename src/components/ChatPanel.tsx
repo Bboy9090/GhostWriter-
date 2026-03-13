@@ -111,6 +111,7 @@ export function ChatPanel({
       senderId: currentUserId,
       senderName: currentUserName,
       content: `Check out this item: ${item.name}`,
+      // eslint-disable-next-line react-hooks/purity -- event handler, not render
       timestamp: Date.now(),
       type: 'item_share',
       attachedItemId: item.id,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Cloud, CloudCheck, CloudWarning, ArrowsClockwise, Pause } from '@phosphor-icons/react'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -18,6 +18,11 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
   const [queueSize, setQueueSize] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+
+  const updateQueueSize = useCallback(async () => {
+    const size = await offlineSyncManager.getQueueSize()
+    setQueueSize(size)
+  }, [])
 
   useEffect(() => {
     const unsubscribe = offlineSyncManager.onStatusChange((online) => {
@@ -60,18 +65,20 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
       }
     })
 
-    if (!offlineSyncManager.getOnlineStatus()) {
-      setStatus('offline')
-    }
-    setIsPaused(offlineSyncManager.isPausedState())
-    updateQueueSize()
+    queueMicrotask(() => {
+      if (!offlineSyncManager.getOnlineStatus()) {
+        setStatus('offline')
+      }
+      setIsPaused(offlineSyncManager.isPausedState())
+      void updateQueueSize()
+    })
 
     return () => {
       unsubscribe()
       unsubscribeSync()
       unsubscribeProgress()
     }
-  }, [])
+  }, [updateQueueSize])
 
   useEffect(() => {
     if (!lastSyncTime) return
@@ -98,11 +105,6 @@ export function CloudSyncStatus({ lastSyncTime }: CloudSyncStatusProps) {
 
     return () => clearInterval(interval)
   }, [lastSyncTime])
-
-  const updateQueueSize = async () => {
-    const size = await offlineSyncManager.getQueueSize()
-    setQueueSize(size)
-  }
 
   const handleManualSync = async () => {
     if (!offlineSyncManager.getOnlineStatus()) {
