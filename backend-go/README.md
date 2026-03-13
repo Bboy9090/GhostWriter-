@@ -62,9 +62,26 @@ Copy `.env.template` to `.env` and configure:
 
 ### Required Settings
 
-- `DB_URL`: PostgreSQL connection string
+- `DB_URL`: PostgreSQL connection string **or** a `mongodb://`/`mongodb+srv://` URI
+  (the server auto-detects the scheme and uses the correct driver)
+- `MONGODB_URI`: *(preferred over `DB_URL` for MongoDB)* Pass a `mongodb://` or `mongodb+srv://` URI
+  here when deploying with MongoDB (e.g. MongoDB Atlas or Railway).
+  If both `MONGODB_URI` and `DB_URL` are set, `MONGODB_URI` takes precedence.
 - `REDIS_URL`: Redis connection string
 - `OPENAI_API_KEY`: OpenAI API key for embeddings
+
+### Database Selection
+
+| Env var | Scheme | Driver used |
+|---------|--------|-------------|
+| `MONGODB_URI=mongodb://...` | `mongodb://` | MongoDB |
+| `MONGODB_URI=mongodb+srv://...` | `mongodb+srv://` | MongoDB |
+| `DB_URL=postgres://...` | `postgres://` or `postgresql://` | PostgreSQL + pgvector |
+| `DB_URL=mongodb://...` | `mongodb://` | MongoDB (auto-detected) |
+
+> **Render.com deployment**: Set `MONGODB_URI` in the Render dashboard under your
+> service's *Environment* tab. If you use Render's managed PostgreSQL, `DB_URL` is
+> injected automatically and no additional configuration is needed.
 
 ### Optional Settings
 

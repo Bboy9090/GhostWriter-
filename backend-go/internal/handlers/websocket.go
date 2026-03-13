@@ -18,14 +18,14 @@ import (
 )
 
 type Handler struct {
-	db        *database.Database
+	db        database.DB
 	redis     *redis.RedisClient
 	apns      *apns.APNSClient
 	embedding *embeddings.EmbeddingService
 }
 
 // NewHandler creates a new handler
-func NewHandler(db *database.Database, redisClient *redis.RedisClient, apnsClient *apns.APNSClient, embeddingService *embeddings.EmbeddingService) *Handler {
+func NewHandler(db database.DB, redisClient *redis.RedisClient, apnsClient *apns.APNSClient, embeddingService *embeddings.EmbeddingService) *Handler {
 	return &Handler{
 		db:        db,
 		redis:     redisClient,

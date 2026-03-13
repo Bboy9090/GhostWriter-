@@ -269,14 +269,14 @@ export function applyFilters(
 function parseLines(text: string): string[] {
   return text
     .split('\n')
-    .map(l => l.trim())
+    .map(line => line.trim())
     .filter(Boolean)
 }
 
 function parseCSV(text: string): string[] {
   return text
     .split(',')
-    .map(s => s.trim())
+    .map(item => item.trim())
     .filter(Boolean)
 }
 

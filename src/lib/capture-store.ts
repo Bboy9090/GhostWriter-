@@ -57,8 +57,8 @@ export function getMaxEntries(): number {
   return MAX_ENTRIES
 }
 
-export function setMaxEntries(n: number): void {
-  MAX_ENTRIES = Math.max(100, Math.min(50000, n))
+export function setMaxEntries(maxEntries: number): void {
+  MAX_ENTRIES = Math.max(100, Math.min(50000, maxEntries))
   try {
     const existing = localStorage.getItem(SETTINGS_STORAGE_KEY)
     const parsed = existing ? JSON.parse(existing) : {}
@@ -203,7 +203,7 @@ export function addCaptureEntry(
   broadcast({ type: 'NEW_ENTRY', entry })
 
   // Notify in-window listeners
-  listeners.forEach(fn => fn(updated))
+  listeners.forEach(listener => listener(updated))
 
   return entry
 }
@@ -247,7 +247,7 @@ export function getStorageStats(): StorageStats {
   let bytesUsed = 0
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    bytesUsed = raw ? new Blob([raw]).size : 0
+    bytesUsed = raw ? new TextEncoder().encode(raw).byteLength : 0
   } catch {
     bytesUsed = 0
   }
@@ -294,9 +294,9 @@ export function exportCaptureJSON(): string {
 export function exportCaptureText(): string {
   const entries = loadEntries()
   return entries
-    .map(e => {
-      const rolePrefix = e.role === 'user' ? '[You] ' : e.role === 'assistant' ? '[AI] ' : ''
-      return `[${e.capturedAt}] ${e.sourceApp}\n${rolePrefix}${e.content}\nTags: ${e.tags.join(', ')}\n`
+    .map(entry => {
+      const rolePrefix = entry.role === 'user' ? '[You] ' : entry.role === 'assistant' ? '[AI] ' : ''
+      return `[${entry.capturedAt}] ${entry.sourceApp}\n${rolePrefix}${entry.content}\nTags: ${entry.tags.join(', ')}\n`
     })
     .join('\n---\n\n')
 }
@@ -330,14 +330,14 @@ export function importCaptureJSON(jsonStr: string): number {
     if (!Array.isArray(imported)) return 0
 
     const existing = loadEntries()
-    const existingIds = new Set(existing.map(e => e.id))
-    const newEntries = imported.filter(e => e.id && !existingIds.has(e.id))
+    const existingIds = new Set(existing.map(entry => entry.id))
+    const newEntries = imported.filter(entry => entry.id && !existingIds.has(entry.id))
     const merged = [...newEntries, ...existing]
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, MAX_ENTRIES)
 
     saveEntries(merged)
-    listeners.forEach(fn => fn(merged))
+    listeners.forEach(listener => listener(merged))
     broadcast({ type: 'ENTRIES_SYNC', entries: merged })
     return newEntries.length
   } catch {
@@ -351,7 +351,7 @@ export function importCaptureJSON(jsonStr: string): number {
 export function clearCaptureEntries(): void {
   saveEntries([])
   broadcast({ type: 'CLEAR_ALL' })
-  listeners.forEach(fn => fn([]))
+  listeners.forEach(listener => listener([]))
 }
 
 /**
@@ -362,14 +362,14 @@ export function onCaptureChange(callback: (entries: CaptureEntry[]) => void): ()
   listeners.add(callback)
 
   // Also listen for cross-window broadcasts
-  const ch = getChannel()
+  const broadcastChannel = getChannel()
   const handler = (event: MessageEvent<CaptureMessage>) => {
     const msg = event.data
     switch (msg.type) {
       case 'NEW_ENTRY': {
         const current = loadEntries()
         // Avoid duplicates
-        if (!current.some(e => e.id === msg.entry.id)) {
+        if (!current.some(entry => entry.id === msg.entry.id)) {
           const updated = [msg.entry, ...current].slice(0, MAX_ENTRIES)
           saveEntries(updated)
           callback(updated)
@@ -392,11 +392,11 @@ export function onCaptureChange(callback: (entries: CaptureEntry[]) => void): ()
     }
   }
 
-  ch.addEventListener('message', handler)
+  broadcastChannel.addEventListener('message', handler)
 
   return () => {
     listeners.delete(callback)
-    ch.removeEventListener('message', handler)
+    broadcastChannel.removeEventListener('message', handler)
   }
 }
 

@@ -1,6 +1,9 @@
 # Render.com Blueprint for GhostWriter
 # This file enables one-click deployment on Render.com
 # Deploy: https://render.com/deploy
+#
+# Deployment order: databases + redis first, then API, then static site
+# (static site needs ghostwriter-api host for VITE_* env vars)
 
 services:
   # Redis / Key Value (must be in services, not databases)
@@ -9,13 +12,41 @@ services:
     ipAllowList:
       - source: 0.0.0.0/0
         description: allow internal connections
-    plan: free
+    plan: starter
 
-  # Frontend - Static Site
+  # Backend API - Docker-based Go service
+  - type: web
+    name: ghostwriter-api
+    runtime: docker
+    dockerfilePath: ./backend-go/Dockerfile
+    dockerContext: ./backend-go
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true  # Generates 32-byte cryptographically secure random string
+      # ── Database ────────────────────────────────────────────────────────────
+      # Set MONGODB_URI to a mongodb:// or mongodb+srv:// connection string to
+      # use MongoDB (e.g. from MongoDB Atlas or Railway).
+      # Leave it unset to fall back to DB_URL (Render's managed PostgreSQL below).
+      - key: MONGODB_URI
+        sync: false          # user must supply the value in the Render dashboard
+        generateValue: true
+      - key: DB_URL
+        fromDatabase:
+          name: ghostwriter-db
+          property: connectionString
+      # ────────────────────────────────────────────────────────────────────────
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: ghostwriter-redis
+          property: connectionString
+    healthCheckPath: /health
+    plan: starter
+
+  # Frontend - Static Site (after API so fromService can resolve)
   - type: web
     name: ghostwriter
     runtime: static
-    # NODE_ENV=development needed so npm ci installs devDependencies (vite, plugins)
     buildCommand: NODE_ENV=development npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
@@ -32,32 +63,10 @@ services:
           name: ghostwriter-api
           property: host
 
-  # Backend API - Go Service
-  - type: web
-    name: ghostwriter-api
-    runtime: go
-    rootDir: backend-go
-    buildCommand: go build -o bin/ghostwriter ./cmd/server
-    startCommand: ./bin/ghostwriter
-    envVars:
-      - key: PORT
-        value: 8080
-      - key: JWT_SECRET
-        generateValue: true  # Generates 32-byte cryptographically secure random string
-      - key: DB_URL
-        fromDatabase:
-          name: ghostwriter-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: ghostwriter-redis
-          property: connectionString
-    healthCheckPath: /health
-
 databases:
   # PostgreSQL Database
   - name: ghostwriter-db
     databaseName: ghostwriter_vault
     user: ghostwriter_user
-    plan: free
+    plan: starter
+    postgresMajorVersion: 16

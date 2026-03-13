@@ -16,8 +16,17 @@ type Database struct {
 	db *sql.DB
 }
 
-// NewDatabase creates a new database connection
+// compile-time assertion: *Database must implement DB.
+var _ DB = (*Database)(nil)
+
+// NewDatabase creates a new PostgreSQL database connection.
+// Pass a postgres:// URI or a libpq key=value DSN.
+// MongoDB URIs (mongodb://, mongodb+srv://) must be handled via NewDatabaseFromURL.
 func NewDatabase(dbURL string) (*Database, error) {
+	if isMongoDB(dbURL) {
+		return nil, fmt.Errorf("error opening database: received a MongoDB URI (%s) but the PostgreSQL driver was selected; use MONGODB_URI or a postgres:// URI for DB_URL", redactURL(dbURL))
+	}
+
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
