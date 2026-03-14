@@ -87,14 +87,63 @@ npm test -- --coverage
 
 ```
 GhostWriter-/
-├── src/              # Source code
+├── src/              # Frontend React/TypeScript source
 │   ├── components/   # React components
 │   ├── lib/          # Utilities and helpers
 │   └── hooks/        # Custom React hooks
-├── scripts/          # Build and utility scripts
+├── backend-go/       # Go backend API (Fiber framework)
+│   ├── cmd/server/   # main.go entry point
+│   └── internal/     # database, handlers, redis, …
+├── extension/        # Chrome browser extension
 ├── ios-native/       # Native iOS Swift code
-├── tests/            # Test files
+├── scripts/          # Build and utility scripts
+├── tests/            # E2E tests (Playwright)
+├── docs/             # Project documentation and intake forms
 └── public/           # Static assets
+```
+
+## 🔧 Running the Go Backend locally
+
+Prerequisites: **Go 1.22+**, **Docker** (for PostgreSQL + Redis).
+
+```bash
+# 1. Start dependencies
+docker compose up -d postgres redis
+
+# 2. Copy and edit environment variables
+cp backend-go/.env.template backend-go/.env
+# Set DB_URL, REDIS_URL, JWT_SECRET (≥32 chars), etc.
+
+# 3. Build and run
+cd backend-go
+go build -o server ./cmd/server
+./server
+# API listens on http://localhost:8080
+# Health check: curl http://localhost:8080/health
+```
+
+### Backend environment variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `DB_URL` | PostgreSQL DSN **or** MongoDB URI | local Postgres |
+| `MONGODB_URI` | MongoDB URI (takes precedence over `DB_URL`) | — |
+| `REDIS_URL` | `host:port` | `localhost:6379` |
+| `JWT_SECRET` | ≥32-char secret | required |
+| `PORT` | HTTP listen port | `8080` |
+| `OPENAI_API_KEY` | Enables vector embeddings | optional |
+
+> **MongoDB on Railway**: set `MONGODB_URI` to your Railway connection string.  
+> The server checks `MONGODB_URI` first; if set, it is used directly.  
+> Otherwise `DB_URL` is used, and the backend auto-detects `mongodb://` /
+> `mongodb+srv://` URIs and routes them to the MongoDB driver instead of
+> PostgreSQL.
+
+### Running Go tests
+
+```bash
+cd backend-go
+go test -v ./...
 ```
 
 ## 🐛 Reporting Bugs
