@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/models"
@@ -64,6 +66,10 @@ func NewMongoDatabase(uri string) (*MongoDatabase, error) {
 }
 
 // InitSchema creates the necessary MongoDB indexes.
+// By default posts persist forever. Set the POST_TTL_DAYS environment variable
+// to a positive integer to enable automatic deletion of entries older than that
+// many days (MongoDB TTL index). Set it to 0 or leave it unset to disable
+// expiration entirely.
 func (m *MongoDatabase) InitSchema(ctx context.Context) error {
 	coll := m.db.Collection(mongoCollection)
 
@@ -82,6 +88,18 @@ func (m *MongoDatabase) InitSchema(ctx context.Context) error {
 		},
 	}
 
+	// Optionally add a TTL index when POST_TTL_DAYS is configured.
+	if ttlDays := postTTLDays(); ttlDays > 0 {
+		ttlSeconds := int32(ttlDays * secondsPerDay)
+		indexes = append(indexes, mongo.IndexModel{
+			Keys:    bson.D{{Key: "created_at", Value: 1}},
+			Options: options.Index().SetName("idx_ttl_created_at").SetExpireAfterSeconds(ttlSeconds),
+		})
+		log.Printf("MongoDB TTL index set: entries expire after %d day(s)", ttlDays)
+	} else {
+		log.Println("MongoDB TTL: disabled (POST_TTL_DAYS not set or 0 – entries persist forever)")
+	}
+
 	if _, err := coll.Indexes().CreateMany(ctx, indexes); err != nil {
 		return fmt.Errorf("error creating MongoDB indexes: %w", err)
 	}
@@ -89,6 +107,23 @@ func (m *MongoDatabase) InitSchema(ctx context.Context) error {
 	log.Println("MongoDB schema initialized")
 	return nil
 }
+
+// postTTLDays reads POST_TTL_DAYS from the environment and returns the configured
+// number of days. Returns 0 if the variable is absent, empty, or non-positive,
+// meaning no TTL is applied.
+func postTTLDays() int {
+	raw := os.Getenv("POST_TTL_DAYS")
+	if raw == "" {
+		return 0
+	}
+	days, err := strconv.Atoi(raw)
+	if err != nil || days <= 0 {
+		return 0
+	}
+	return days
+}
+
+const secondsPerDay = 24 * 60 * 60
 
 // nextSeqID atomically increments and returns the next integer ID for entries.
 func (m *MongoDatabase) nextSeqID(ctx context.Context) (int64, error) {
