@@ -7,6 +7,7 @@ GhostWriter is built with a modern, scalable architecture that prioritizes perfo
 ## Technology Stack
 
 ### Frontend
+
 - **React 19.2** - Latest React with concurrent features
 - **TypeScript 5.9** - Type-safe development with strict mode
 - **Vite 7.2** - Lightning-fast build tool and dev server
@@ -15,11 +16,13 @@ GhostWriter is built with a modern, scalable architecture that prioritizes perfo
 - **TanStack Query** - Powerful data synchronization
 
 ### Testing
+
 - **Vitest** - Fast unit test framework
 - **Testing Library** - React component testing utilities
 - **jsdom** - DOM environment for testing
 
 ### Development Tools
+
 - **ESLint** - Code linting and quality
 - **Prettier** - Code formatting
 - **Husky** - Git hooks
@@ -45,29 +48,41 @@ GhostWriter-/
 └── .github/              # GitHub workflows and templates
 ```
 
+## Capture → vault flows (actual behavior)
+
+- **Local vault (browser):** React UI + `capture-store` (`localStorage`, `BroadcastChannel`). Entries pass through `capture-filters` (noise, sensitive, dedup).
+- **Screenshot OCR (web):** Tesseract.js via `src/lib/ocr-browser.ts` when users drop an image on the main dropzone; video OCR belongs in **Dev → iOS Upload**.
+- **Server vault (optional):** `backend-go` exposes `POST /vault/search` (hybrid vector + keyword), `GET /entries`, and `GET /ws` for WebSocket text ingest. Database: PostgreSQL + pgvector **or** MongoDB (in-memory cosine for vectors).
+- **Semantic search in the main UI:** Opt-in via `VITE_API_URL` / `VITE_GHOSTWRITER_API_URL` and `VITE_GHOSTWRITER_USER_ID` (see `docs/CAPTURE_TO_VAULT.md`).
+
 ## Key Architectural Decisions
 
 ### 1. Component Architecture
+
 - **Atomic Design**: Components organized by complexity (atoms → molecules → organisms)
 - **Composition over Inheritance**: Prefer composition patterns
 - **Separation of Concerns**: UI components separate from business logic
 
 ### 2. State Management
+
 - **React Query**: Server state and caching
 - **Local State**: React hooks for component state
 - **Context API**: Theme and global settings
 
 ### 3. Type Safety
+
 - **Strict TypeScript**: Maximum type safety enabled
 - **Zod**: Runtime type validation
 - **Type Inference**: Leverage TypeScript's inference capabilities
 
 ### 4. Performance
+
 - **Code Splitting**: Route-based code splitting
 - **Lazy Loading**: Dynamic imports for heavy components
 - **Memoization**: Strategic use of React.memo and useMemo
 
 ### 5. Testing Strategy
+
 - **Unit Tests**: Component and utility function tests
 - **Integration Tests**: Feature workflow tests
 - **E2E Tests**: Critical user journeys (planned)
@@ -83,12 +98,14 @@ GhostWriter-/
 ## CI/CD Pipeline
 
 ### Continuous Integration
+
 - Lint and type check on every PR
 - Run test suite
 - Build verification
 - Security scanning
 
 ### Continuous Deployment
+
 - Automated releases on version tags
 - Build artifacts generation
 - Release notes generation
