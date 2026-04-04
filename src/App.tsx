@@ -56,15 +56,8 @@ import {
   getMaxEntries,
   setMaxEntries,
 } from './lib/capture-store'
-
-type CaptureEntry = {
-  id: string
-  sourceApp: string
-  content: string
-  confidence: number
-  tags: string[]
-  capturedAt: string
-}
+import { recognizeImageFile } from './lib/ocr-browser'
+import { isCloudVaultConfigured, searchCloudVault, type CloudVaultSearchHit } from './lib/vault-api'
 
 type PipelineStep = {
   title: string
@@ -77,110 +70,120 @@ type PipelineStep = {
 
 type ServiceStatus = {
   name: string
-  status: 'healthy' | 'degraded' | 'offline'
+  status: 'healthy' | 'degraded' | 'offline' | 'idle'
   detail: string
 }
 
 const pipelineSteps: PipelineStep[] = [
   {
     title: 'Capture Buffer',
-    description: 'MediaProjection frames with delta gating and overlay-first launch.',
-    metric: '2.1% visual delta',
+    description:
+      'Browser uploads and iOS lab use Tesseract; native capture uses platform OCR where wired.',
+    metric: 'Configurable',
     status: 'live',
     icon: '📡',
     color: 'from-emerald-500/20 to-cyan-500/20 border-emerald-500/30',
   },
   {
     title: 'OCR Extraction',
-    description: 'On-device ML Kit recognition with block geometry retention.',
-    metric: '41ms p95',
+    description:
+      'Tesseract.js in the web app with contrast/grayscale preprocessing and line healing.',
+    metric: 'Device-dependent',
     status: 'live',
     icon: '🔍',
     color: 'from-cyan-500/20 to-blue-500/20 border-cyan-500/30',
   },
   {
     title: 'Dedup Gatekeeper',
-    description: 'Levenshtein + SimHash over the last five blocks.',
-    metric: '89% similarity cutoff',
+    description: 'Jaccard token overlap on a sliding window of recent captures (filters panel).',
+    metric: 'Default 85% cutoff',
     status: 'live',
     icon: '🛡️',
     color: 'from-blue-500/20 to-indigo-500/20 border-blue-500/30',
   },
   {
     title: 'Healer Pass',
-    description: 'Local LLM cleanup restores paragraphs and fixes line breaks.',
-    metric: 'Gemma 2B',
+    description: 'Rule-based line-break healing after OCR (hyphen joins, paragraph gaps).',
+    metric: 'On by default',
     status: 'warming',
     icon: '🧠',
     color: 'from-amber-500/20 to-orange-500/20 border-amber-500/30',
   },
   {
     title: 'Vault Sync',
-    description: 'WebSocket stream into pgvector with RRF hybrid search.',
-    metric: '32ms round-trip',
+    description: 'Local vault in this UI; optional Go API + pgvector/Mongo + Redis when deployed.',
+    metric: 'Env-driven',
     status: 'live',
     icon: '🗄️',
     color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30',
   },
 ]
 
-const captureFeed: CaptureEntry[] = [
-  {
-    id: 'cap-1',
-    sourceApp: 'Chrome',
-    content: 'MediaProjection must start after overlay is visible on Android 15.',
-    confidence: 97,
-    tags: ['portal', 'permissions'],
-    capturedAt: '09:42 AM',
-  },
-  {
-    id: 'cap-2',
-    sourceApp: 'PDF Reader',
-    content: 'Dedup gate ignored 4 repeated paragraphs during slow scroll.',
-    confidence: 94,
-    tags: ['dedupe', 'scroll'],
-    capturedAt: '09:44 AM',
-  },
-  {
-    id: 'cap-3',
-    sourceApp: 'Instagram',
-    content: 'Healer reconstructed the paragraph and removed line breaks.',
-    confidence: 91,
-    tags: ['healer', 'formatting'],
-    capturedAt: '09:45 AM',
-  },
-  {
-    id: 'cap-4',
-    sourceApp: 'Docs',
-    content: 'Portal captured block geometry for layout-aware syncing.',
-    confidence: 96,
-    tags: ['layout', 'blocks'],
-    capturedAt: '09:47 AM',
-  },
-  {
-    id: 'cap-5',
-    sourceApp: 'News',
-    content: 'Vault indexed the entry with vector embeddings in 28ms.',
-    confidence: 93,
-    tags: ['vault', 'pgvector'],
-    capturedAt: '09:49 AM',
-  },
-]
+function buildVaultStats(
+  entryCount: number,
+  maxEntries: number
+): Array<{
+  label: string
+  value: string
+  detail: string
+  color: string
+}> {
+  const pct = maxEntries > 0 ? Math.round((entryCount / maxEntries) * 100) : 0
+  return [
+    {
+      label: 'Local entries',
+      value: entryCount.toLocaleString(),
+      detail: `cap at ${maxEntries.toLocaleString()}`,
+      color: 'text-emerald-400',
+    },
+    {
+      label: 'Storage use',
+      value: `${pct}%`,
+      detail: 'localStorage capture log',
+      color: 'text-cyan-400',
+    },
+    {
+      label: 'Cloud vault',
+      value: isCloudVaultConfigured() ? 'Linked' : 'Not linked',
+      detail: isCloudVaultConfigured()
+        ? 'Semantic search uses your API'
+        : 'Set VITE_API_URL + VITE_GHOSTWRITER_USER_ID',
+      color: isCloudVaultConfigured() ? 'text-purple-400' : 'text-muted-foreground',
+    },
+    {
+      label: 'Embeddings',
+      value: isCloudVaultConfigured() ? 'Server-side' : 'N/A',
+      detail: 'OpenAI on the Go API when deployed',
+      color: 'text-amber-400',
+    },
+  ]
+}
 
-
-const vaultStats = [
-  { label: 'Vault Entries', value: '128,440', detail: '+1,482 today', color: 'text-emerald-400' },
-  { label: 'Dedup Rate', value: '92.4%', detail: 'scroll-safe', color: 'text-cyan-400' },
-  { label: 'OCR Latency', value: '41ms', detail: 'p95 on-device', color: 'text-purple-400' },
-  { label: 'Sync Lag', value: '28ms', detail: 'websocket', color: 'text-amber-400' },
-]
-
-const serviceHealth: ServiceStatus[] = [
-  { name: 'ghost-api', status: 'healthy', detail: 'p95 33ms' },
-  { name: 'vault-db', status: 'healthy', detail: 'pgvector hnsw ready' },
-  { name: 'ghost-stream', status: 'healthy', detail: 'redis fanout ok' },
-  { name: 'embedding', status: 'degraded', detail: 'fallback to keywords' },
-]
+function buildServiceHealth(): ServiceStatus[] {
+  const api = isCloudVaultConfigured()
+  return [
+    {
+      name: 'ghost-api',
+      status: api ? 'healthy' : 'offline',
+      detail: api ? 'Search endpoint configured' : 'Not configured for this build',
+    },
+    {
+      name: 'vault-db',
+      status: api ? 'healthy' : 'idle',
+      detail: api ? 'PostgreSQL or MongoDB (server)' : 'Local vault only in browser',
+    },
+    {
+      name: 'ghost-stream',
+      status: api ? 'healthy' : 'idle',
+      detail: api ? 'Redis pub/sub when server runs' : 'WebSocket ingest is server-only',
+    },
+    {
+      name: 'embedding',
+      status: api ? 'healthy' : 'offline',
+      detail: api ? 'text-embedding-3-small (512d)' : 'Set API URL + user id to enable',
+    },
+  ]
+}
 
 const captureModes = [
   { key: 'quality', label: 'Quality', fps: 3, delta: '1.5%', icon: '🎯' },
@@ -188,9 +191,11 @@ const captureModes = [
   { key: 'turbo', label: 'Turbo', fps: 10, delta: '3.5%', icon: '⚡' },
 ]
 
-
 function StorageBar({ captureCount }: { captureCount: number }) {
-  const stats = useMemo(() => getStorageStats(), [captureCount])
+  const stats = useMemo(() => {
+    void captureCount
+    return getStorageStats()
+  }, [captureCount])
   const [showSettings, setShowSettings] = useState(false)
   const [maxInput, setMaxInput] = useState(String(getMaxEntries()))
 
@@ -390,6 +395,10 @@ function App() {
   const [ghostPulse, setGhostPulse] = useState<GhostPulseState>('idle')
   const [isDragOver, setIsDragOver] = useState(false)
   const [devActiveTab, setDevActiveTab] = useState('pipeline')
+  const [ocrBusy, setOcrBusy] = useState(false)
+  const [cloudSearchBusy, setCloudSearchBusy] = useState(false)
+  const [cloudHits, setCloudHits] = useState<CloudVaultSearchHit[]>([])
+  const [cloudSearchError, setCloudSearchError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
 
@@ -423,6 +432,12 @@ function App() {
   // Live capture log — shared with popout portal via BroadcastChannel
   const captureLog = useCaptureLog()
 
+  const vaultStatsSnapshot = useMemo(
+    () => buildVaultStats(captureLog.length, getMaxEntries()),
+    [captureLog.length]
+  )
+  const serviceHealthSnapshot = useMemo(() => buildServiceHealth(), [])
+
   // Update ghost pulse when new capture arrives — briefly glows green, then returns to active/idle
   const prevCaptureCount = useRef(captureLog.length)
   useEffect((): void | (() => void) => {
@@ -451,21 +466,17 @@ function App() {
     return () => stopDemoCapture()
   }, [portalActive])
 
-  // Search filters both static demo data and live capture log
+  // Local vault search (substring match on content, source, tags)
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    // Merge live captures + static feed, newest first
-    const allEntries = [
-      ...captureLog.map(e => ({
-        id: e.id,
-        sourceApp: e.sourceApp,
-        content: e.content,
-        confidence: e.confidence,
-        tags: e.tags,
-        capturedAt: e.capturedAt,
-      })),
-      ...captureFeed,
-    ]
+    const allEntries = captureLog.map(e => ({
+      id: e.id,
+      sourceApp: e.sourceApp,
+      content: e.content,
+      confidence: e.confidence,
+      tags: e.tags,
+      capturedAt: e.capturedAt,
+    }))
     if (!query) return allEntries
     return allEntries.filter(
       entry =>
@@ -474,6 +485,40 @@ function App() {
         entry.tags.some(tag => tag.toLowerCase().includes(query))
     )
   }, [searchQuery, captureLog])
+
+  const cloudSearchGen = useRef(0)
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (!isCloudVaultConfigured() || !q) {
+      setCloudHits([])
+      setCloudSearchError(null)
+      setCloudSearchBusy(false)
+      return
+    }
+    const gen = ++cloudSearchGen.current
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setCloudSearchBusy(true)
+        setCloudSearchError(null)
+        try {
+          const hits = await searchCloudVault(q)
+          if (gen === cloudSearchGen.current) {
+            setCloudHits(hits)
+          }
+        } catch (err) {
+          if (gen === cloudSearchGen.current) {
+            setCloudHits([])
+            setCloudSearchError(err instanceof Error ? err.message : 'Cloud search failed')
+          }
+        } finally {
+          if (gen === cloudSearchGen.current) {
+            setCloudSearchBusy(false)
+          }
+        }
+      })()
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const selectedCaptureMode =
     captureModes.find(mode => mode.key === captureMode) ?? captureModes[1]!
@@ -497,8 +542,41 @@ function App() {
       toast.error('Please drop an image or video file.')
       return
     }
-    toast.success(`Processing: ${file.name}`)
-    addCaptureEntry(`[File uploaded: ${file.name}]`, { sourceApp: 'Upload' })
+    if (file.type.startsWith('video/')) {
+      toast.message('Video OCR runs in the iOS Upload lab', {
+        description:
+          'Open Dev → iOS Upload, drop your clip there for frame sampling and stitching. This drop zone is optimized for screenshots.',
+      })
+      return
+    }
+
+    void (async () => {
+      setOcrBusy(true)
+      toast.message(`Reading text from ${file.name}…`, { duration: 4000 })
+      try {
+        const { text, confidence } = await recognizeImageFile(file)
+        if (!text.trim()) {
+          toast.error(
+            'No text found in that image. Try a clearer screenshot or the iOS Upload lab.'
+          )
+          return
+        }
+        const confPct =
+          confidence != null && Number.isFinite(confidence)
+            ? Math.round(Math.min(100, confidence))
+            : 85
+        addCaptureEntry(text, {
+          sourceApp: 'Screenshot',
+          confidence: confPct,
+          tags: ['ocr', file.name.slice(0, 40)],
+        })
+        toast.success('Screenshot text added to your vault')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'OCR failed for this file.')
+      } finally {
+        setOcrBusy(false)
+      }
+    })()
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -538,21 +616,21 @@ function App() {
                 </div>
                 {[
                   {
-                    label: 'Frame delta gate',
-                    value: '2.1%',
-                    progress: 72,
+                    label: 'Demo capture interval',
+                    value: portalActive ? '~3–5s' : 'off',
+                    progress: portalActive ? 45 : 0,
                     color: 'text-emerald-400',
                   },
                   {
-                    label: 'OCR queue',
-                    value: '1.2 frames',
-                    progress: 38,
+                    label: 'Local vault entries',
+                    value: String(captureLog.length),
+                    progress: Math.min(100, captureLog.length > 0 ? 30 : 5),
                     color: 'text-cyan-400',
                   },
                   {
-                    label: 'Dedup hit rate',
-                    value: '92%',
-                    progress: 92,
+                    label: 'Cloud vault search',
+                    value: isCloudVaultConfigured() ? 'enabled' : 'not configured',
+                    progress: isCloudVaultConfigured() ? 80 : 12,
                     color: 'text-purple-400',
                   },
                 ].map(item => (
@@ -566,7 +644,7 @@ function App() {
                 ))}
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-purple-500/5 border border-purple-500/15 rounded-lg p-2">
                   <Sparkle size={12} className="text-purple-400" weight="fill" />
-                  Healer batch runs every 10 seconds.
+                  Line-break healing runs on OCR output (shared with iOS Upload lab).
                 </div>
               </CardContent>
             </Card>
@@ -594,7 +672,7 @@ function App() {
                   <h3 className="font-semibold text-sm">Vault Snapshot</h3>
                 </div>
                 <div className="grid gap-2 grid-cols-2">
-                  {vaultStats.map(stat => (
+                  {vaultStatsSnapshot.map(stat => (
                     <div
                       key={stat.label}
                       className="rounded-xl border border-border/50 bg-card/50 p-3 space-y-1"
@@ -627,9 +705,12 @@ function App() {
                     <PuzzlePiece size={24} weight="fill" className="text-cyan-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm sm:text-base">Get the Browser Extension</h3>
+                    <h3 className="font-semibold text-sm sm:text-base">
+                      Get the Browser Extension
+                    </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                      Capture without focus switching. Portal stays in a side panel while you scroll the page – no more clicking back and forth.
+                      Capture without focus switching. Portal stays in a side panel while you scroll
+                      the page – no more clicking back and forth.
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
                       <Button
@@ -673,7 +754,9 @@ function App() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <h3 className="font-semibold text-sm">Portal Controls</h3>
-                    <p className="text-xs text-muted-foreground">Overlay-first policy for Android 15+</p>
+                    <p className="text-xs text-muted-foreground">
+                      Overlay-first policy for Android 15+
+                    </p>
                   </div>
                   <Badge
                     variant="secondary"
@@ -779,9 +862,23 @@ function App() {
                   </div>
                   <div className="space-y-2 text-sm">
                     {[
-                      { label: 'Retention Window', value: '30 days encrypted', color: 'text-emerald-400' },
-                      { label: 'Vector Index', value: 'HNSW cosine', color: 'text-cyan-400' },
-                      { label: 'Zero-Knowledge', value: 'No raw frames', color: 'text-purple-400' },
+                      {
+                        label: 'Local vault',
+                        value: 'Browser localStorage',
+                        color: 'text-emerald-400',
+                      },
+                      {
+                        label: 'Server vault',
+                        value: isCloudVaultConfigured()
+                          ? 'pgvector or Mongo + embeddings'
+                          : 'optional (env)',
+                        color: 'text-cyan-400',
+                      },
+                      {
+                        label: 'Sensitive text',
+                        value: 'Filtered in Capture Filters',
+                        color: 'text-purple-400',
+                      },
                     ].map(item => (
                       <div
                         key={item.label}
@@ -793,13 +890,11 @@ function App() {
                     ))}
                   </div>
                   <Separator className="opacity-30" />
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Index build</span>
-                      <span className="text-emerald-400 font-medium">78%</span>
-                    </div>
-                    <Progress value={78} />
-                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Semantic search in the main vault UI calls your API when{' '}
+                    <span className="font-mono text-[10px]">VITE_API_URL</span> and{' '}
+                    <span className="font-mono text-[10px]">VITE_GHOSTWRITER_USER_ID</span> are set.
+                  </p>
                 </CardContent>
               </Card>
 
@@ -811,9 +906,25 @@ function App() {
                   </div>
                   <div className="space-y-2 text-sm">
                     {[
-                      { label: 'WebSocket', value: 'Connected', color: 'text-emerald-400' },
-                      { label: 'Redis Streams', value: '2.1k msgs/sec', color: 'text-cyan-400' },
-                      { label: 'Edge Queue', value: '0 pending', color: 'text-purple-400' },
+                      {
+                        label: 'WebSocket ingest',
+                        value: isCloudVaultConfigured()
+                          ? 'Server /ws (when running)'
+                          : 'Not used by SPA',
+                        color: isCloudVaultConfigured()
+                          ? 'text-emerald-400'
+                          : 'text-muted-foreground',
+                      },
+                      {
+                        label: 'Redis fanout',
+                        value: isCloudVaultConfigured() ? 'backend-go + Redis' : 'N/A',
+                        color: isCloudVaultConfigured() ? 'text-cyan-400' : 'text-muted-foreground',
+                      },
+                      {
+                        label: 'Spark KV queue',
+                        value: 'Separate card sync path',
+                        color: 'text-purple-400',
+                      },
                     ].map(item => (
                       <div
                         key={item.label}
@@ -848,7 +959,7 @@ function App() {
                   <h3 className="font-semibold text-sm">Service Health</h3>
                 </div>
                 <div className="space-y-2">
-                  {serviceHealth.map((service, i) => (
+                  {serviceHealthSnapshot.map((service, i) => (
                     <div
                       key={service.name}
                       className="flex items-center justify-between rounded-xl border border-border/50 bg-card/30 p-3 animate-fade-in-up"
@@ -864,7 +975,9 @@ function App() {
                             ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                             : service.status === 'degraded'
                               ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                              : 'bg-red-500/15 text-red-400 border-red-500/30'
+                              : service.status === 'idle'
+                                ? 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30'
+                                : 'bg-red-500/15 text-red-400 border-red-500/30'
                         }
                       >
                         <span
@@ -873,7 +986,9 @@ function App() {
                               ? 'bg-emerald-400'
                               : service.status === 'degraded'
                                 ? 'bg-amber-400'
-                                : 'bg-red-400'
+                                : service.status === 'idle'
+                                  ? 'bg-zinc-400'
+                                  : 'bg-red-400'
                           }`}
                         />
                         {service.status.toUpperCase()}
@@ -910,9 +1025,18 @@ function App() {
                 </div>
                 <ul className="space-y-2">
                   {[
-                    { text: 'Postgres 17 + pgvector with HNSW indexing for semantic recall.', icon: '🗃️' },
-                    { text: 'Redis Streams fan out updates to every connected portal.', icon: '📡' },
-                    { text: 'Fallback to keyword search if embeddings are unavailable.', icon: '🔍' },
+                    {
+                      text: 'Postgres 17 + pgvector with HNSW indexing for semantic recall.',
+                      icon: '🗃️',
+                    },
+                    {
+                      text: 'Redis Streams fan out updates to every connected portal.',
+                      icon: '📡',
+                    },
+                    {
+                      text: 'Fallback to keyword search if embeddings are unavailable.',
+                      icon: '🔍',
+                    },
                   ].map((item, i) => (
                     <li
                       key={i}
@@ -970,10 +1094,7 @@ function App() {
 
       {/* Developer Drawer (Settings) */}
       <Sheet open={showDevDrawer} onOpenChange={setShowDevDrawer}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-xl overflow-y-auto"
-        >
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader className="pb-4">
             <SheetTitle className="flex items-center gap-2">
               <GearSix size={18} weight="fill" className="text-muted-foreground" />
@@ -1055,7 +1176,6 @@ function App() {
 
         {/* ── Main Content ── */}
         <main className="relative z-10 container mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-10 space-y-6">
-
           {/* Extension CTA – visible on main page */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -1087,24 +1207,29 @@ function App() {
             <div
               role="button"
               tabIndex={0}
-              aria-label="Drop screenshot or recording here or click to browse"
-              className={`rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-3 py-10 px-6 text-center
+              aria-busy={ocrBusy}
+              aria-label="Drop screenshot here or click to browse; use iOS Upload lab for video OCR"
+              className={`rounded-2xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center gap-3 py-10 px-6 text-center
                 ${
-                  isDragOver
-                    ? 'border-primary bg-primary/5 scale-[1.01]'
-                    : 'border-border/50 hover:border-primary/50 hover:bg-muted/20'
+                  ocrBusy
+                    ? 'border-muted cursor-wait opacity-80'
+                    : isDragOver
+                      ? 'border-primary bg-primary/5 scale-[1.01] cursor-pointer'
+                      : 'border-border/50 hover:border-primary/50 hover:bg-muted/20 cursor-pointer'
                 }`}
               onDragOver={e => {
                 e.preventDefault()
-                setIsDragOver(true)
+                if (!ocrBusy) setIsDragOver(true)
               }}
               onDragLeave={() => setIsDragOver(false)}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (!ocrBusy) fileInputRef.current?.click()
+              }}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  fileInputRef.current?.click()
+                  if (!ocrBusy) fileInputRef.current?.click()
                 }
               }}
             >
@@ -1117,14 +1242,20 @@ function App() {
               </div>
               <div>
                 <p className="font-semibold text-sm sm:text-base">
-                  Drop Screenshot / Recording Here
+                  {ocrBusy ? 'Reading text from image…' : 'Drop a screenshot here'}
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                  or{' '}
-                  <span className="underline underline-offset-2 text-primary/80 hover:text-primary">
-                    Browse
-                  </span>{' '}
-                  to select a file
+                  {ocrBusy
+                    ? 'Tesseract runs in your browser; nothing leaves your device until you sync.'
+                    : 'Video? Use Dev → iOS Upload for frame OCR. Or '}
+                  {!ocrBusy && (
+                    <>
+                      <span className="underline underline-offset-2 text-primary/80 hover:text-primary">
+                        browse
+                      </span>{' '}
+                      for an image
+                    </>
+                  )}
                 </p>
               </div>
               <input
@@ -1132,6 +1263,7 @@ function App() {
                 type="file"
                 accept="image/*,video/*"
                 className="sr-only"
+                disabled={ocrBusy}
                 onChange={e => handleDropzoneFiles(e.target.files)}
               />
             </div>
@@ -1144,11 +1276,11 @@ function App() {
                 id="always-on-capture"
               />
               <label htmlFor="always-on-capture" className="flex-1 cursor-pointer">
-                <p className="text-sm font-medium">Always-On Screen Capture</p>
+                <p className="text-sm font-medium">Demo capture stream</p>
                 <p className="text-[11px] text-muted-foreground">
                   {portalActive
-                    ? 'Background portal is actively reading your screen'
-                    : 'Background capture is paused'}
+                    ? 'Adds sample lines to the local vault for UI testing (not real screen OCR in the browser).'
+                    : 'Paused — use screenshots, manual paste, extension, or iOS Upload for real text.'}
                 </p>
               </label>
               {portalActive && (
@@ -1171,7 +1303,11 @@ function App() {
               <Input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search vault by concept, source, or tag…"
+                placeholder={
+                  isCloudVaultConfigured()
+                    ? 'Search local vault + cloud (semantic)…'
+                    : 'Search local vault (text, source, tags)…'
+                }
                 className="pl-9 bg-muted/30 border-border/50 focus:border-primary/50 h-10"
               />
               {searchQuery && (
@@ -1184,6 +1320,62 @@ function App() {
                 </button>
               )}
             </div>
+
+            {isCloudVaultConfigured() && searchQuery.trim() && (
+              <div className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Cloud vault
+                  </p>
+                  {cloudSearchBusy && (
+                    <span className="text-[10px] text-muted-foreground">Searching…</span>
+                  )}
+                </div>
+                {cloudSearchError && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">{cloudSearchError}</p>
+                )}
+                {!cloudSearchBusy && !cloudSearchError && cloudHits.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No server-side matches for this query.
+                  </p>
+                )}
+                {cloudHits.length > 0 && (
+                  <ul className="space-y-2 max-h-48 overflow-y-auto">
+                    {cloudHits.map(hit => (
+                      <li
+                        key={hit.id}
+                        className="rounded-lg border border-border/30 bg-card/40 p-2 text-xs"
+                      >
+                        <div className="flex justify-between gap-2 mb-1">
+                          <Badge variant="outline" className="text-[9px]">
+                            #{hit.id}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {(hit.similarity * 100).toFixed(0)}% match
+                          </span>
+                        </div>
+                        <p className="text-foreground/90 line-clamp-4 leading-relaxed">
+                          {hit.text_content}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-[10px] mt-1 px-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(hit.text_content)
+                            toast.success('Cloud result copied')
+                          }}
+                        >
+                          <Copy size={12} className="mr-1" />
+                          Copy
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {/* Feed header row */}
             <div className="flex items-center justify-between">

@@ -20,6 +20,7 @@ import {
   X,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { applyEnhancements, healOcrText, loadImageToCanvas } from '@/lib/ocr-browser'
 
 type CaptureResult = {
   id: string
@@ -45,8 +46,10 @@ type Segment = {
 const DEDUPE_WINDOW = 8
 const MOTION_SCALE = 8
 /** Max OCR workers for parallel image processing. Keeps speed high without overloading. */
-const OCR_CONCURRENCY = Math.min(6, Math.max(2, (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4) - 1)
-const PARAGRAPH_TOKEN = '__GW_PARA__'
+const OCR_CONCURRENCY = Math.min(
+  6,
+  Math.max(2, (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4) - 1
+)
 const DEFAULT_NOISE_PHRASES = [
   'Regenerate response',
   'Stop generating',
@@ -93,15 +96,6 @@ function splitParagraphs(text: string) {
     .filter(Boolean)
 }
 
-function healText(rawText: string) {
-  if (!rawText) return ''
-  let cleaned = rawText.replace(/-\n(\w)/g, '$1')
-  cleaned = cleaned.replace(/\n\s*\n+/g, PARAGRAPH_TOKEN)
-  cleaned = cleaned.replace(/\n+/g, ' ')
-  cleaned = cleaned.replace(new RegExp(PARAGRAPH_TOKEN, 'g'), '\n\n')
-  return cleaned.trim()
-}
-
 function parsePatternList(value: string) {
   return value
     .split(',')
@@ -142,10 +136,6 @@ function slugify(value: string) {
   if (!trimmed) return 'ghostwriter-vault'
   const cleaned = trimmed.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   return cleaned || 'ghostwriter-vault'
-}
-
-function clampChannel(value: number) {
-  return Math.min(255, Math.max(0, value))
 }
 
 function formatParagraph(paragraph: string, format: OutputFormat) {
@@ -235,117 +225,6 @@ function formatOutput({
   })
 
   return lines.join('\n').trim()
-}
-
-async function loadImageToCanvas(file: File, maxWidth: number) {
-  let bitmap: ImageBitmap
-  try {
-    bitmap = await createImageBitmap(file)
-  } catch (createBitmapError) {
-    // Fallback for HEIC/HEIF or unsupported formats: load via Image + object URL
-    const objectUrl = URL.createObjectURL(file)
-    try {
-      bitmap = await new Promise<ImageBitmap>((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => {
-          createImageBitmap(img).then(resolve).catch(reject)
-        }
-        img.onerror = () =>
-          reject(new Error(`Failed to load image: ${file.name}. Try converting HEIC to PNG/JPEG.`))
-        img.src = objectUrl
-      })
-    } finally {
-      URL.revokeObjectURL(objectUrl)
-    }
-  }
-
-  const scale = Math.min(1, maxWidth / bitmap.width)
-  const width = Math.max(1, Math.floor(bitmap.width * scale))
-  const height = Math.max(1, Math.floor(bitmap.height * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) {
-    bitmap.close?.()
-    throw new Error('Canvas not available for image processing.')
-  }
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close?.()
-  return { canvas, ctx, width, height }
-}
-
-function applyEnhancements(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  {
-    enableEnhance,
-    grayscale,
-    contrast,
-    sharpen,
-  }: {
-    enableEnhance: boolean
-    grayscale: boolean
-    contrast: number
-    sharpen: boolean
-  }
-) {
-  const imageData = ctx.getImageData(0, 0, width, height)
-  const data = imageData.data
-  const boundedContrast = Math.min(100, Math.max(-100, contrast))
-  const factor = (259 * (boundedContrast + 255)) / (255 * (259 - boundedContrast))
-
-  for (let i = 0; i < data.length; i += 4) {
-    let r = data[i]
-    let g = data[i + 1]
-    let b = data[i + 2]
-
-    if (grayscale) {
-      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
-      r = luma
-      g = luma
-      b = luma
-    }
-
-    if (enableEnhance) {
-      r = factor * (r - 128) + 128
-      g = factor * (g - 128) + 128
-      b = factor * (b - 128) + 128
-    }
-
-    data[i] = clampChannel(r)
-    data[i + 1] = clampChannel(g)
-    data[i + 2] = clampChannel(b)
-  }
-
-  ctx.putImageData(imageData, 0, 0)
-
-  if (sharpen) {
-    const sharpData = ctx.getImageData(0, 0, width, height)
-    const d = sharpData.data
-    const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0]
-    const side = 3
-    const half = Math.floor(side / 2)
-    const orig = new Uint8ClampedArray(d)
-
-    for (let y = half; y < height - half; y += 1) {
-      for (let x = half; x < width - half; x += 1) {
-        for (let c = 0; c < 3; c += 1) {
-          let sum = 0
-          for (let ky = -half; ky <= half; ky += 1) {
-            for (let kx = -half; kx <= half; kx += 1) {
-              const idx = ((y + ky) * width + (x + kx)) * 4 + c
-              const kIdx = (ky + half) * side + (kx + half)
-              sum += orig[idx] * kernel[kIdx]
-            }
-          }
-          d[(y * width + x) * 4 + c] = clampChannel(sum)
-        }
-      }
-    }
-    ctx.putImageData(sharpData, 0, 0)
-  }
 }
 
 function sortImageEntries(
@@ -535,7 +414,9 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
     if (added.length > 0) {
       const total = files.length + added.length
       toast.success(
-        total > added.length ? `Added ${added.length} (${total} total)` : `Selected ${added.length} file(s)`
+        total > added.length
+          ? `Added ${added.length} (${total} total)`
+          : `Selected ${added.length} file(s)`
       )
     }
     event.target.value = ''
@@ -568,7 +449,9 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
         addImageFiles(imageFiles, true)
         const total = files.length + imageFiles.length
         toast.success(
-          total > imageFiles.length ? `Added ${imageFiles.length} (${total} total)` : `Added ${imageFiles.length} file(s)`
+          total > imageFiles.length
+            ? `Added ${imageFiles.length} (${total} total)`
+            : `Added ${imageFiles.length} file(s)`
         )
         if (videoFiles.length > 0)
           toast.info('Dropped video ignored. Switch to Screen Recording mode.')
@@ -812,7 +695,7 @@ export function IOSCapture({ showHelp = false, onHelpDismiss }: IOSCaptureProps)
       confidence: number | null,
       capturedAt?: string
     ) => {
-      const cleanedText = lineHealEnabled ? healText(rawText) : rawText.trim()
+      const cleanedText = lineHealEnabled ? healOcrText(rawText) : rawText.trim()
       const paragraphs = splitParagraphs(cleanedText)
       let kept = 0
       let dropped = 0

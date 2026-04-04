@@ -243,11 +243,16 @@ export function applyFilters(
     }
   }
 
-  // 6. Dedup gate
+  // 6. Dedup gate (compare whitespace-normalized forms so line-wrap variants still match)
   if (settings.dedupEnabled) {
+    const normalizedForDedup = normalizeForDedup(cleaned)
     const isDupe = recentTexts
       .slice(0, settings.dedupWindow)
-      .some(recent => jaccardSimilarity(recent, cleaned) >= settings.dedupThreshold)
+      .some(
+        recent =>
+          jaccardSimilarity(normalizeForDedup(recent), normalizedForDedup) >=
+          settings.dedupThreshold
+      )
     if (isDupe) {
       result.text = null
       result.dropReason = 'duplicate'
@@ -265,6 +270,10 @@ export function applyFilters(
 }
 
 // ── Helpers ──────────────────────────────────────────────────
+
+function normalizeForDedup(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, ' ').trim()
+}
 
 function parseLines(text: string): string[] {
   return text
