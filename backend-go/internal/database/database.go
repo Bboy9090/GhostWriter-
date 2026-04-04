@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/models"
 	"github.com/google/uuid"
@@ -155,6 +156,51 @@ func (d *Database) SearchEntries(ctx context.Context, query *models.SearchQuery,
 	}
 
 	return results, nil
+}
+
+// SearchEntriesKeyword finds entries containing the substring (case-insensitive).
+func (d *Database) SearchEntriesKeyword(ctx context.Context, userID uuid.UUID, query string, limit int) ([]models.PortalEntry, error) {
+	q := strings.TrimSpace(query)
+	if q == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	sqlQuery := `
+		SELECT id, user_id, text_content, embedding, created_at
+		FROM portal_entries
+		WHERE user_id = $1 AND position(lower($2) in lower(text_content)) > 0
+		ORDER BY created_at DESC
+		LIMIT $3
+	`
+
+	rows, err := d.db.QueryContext(ctx, sqlQuery, userID, q, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error executing keyword search: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []models.PortalEntry
+	for rows.Next() {
+		var entry models.PortalEntry
+		err := rows.Scan(
+			&entry.ID,
+			&entry.UserID,
+			&entry.TextContent,
+			&entry.Embedding,
+			&entry.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning entry: %w", err)
+		}
+		entries = append(entries, entry)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating keyword results: %w", err)
+	}
+	return entries, nil
 }
 
 // GetEntriesByUserID retrieves entries for a specific user

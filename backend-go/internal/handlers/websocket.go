@@ -17,6 +17,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	wsEmbedMaxAttempts = 3
+	wsInsertMaxAttempts = 4
+	wsRetryBaseDelay    = 400 * time.Millisecond
+)
+
 type Handler struct {
 	db        database.DB
 	redis     *redis.RedisClient
@@ -93,18 +99,25 @@ func (h *Handler) processTextEntry(msg WebSocketMessage) {
 		return
 	}
 
-	// Generate embedding for the text (skip if OPENAI_API_KEY not set)
+	// Generate embedding (retry transient OpenAI errors; continue without vector if all fail)
 	var embedding pgvector.Vector
 	if h.embedding != nil {
 		var embErr error
-		embedding, embErr = h.embedding.GenerateEmbedding(msg.TextContent)
+		for attempt := 1; attempt <= wsEmbedMaxAttempts; attempt++ {
+			embedding, embErr = h.embedding.GenerateEmbedding(msg.TextContent)
+			if embErr == nil {
+				break
+			}
+			log.Printf("Error generating embedding (attempt %d/%d): %v", attempt, wsEmbedMaxAttempts, embErr)
+			if attempt < wsEmbedMaxAttempts {
+				time.Sleep(wsRetryBaseDelay * time.Duration(attempt))
+			}
+		}
 		if embErr != nil {
-			log.Printf("Error generating embedding: %v", embErr)
-			// Continue without embedding
+			log.Printf("Storing entry without embedding after %d failed attempts", wsEmbedMaxAttempts)
 		}
 	}
 
-	// Create portal entry
 	entry := &models.PortalEntry{
 		UserID:      userID,
 		TextContent: msg.TextContent,
@@ -112,9 +125,19 @@ func (h *Handler) processTextEntry(msg WebSocketMessage) {
 		CreatedAt:   time.Now().UTC(),
 	}
 
-	// Insert into database
-	if err := h.db.InsertEntry(ctx, entry); err != nil {
-		log.Printf("Error inserting entry: %v", err)
+	var insertErr error
+	for attempt := 1; attempt <= wsInsertMaxAttempts; attempt++ {
+		insertErr = h.db.InsertEntry(ctx, entry)
+		if insertErr == nil {
+			break
+		}
+		log.Printf("Error inserting entry (attempt %d/%d): %v", attempt, wsInsertMaxAttempts, insertErr)
+		if attempt < wsInsertMaxAttempts {
+			time.Sleep(wsRetryBaseDelay * time.Duration(attempt))
+		}
+	}
+	if insertErr != nil {
+		log.Printf("Failed to insert entry after %d attempts", wsInsertMaxAttempts)
 		return
 	}
 

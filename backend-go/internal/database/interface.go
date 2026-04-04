@@ -13,6 +13,8 @@ type DB interface {
 	InitSchema(ctx context.Context) error
 	InsertEntry(ctx context.Context, entry *models.PortalEntry) error
 	SearchEntries(ctx context.Context, query *models.SearchQuery, queryEmbedding pgvector.Vector) ([]models.SearchResult, error)
+	// SearchEntriesKeyword returns recent entries whose text contains the query (case-insensitive).
+	SearchEntriesKeyword(ctx context.Context, userID uuid.UUID, query string, limit int) ([]models.PortalEntry, error)
 	GetEntriesByUserID(ctx context.Context, userID uuid.UUID, limit int) ([]models.PortalEntry, error)
 	Close() error
 }

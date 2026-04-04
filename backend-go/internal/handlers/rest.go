@@ -47,23 +47,41 @@ func (h *Handler) SearchVault(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate embedding for search query
-	queryEmbedding, err := h.embedding.GenerateEmbedding(searchQuery.Query)
-	if err != nil {
-		log.Printf("Error generating query embedding: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error processing search query",
-		})
+	limit := searchQuery.Limit
+	if limit <= 0 {
+		limit = 10
 	}
 
-	// Perform similarity search
-	results, err := h.db.SearchEntries(c.Context(), &searchQuery, queryEmbedding)
+	var vecResults []models.SearchResult
+
+	if h.embedding != nil {
+		queryEmbedding, err := h.embedding.GenerateEmbedding(searchQuery.Query)
+		if err != nil {
+			log.Printf("Error generating query embedding (falling back to keyword search): %v", err)
+		} else {
+			vecResults, err = h.db.SearchEntries(c.Context(), &searchQuery, queryEmbedding)
+			if err != nil {
+				log.Printf("Error in vector search (falling back to keyword): %v", err)
+				vecResults = nil
+			}
+		}
+	} else {
+		log.Printf("Embedding service disabled: vector leg of search skipped for query %q", searchQuery.Query)
+	}
+
+	kwLimit := limit * 3
+	if kwLimit < 20 {
+		kwLimit = 20
+	}
+	kwEntries, err := h.db.SearchEntriesKeyword(c.Context(), searchQuery.UserID, searchQuery.Query, kwLimit)
 	if err != nil {
-		log.Printf("Error searching entries: %v", err)
+		log.Printf("Error keyword searching entries: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Error performing search",
 		})
 	}
+
+	results := mergeVectorAndKeyword(vecResults, kwEntries, searchQuery.Query, limit)
 
 	return c.JSON(fiber.Map{
 		"results": results,

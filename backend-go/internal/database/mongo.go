@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/models"
@@ -245,6 +246,58 @@ func (m *MongoDatabase) SearchEntries(ctx context.Context, query *models.SearchQ
 		results[i] = scored[i].result
 	}
 	return results, nil
+}
+
+// SearchEntriesKeyword returns recent entries whose text contains the query (case-insensitive).
+func (m *MongoDatabase) SearchEntriesKeyword(ctx context.Context, userID uuid.UUID, query string, limit int) ([]models.PortalEntry, error) {
+	q := strings.TrimSpace(strings.ToLower(query))
+	if q == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	filter := bson.M{
+		"user_id": userID.String(),
+		"text_content": bson.M{
+			"$regex":   q,
+			"$options": "i",
+		},
+	}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(int64(limit))
+
+	cursor, err := m.db.Collection(mongoCollection).Find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error keyword searching MongoDB: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var entries []models.PortalEntry
+	for cursor.Next(ctx) {
+		var doc mongoEntry
+		if err := cursor.Decode(&doc); err != nil {
+			return nil, fmt.Errorf("error decoding MongoDB entry: %w", err)
+		}
+		uid, err := uuid.Parse(doc.UserID)
+		if err != nil {
+			log.Printf("warning: skipping entry with invalid user_id %q: %v", doc.UserID, err)
+			continue
+		}
+		entries = append(entries, models.PortalEntry{
+			ID:          int(doc.SeqID),
+			UserID:      uid,
+			TextContent: doc.TextContent,
+			Embedding:   pgvector.NewVector(doc.Embedding),
+			CreatedAt:   doc.CreatedAt,
+		})
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating MongoDB keyword results: %w", err)
+	}
+	return entries, nil
 }
 
 // GetEntriesByUserID retrieves the most recent entries for a user.

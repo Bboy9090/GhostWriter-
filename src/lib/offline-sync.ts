@@ -1,6 +1,6 @@
 import type { Card, UsageEntry } from './types'
 
-export type SyncOperation = 
+export type SyncOperation =
   | { type: 'SAVE_CARDS'; data: Card[]; timestamp: number; id: string }
   | { type: 'SAVE_USAGE'; data: UsageEntry[]; timestamp: number; id: string }
 
@@ -21,6 +21,8 @@ export interface SyncProgress {
 const SYNC_QUEUE_KEY = 'cardCommandCenter.syncQueue'
 const BATCH_SIZE = 1
 const BATCH_DELAY_MS = 500
+const SPARK_KV_MAX_ATTEMPTS = 4
+const SPARK_KV_BASE_DELAY_MS = 500
 
 declare global {
   interface Window {
@@ -46,7 +48,7 @@ export class OfflineSyncManager {
     totalOperations: 0,
     currentOperationType: '',
     isPaused: false,
-    isProcessing: false
+    isProcessing: false,
   }
   private listeners: Set<(isOnline: boolean) => void> = new Set()
   private syncListeners: Set<(success: boolean) => void> = new Set()
@@ -112,22 +114,20 @@ export class OfflineSyncManager {
 
   async addToQueue(operation: Omit<SyncOperation, 'id'>): Promise<void> {
     const queue = await this.loadQueue()
-    
+
     const operationWithId = {
       ...operation,
-      id: `${operation.type}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+      id: `${operation.type}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     } as SyncOperation
-    
-    const existingIndex = queue.operations.findIndex(
-      op => op.type === operation.type
-    )
-    
+
+    const existingIndex = queue.operations.findIndex(op => op.type === operation.type)
+
     if (existingIndex !== -1) {
       queue.operations[existingIndex] = operationWithId
     } else {
       queue.operations.push(operationWithId)
     }
-    
+
     await this.saveQueue(queue)
     this.updateProgress()
   }
@@ -148,7 +148,7 @@ export class OfflineSyncManager {
     await this.saveQueue(queue)
     this.currentProgress.isPaused = false
     this.notifyProgressListeners()
-    
+
     if (this.isOnline && !this.syncInProgress) {
       await this.processSyncQueue()
     }
@@ -190,7 +190,7 @@ export class OfflineSyncManager {
 
     try {
       const operations = [...queue.operations]
-      
+
       for (let i = 0; i < operations.length; i++) {
         if (this.isPaused) {
           this.syncInProgress = false
@@ -205,7 +205,7 @@ export class OfflineSyncManager {
         this.notifyProgressListeners()
 
         await this.executeOperation(operation)
-        
+
         queue.operations = queue.operations.filter(op => op.id !== operation.id)
         await this.saveQueue(queue)
 
@@ -216,7 +216,7 @@ export class OfflineSyncManager {
 
       queue.lastProcessedTime = Date.now()
       await this.saveQueue(queue)
-      
+
       this.currentProgress.currentOperation = 0
       this.currentProgress.totalOperations = 0
       this.currentProgress.currentOperationType = ''
@@ -243,14 +243,30 @@ export class OfflineSyncManager {
     }
   }
 
+  private async sparkKvSetWithRetry<T>(key: string, value: T): Promise<void> {
+    let lastErr: unknown
+    for (let attempt = 1; attempt <= SPARK_KV_MAX_ATTEMPTS; attempt++) {
+      try {
+        await spark.kv.set(key, value)
+        return
+      } catch (e) {
+        lastErr = e
+        if (attempt < SPARK_KV_MAX_ATTEMPTS) {
+          await new Promise(r => setTimeout(r, SPARK_KV_BASE_DELAY_MS * Math.pow(2, attempt - 1)))
+        }
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error('Spark KV sync failed')
+  }
+
   private async executeOperation(operation: SyncOperation): Promise<void> {
     switch (operation.type) {
       case 'SAVE_CARDS':
-        await spark.kv.set('cardCommandCenter.cards', operation.data)
+        await this.sparkKvSetWithRetry('cardCommandCenter.cards', operation.data)
         localStorage.removeItem('cardCommandCenter.cards')
         break
       case 'SAVE_USAGE':
-        await spark.kv.set('cardCommandCenter.usage', operation.data)
+        await this.sparkKvSetWithRetry('cardCommandCenter.usage', operation.data)
         localStorage.removeItem('cardCommandCenter.usage')
         break
     }
