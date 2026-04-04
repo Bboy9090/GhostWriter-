@@ -47,8 +47,6 @@ import { useIsMobile } from './hooks/use-mobile'
 import { usePopoutPortal } from './hooks/use-popout-portal'
 import { useCaptureLog } from './hooks/use-capture-log'
 import {
-  startDemoCapture,
-  stopDemoCapture,
   clearCaptureEntries,
   addCaptureEntry,
   getStorageStats,
@@ -184,12 +182,6 @@ function buildServiceHealth(): ServiceStatus[] {
     },
   ]
 }
-
-const captureModes = [
-  { key: 'quality', label: 'Quality', fps: 3, delta: '1.5%', icon: '🎯' },
-  { key: 'balanced', label: 'Balanced', fps: 5, delta: '2.0%', icon: '⚖️' },
-  { key: 'turbo', label: 'Turbo', fps: 10, delta: '3.5%', icon: '⚡' },
-]
 
 function StorageBar({ captureCount }: { captureCount: number }) {
   const stats = useMemo(() => {
@@ -382,12 +374,9 @@ function GhostPulseIndicator({ state }: { state: GhostPulseState }) {
 
 function App() {
   const [showCaptureHelp, setShowCaptureHelp] = useState(false)
-  const [portalActive, setPortalActive] = useState(true)
+  /** Floating portal widget emphasis only (not screen capture — web app has no OS capture). */
+  const [portalWidgetActive, setPortalWidgetActive] = useState(true)
   const [vaultUnlocked, setVaultUnlocked] = useState(true)
-  const [stealthMode, setStealthMode] = useState(true)
-  const [dedupeGuard, setDedupeGuard] = useState(true)
-  const [healerEnabled, setHealerEnabled] = useState(true)
-  const [captureMode, setCaptureMode] = useState('balanced')
   const [searchQuery, setSearchQuery] = useState('')
   const [showDevDrawer, setShowDevDrawer] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -402,11 +391,9 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
 
-  const selectedCaptureModeObj = captureModes.find(m => m.key === captureMode)
-
   // Popout portal hook - allows the portal to float over other windows/apps
   const handlePopoutToggle = useCallback(() => {
-    setPortalActive(prev => !prev)
+    setPortalWidgetActive(prev => !prev)
   }, [])
   const handlePopoutOpenVault = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -417,12 +404,8 @@ function App() {
 
   const { isPoppedOut, popOut, popIn } = usePopoutPortal({
     state: {
-      isActive: portalActive,
+      isActive: portalWidgetActive,
       vaultUnlocked,
-      stealthMode,
-      healerEnabled,
-      captureMode,
-      captureFps: selectedCaptureModeObj?.fps ?? 5,
     },
     onToggle: handlePopoutToggle,
     onOpenVault: handlePopoutOpenVault,
@@ -438,33 +421,15 @@ function App() {
   )
   const serviceHealthSnapshot = useMemo(() => buildServiceHealth(), [])
 
-  // Update ghost pulse when new capture arrives — briefly glows green, then returns to active/idle
   const prevCaptureCount = useRef(captureLog.length)
   useEffect((): void | (() => void) => {
     if (captureLog.length > prevCaptureCount.current) {
       queueMicrotask(() => setGhostPulse('saved'))
-      const savedTimer = setTimeout(() => {
-        setGhostPulse(portalActive ? 'active' : 'idle')
-      }, 1500)
+      const savedTimer = setTimeout(() => setGhostPulse('idle'), 1500)
       prevCaptureCount.current = captureLog.length
       return () => clearTimeout(savedTimer)
     }
-  }, [captureLog.length, portalActive])
-
-  // Update pulse state when portal active state changes
-  useEffect(() => {
-    queueMicrotask(() => setGhostPulse(portalActive ? 'active' : 'idle'))
-  }, [portalActive])
-
-  // Start/stop demo capture when portal is toggled
-  useEffect(() => {
-    if (portalActive) {
-      startDemoCapture()
-    } else {
-      stopDemoCapture()
-    }
-    return () => stopDemoCapture()
-  }, [portalActive])
+  }, [captureLog.length])
 
   // Local vault search (substring match on content, source, tags)
   const filteredEntries = useMemo(() => {
@@ -520,18 +485,8 @@ function App() {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  const selectedCaptureMode =
-    captureModes.find(mode => mode.key === captureMode) ?? captureModes[1]!
-
-  const selectedFps = selectedCaptureMode?.fps ?? 5
-  const selectedDelta = selectedCaptureMode?.delta ?? '2.0%'
-  const selectedKey = selectedCaptureMode?.key ?? 'balanced'
-
   const handlePortalToggle = (active: boolean) => {
-    setPortalActive(active)
-    toast.success(
-      active ? '👻 Portal opened. Streaming live frames.' : 'Portal closed. Capture paused.'
-    )
+    setPortalWidgetActive(active)
   }
 
   const handleDropzoneFiles = (files: FileList | null) => {
@@ -606,26 +561,14 @@ function App() {
             <Card className="card-neon overflow-hidden border-cyan-500/15">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Portal Telemetry</h3>
-                  <Badge
-                    variant="secondary"
-                    className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px]"
-                  >
-                    {selectedFps} FPS
-                  </Badge>
+                  <h3 className="font-semibold text-sm">Vault status</h3>
                 </div>
                 {[
                   {
-                    label: 'Demo capture interval',
-                    value: portalActive ? '~3–5s' : 'off',
-                    progress: portalActive ? 45 : 0,
-                    color: 'text-emerald-400',
-                  },
-                  {
                     label: 'Local vault entries',
                     value: String(captureLog.length),
-                    progress: Math.min(100, captureLog.length > 0 ? 30 : 5),
-                    color: 'text-cyan-400',
+                    progress: Math.min(100, Math.max(5, captureLog.length)),
+                    color: 'text-emerald-400',
                   },
                   {
                     label: 'Cloud vault search',
@@ -751,98 +694,24 @@ function App() {
             </Card>
             <Card className="card-neon border-emerald-500/15 overflow-hidden">
               <CardContent className="p-4 space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">Portal Controls</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Overlay-first policy for Android 15+
-                    </p>
-                  </div>
-                  <Badge
-                    variant="secondary"
-                    className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]"
-                  >
-                    MediaProjection
-                  </Badge>
-                </div>
-                <div className="grid gap-3 grid-cols-1">
-                  {[
-                    {
-                      label: 'Stealth Mode',
-                      desc: 'Hide notifications',
-                      checked: stealthMode,
-                      onChange: setStealthMode,
-                      color: 'border-amber-500/20',
-                    },
-                    {
-                      label: 'Dedup Guard',
-                      desc: 'Similarity gate',
-                      checked: dedupeGuard,
-                      onChange: setDedupeGuard,
-                      color: 'border-cyan-500/20',
-                    },
-                    {
-                      label: 'Healer Pass',
-                      desc: 'Local LLM cleanup',
-                      checked: healerEnabled,
-                      onChange: setHealerEnabled,
-                      color: 'border-purple-500/20',
-                    },
-                  ].map(toggle => (
-                    <div
-                      key={toggle.label}
-                      className={`flex items-center justify-between rounded-xl border ${toggle.color} bg-card/50 p-3`}
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{toggle.label}</p>
-                        <p className="text-[10px] text-muted-foreground">{toggle.desc}</p>
-                      </div>
-                      <Switch checked={toggle.checked} onCheckedChange={toggle.onChange} />
-                    </div>
-                  ))}
-                </div>
                 <div>
-                  <p className="text-sm font-medium mb-2">Capture Mode</p>
-                  <div className="flex flex-wrap gap-2">
-                    {captureModes.map(mode => (
-                      <Button
-                        key={mode.key}
-                        variant={captureMode === mode.key ? 'default' : 'outline'}
-                        onClick={() => setCaptureMode(mode.key)}
-                        size="sm"
-                      >
-                        <span className="mr-1">{mode.icon}</span>
-                        {mode.label} ({mode.fps} FPS)
-                      </Button>
-                    ))}
-                  </div>
+                  <h3 className="font-semibold text-sm">Portal (this web app)</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The floating widget only changes appearance. Real text comes from paste,
+                    screenshot OCR on the main page, the browser extension, or the iOS Upload lab
+                    below. Native screen capture belongs in the mobile app or OS integration, not
+                    here.
+                  </p>
                 </div>
                 <Separator className="opacity-30" />
-                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Overlay Status
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Floating portal ready for tap-to-stream.
-                    </p>
-                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                      Active
-                    </Badge>
-                  </div>
-                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-cyan-500" />
-                      Capture Notes
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Average output: {selectedFps} FPS, delta gate {selectedDelta}.
-                    </p>
-                    <Badge variant="outline" className="border-cyan-500/30 text-cyan-400">
-                      Rotation locked
-                    </Badge>
-                  </div>
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3 text-xs text-muted-foreground space-y-2">
+                  <p>
+                    <span className="font-medium text-foreground">
+                      Noise, dedup, sensitive text:
+                    </span>{' '}
+                    adjust in Capture Filters on this tab — those settings are real and persist in
+                    the browser.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -1009,11 +878,9 @@ function App() {
                   $ docker-compose up -d
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Grant overlay + media projection permissions on-device.
+                  For device screen capture, use the GhostWriter mobile app or platform-specific
+                  tooling; this SPA does not access MediaProjection or desktop capture APIs.
                 </p>
-                <div className="rounded-xl border border-border/50 bg-muted/30 p-3 font-mono text-xs text-cyan-400">
-                  $ ./ghostwriter portal --mode {selectedKey}
-                </div>
               </CardContent>
             </Card>
 
@@ -1082,7 +949,7 @@ function App() {
 
       {/* Floating Portal - can be popped out onto other windows */}
       <FloatingPortal
-        isActive={portalActive}
+        isActive={portalWidgetActive}
         onToggle={handlePortalToggle}
         onOpenVault={() => {
           window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1271,22 +1138,22 @@ function App() {
             {/* Always-On Screen Capture toggle */}
             <div className="flex items-center gap-3 px-1 py-2 rounded-xl border border-border/30 bg-card/30">
               <Switch
-                checked={portalActive}
+                checked={portalWidgetActive}
                 onCheckedChange={handlePortalToggle}
-                id="always-on-capture"
+                id="floating-portal-widget"
               />
-              <label htmlFor="always-on-capture" className="flex-1 cursor-pointer">
-                <p className="text-sm font-medium">Demo capture stream</p>
+              <label htmlFor="floating-portal-widget" className="flex-1 cursor-pointer">
+                <p className="text-sm font-medium">Floating portal widget</p>
                 <p className="text-[11px] text-muted-foreground">
-                  {portalActive
-                    ? 'Adds sample lines to the local vault for UI testing (not real screen OCR in the browser).'
-                    : 'Paused — use screenshots, manual paste, extension, or iOS Upload for real text.'}
+                  {portalWidgetActive
+                    ? 'Shows the draggable portal control. This does not capture your screen in the browser.'
+                    : 'Widget minimized to inactive styling. Add text via paste, screenshot drop, extension, or iOS Upload.'}
                 </p>
               </label>
-              {portalActive && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live
+              {portalWidgetActive && (
+                <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                  On
                 </span>
               )}
             </div>
@@ -1422,9 +1289,7 @@ function App() {
                   <p className="text-sm text-muted-foreground">
                     {searchQuery
                       ? 'No matches found. Try a different search term.'
-                      : portalActive
-                        ? 'Listening for text… entries will appear here in real-time.'
-                        : 'Enable Always-On Capture or drop a file above to start.'}
+                      : 'Drop a screenshot, paste text below, or use the extension / iOS Upload lab.'}
                   </p>
                 </div>
               ) : (

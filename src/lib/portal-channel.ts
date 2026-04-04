@@ -19,10 +19,6 @@ export type PortalMessage =
 export interface PortalState {
   isActive: boolean
   vaultUnlocked: boolean
-  stealthMode: boolean
-  healerEnabled: boolean
-  captureMode: string
-  captureFps: number
 }
 
 const CHANNEL_NAME = 'ghostwriter-portal'

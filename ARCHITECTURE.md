@@ -54,6 +54,7 @@ GhostWriter-/
 - **Screenshot OCR (web):** Tesseract.js via `src/lib/ocr-browser.ts` when users drop an image on the main dropzone; video OCR belongs in **Dev → iOS Upload**.
 - **Server vault (optional):** `backend-go` exposes `POST /vault/search` (hybrid vector + keyword), `GET /entries`, and `GET /ws` for WebSocket text ingest. Database: PostgreSQL + pgvector **or** MongoDB (in-memory cosine for vectors).
 - **Semantic search in the main UI:** Opt-in via `VITE_API_URL` / `VITE_GHOSTWRITER_API_URL` and `VITE_GHOSTWRITER_USER_ID` (see `docs/CAPTURE_TO_VAULT.md`).
+- **No simulated ingest:** The web app does not inject sample captures; the floating portal is a UI control only until extension or native clients feed real text.
 
 ## Key Architectural Decisions
 

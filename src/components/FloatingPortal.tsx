@@ -88,10 +88,7 @@ export function FloatingPortal({
       }
       const next = !isActive
       onToggle(next)
-      toast.success(
-        next ? '👻 Portal opened — streaming live frames' : 'Portal closed — capture paused',
-        { duration: 1500 }
-      )
+      toast.success(next ? 'Portal widget active' : 'Portal widget inactive', { duration: 1500 })
     },
     [isActive, onToggle]
   )
@@ -455,7 +452,11 @@ export function FloatingPortal({
               handleToggle(e)
             }}
             role="button"
-            aria-label={isActive ? 'Click to pause capture' : 'Click to start capture'}
+            aria-label={
+              isActive
+                ? 'Click to turn off portal widget emphasis'
+                : 'Click to turn on portal widget emphasis'
+            }
             tabIndex={0}
           >
             {/* Wormhole pulsing ring */}
@@ -539,11 +540,9 @@ export function FloatingPortal({
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={8} className="max-w-xs">
           <div className="space-y-1.5">
-            <p className="font-semibold text-xs">
-              {isActive ? 'Portal Active' : 'Portal Inactive'}
-            </p>
+            <p className="font-semibold text-xs">{isActive ? 'Widget on' : 'Widget off'}</p>
             <p className="text-xs text-primary-foreground/80">
-              {isActive ? 'Click to pause text capture' : 'Click to start capturing text'}
+              {isActive ? 'Visual emphasis on' : 'Visual emphasis off — add text from the main app'}
             </p>
             {!isMobile && (
               <div className="pt-1.5 border-t border-primary-foreground/10 space-y-1">

@@ -189,7 +189,7 @@ export function addCaptureEntry(
     id: generateId(),
     sourceApp,
     content: finalContent,
-    confidence: options?.confidence ?? Math.round(85 + Math.random() * 14),
+    confidence: options?.confidence ?? 90,
     tags: allTags,
     capturedAt: formatTime(new Date()),
     timestamp: Date.now(),
@@ -295,7 +295,8 @@ export function exportCaptureText(): string {
   const entries = loadEntries()
   return entries
     .map(entry => {
-      const rolePrefix = entry.role === 'user' ? '[You] ' : entry.role === 'assistant' ? '[AI] ' : ''
+      const rolePrefix =
+        entry.role === 'user' ? '[You] ' : entry.role === 'assistant' ? '[AI] ' : ''
       return `[${entry.capturedAt}] ${entry.sourceApp}\n${rolePrefix}${entry.content}\nTags: ${entry.tags.join(', ')}\n`
     })
     .join('\n---\n\n')
@@ -432,117 +433,4 @@ function autoTag(text: string): string[] {
   if (tags.length === 0) tags.push('text')
 
   return tags
-}
-
-// ── demo / simulated capture ─────────────────────────────────
-
-const DEMO_CAPTURES = [
-  {
-    text: 'MediaProjection must start after overlay is visible on Android 15.',
-    source: 'Chrome',
-    tags: ['portal', 'permissions'],
-  },
-  {
-    text: 'Dedup gate ignored 4 repeated paragraphs during slow scroll.',
-    source: 'PDF Reader',
-    tags: ['dedupe', 'scroll'],
-  },
-  {
-    text: 'Healer reconstructed the paragraph and removed line breaks.',
-    source: 'Instagram',
-    tags: ['healer', 'formatting'],
-  },
-  {
-    text: 'Portal captured block geometry for layout-aware syncing.',
-    source: 'Docs',
-    tags: ['layout', 'blocks'],
-  },
-  {
-    text: 'Vault indexed the entry with vector embeddings in 28ms.',
-    source: 'News',
-    tags: ['vault', 'pgvector'],
-  },
-  {
-    text: 'The quick brown fox jumps over the lazy dog near the riverbank.',
-    source: 'Safari',
-    tags: ['text'],
-  },
-  {
-    text: 'function handleCapture(frame: ImageData) { return processOCR(frame); }',
-    source: 'VS Code',
-    tags: ['code'],
-  },
-  {
-    text: 'Meeting at 3pm tomorrow to discuss the new feature rollout.',
-    source: 'Slack',
-    tags: ['task'],
-  },
-  {
-    text: 'Error: ECONNREFUSED when connecting to Redis on port 6379.',
-    source: 'Terminal',
-    tags: ['error'],
-  },
-  {
-    text: 'Your order #4829 has shipped. Expected delivery: Friday.',
-    source: 'Gmail',
-    tags: ['text'],
-  },
-  {
-    text: 'React 19 introduces use() hook for reading resources in render.',
-    source: 'Twitter',
-    tags: ['code', 'text'],
-  },
-  {
-    text: 'SELECT * FROM vault_entries WHERE similarity > 0.85 ORDER BY created_at DESC;',
-    source: 'pgAdmin',
-    tags: ['code'],
-  },
-  {
-    text: 'Battery optimization may pause background capture. Disable for best results.',
-    source: 'Settings',
-    tags: ['portal'],
-  },
-  {
-    text: 'The embedding model produces 384-dimensional vectors for semantic search.',
-    source: 'Docs',
-    tags: ['vault', 'text'],
-  },
-  {
-    text: 'New PR: Add support for HEIC image format in OCR pipeline.',
-    source: 'GitHub',
-    tags: ['code', 'task'],
-  },
-]
-
-let demoInterval: ReturnType<typeof setInterval> | null = null
-let demoIndex = 0
-
-/**
- * Start simulated capture — adds a new entry every few seconds
- * while the portal is active (for demo purposes).
- */
-export function startDemoCapture(): void {
-  if (demoInterval) return
-  demoInterval = setInterval(
-    () => {
-      const demo = DEMO_CAPTURES[demoIndex % DEMO_CAPTURES.length]!
-      addCaptureEntry(demo.text, {
-        sourceApp: demo.source,
-        tags: demo.tags,
-        confidence: Math.round(88 + Math.random() * 11),
-      })
-      demoIndex++
-    },
-    3000 + Math.random() * 2000
-  )
-}
-
-/**
- * Stop simulated capture.
- */
-export function stopDemoCapture(): void {
-  if (demoInterval) {
-    clearInterval(demoInterval)
-    demoInterval = null
-  }
 }

@@ -21,16 +21,12 @@ import {
   type PortalMessage,
 } from '@/lib/portal-channel'
 import { useCaptureLog } from '@/hooks/use-capture-log'
-import { startDemoCapture, stopDemoCapture, clearCaptureEntries } from '@/lib/capture-store'
+import { clearCaptureEntries } from '@/lib/capture-store'
 import { Logo } from './Logo'
 
 const DEFAULT_STATE: PortalState = {
   isActive: false,
   vaultUnlocked: true,
-  stealthMode: true,
-  healerEnabled: true,
-  captureMode: 'balanced',
-  captureFps: 5,
 }
 
 export function PortalStandalone() {
@@ -39,16 +35,6 @@ export function PortalStandalone() {
   const [showExpanded, setShowExpanded] = useState(false)
   const captureEntries = useCaptureLog()
   const logEndRef = useRef<HTMLDivElement>(null)
-
-  // Start/stop demo capture based on portal active state
-  useEffect(() => {
-    if (state.isActive) {
-      startDemoCapture()
-    } else {
-      stopDemoCapture()
-    }
-    return () => stopDemoCapture()
-  }, [state.isActive])
 
   // Auto-scroll the capture log to the top when new entries arrive
   useEffect(() => {
@@ -239,15 +225,13 @@ export function PortalStandalone() {
               transition: 'all 0.3s ease',
             }}
           />
-          {state.isActive ? 'Capturing...' : 'Start Capture'}
+          {state.isActive ? 'Widget highlighted' : 'Widget inactive'}
         </button>
 
         {/* Status pills */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <StatusPill label="Portal" active={state.isActive} color="oklch(0.72 0.22 160)" />
           <StatusPill label="Vault" active={state.vaultUnlocked} color="oklch(0.75 0.18 195)" />
-          <StatusPill label="Healer" active={state.healerEnabled} color="oklch(0.62 0.25 300)" />
-          <StatusPill label="Stealth" active={state.stealthMode} color="oklch(0.78 0.16 80)" />
         </div>
 
         {/* ── Live Capture Log ── */}
@@ -336,7 +320,7 @@ export function PortalStandalone() {
                   fontSize: '11px',
                 }}
               >
-                {state.isActive ? 'Listening for text...' : 'Start capture to see text appear here'}
+                Add text from the main app (paste, screenshot OCR, extension). Entries sync here.
               </div>
             ) : (
               captureEntries.slice(0, 50).map(entry => (
@@ -435,13 +419,6 @@ export function PortalStandalone() {
         {showExpanded && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <InfoCard
-                label="Mode"
-                value={state.captureMode.charAt(0).toUpperCase() + state.captureMode.slice(1)}
-              />
-              <InfoCard label="FPS" value={String(state.captureFps)} />
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
               <ActionButton
                 label={state.vaultUnlocked ? '🔓 Lock Vault' : '🔒 Unlock'}
                 onClick={handleToggleVault}
@@ -501,34 +478,6 @@ function StatusPill({ label, active, color }: { label: string; active: boolean; 
         }}
       />
       {label}
-    </div>
-  )
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        padding: '10px 12px',
-        borderRadius: '10px',
-        background: 'oklch(0.14 0.025 265)',
-        border: '1px solid oklch(0.22 0.03 270 / 0.5)',
-      }}
-    >
-      <div style={{ fontSize: '10px', color: 'oklch(0.45 0.02 220)', fontWeight: 500 }}>
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: '16px',
-          fontWeight: 700,
-          color: 'oklch(0.85 0.01 200)',
-          marginTop: '2px',
-        }}
-      >
-        {value}
-      </div>
     </div>
   )
 }
