@@ -62,11 +62,13 @@ export function QuickCapture({
   const streamRef = useRef<MediaStream | null>(null)
   const barcodeScanningRef = useRef(false)
   const [hasStream, setHasStream] = useState(false)
+  const [barcodeScanning, setBarcodeScanning] = useState(false)
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
     barcodeScanningRef.current = false
+    setBarcodeScanning(false)
     setHasStream(false)
     if (videoRef.current) {
       videoRef.current.srcObject = null
@@ -173,7 +175,6 @@ export function QuickCapture({
       toast.error(
         'BarcodeDetector is not available here (try Chrome with HTTPS, or enter the code manually).'
       )
-      setIsCapturing(false)
       return
     }
     setIsCapturing(true)
@@ -182,6 +183,7 @@ export function QuickCapture({
       setIsCapturing(false)
       return
     }
+    setBarcodeScanning(true)
 
     const detector = new BD({
       formats: [
@@ -198,13 +200,14 @@ export function QuickCapture({
     })
 
     barcodeScanningRef.current = true
-    const video = videoRef.current
 
     const tick = async () => {
-      if (!barcodeScanningRef.current || !video || video.readyState < 2) {
-        if (barcodeScanningRef.current) {
-          requestAnimationFrame(() => void tick())
-        }
+      const video = videoRef.current
+      if (!barcodeScanningRef.current) {
+        return
+      }
+      if (!video || video.readyState < 2) {
+        requestAnimationFrame(() => void tick())
         return
       }
       try {
@@ -212,6 +215,7 @@ export function QuickCapture({
         const first = codes.find(c => c.rawValue?.trim())
         if (first?.rawValue) {
           barcodeScanningRef.current = false
+          setBarcodeScanning(false)
           setBarcode(first.rawValue)
           stopCamera()
           setIsCapturing(false)
@@ -231,6 +235,7 @@ export function QuickCapture({
 
   const handleStopBarcodeScan = () => {
     barcodeScanningRef.current = false
+    setBarcodeScanning(false)
     stopCamera()
     setIsCapturing(false)
   }
@@ -332,7 +337,7 @@ export function QuickCapture({
                     </Button>
                   </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-stretch justify-center min-h-[180px]">
+                  <div className="relative w-full h-full flex flex-col items-stretch justify-center min-h-[180px]">
                     <video
                       ref={videoRef}
                       className="w-full h-full object-cover bg-black"
@@ -405,16 +410,16 @@ export function QuickCapture({
 
           {mode === 'barcode' && (
             <div className="space-y-3">
-              <div className="aspect-video bg-muted rounded-lg overflow-hidden relative flex flex-col min-h-[180px]">
+              <div className="relative aspect-video bg-muted rounded-lg overflow-hidden flex flex-col min-h-[180px]">
                 <video
                   ref={videoRef}
-                  className="w-full flex-1 object-cover bg-black min-h-[160px]"
+                  className="absolute inset-0 w-full h-full object-cover bg-black"
                   playsInline
                   muted
                   autoPlay
                 />
                 {!hasStream && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 bg-muted/80">
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 p-4 bg-muted/80">
                     <Barcode size={48} className="text-muted-foreground" />
                     <p className="text-xs text-center text-muted-foreground px-2">
                       Point the camera at a barcode. Requires BarcodeDetector (e.g. Chrome). Or type
@@ -422,8 +427,12 @@ export function QuickCapture({
                     </p>
                   </div>
                 )}
-                <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-2 justify-center">
-                  {!isCapturing || !hasStream ? (
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex flex-wrap gap-2 justify-center">
+                  {hasStream && barcodeScanning ? (
+                    <Button type="button" variant="outline" onClick={handleStopBarcodeScan}>
+                      Stop scanning
+                    </Button>
+                  ) : (
                     <Button
                       type="button"
                       onClick={() => void handleBarcodeScan()}
@@ -435,10 +444,6 @@ export function QuickCapture({
                         <Barcode size={18} className="mr-2" />
                       )}
                       Scan with camera
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" onClick={handleStopBarcodeScan}>
-                      Stop scanning
                     </Button>
                   )}
                 </div>

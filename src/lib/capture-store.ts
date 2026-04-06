@@ -72,7 +72,17 @@ export function setMaxEntries(maxEntries: number): void {
 // ── helpers ──────────────────────────────────────────────────
 
 function generateId(): string {
-  return `cap-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `cap-${crypto.randomUUID()}`
+  }
+  const bytes = new Uint8Array(8)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  return `cap-${Date.now()}-${hex}`
 }
 
 function formatTime(date: Date): string {

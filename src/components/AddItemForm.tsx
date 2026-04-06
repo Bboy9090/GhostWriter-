@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react'
-import { CartItem, StoreType, Priority, STORE_METADATA, ITEM_CATEGORIES, PRIORITY_CONFIG } from '@/lib/types'
+import {
+  CartItem,
+  StoreType,
+  Priority,
+  STORE_METADATA,
+  ITEM_CATEGORIES,
+  PRIORITY_CONFIG,
+} from '@/lib/types'
 import { generateId, detectStore } from '@/lib/storage'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { Button } from './ui/button'
@@ -8,9 +15,17 @@ import { Textarea } from './ui/textarea'
 import { Label } from './ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Badge } from './ui/badge'
-import { 
-  Link, Package, Tag, CurrencyDollar, Image, 
-  MagicWand, SpinnerGap, X, Plus, ShoppingBag
+import {
+  Link,
+  Package,
+  Tag,
+  CurrencyDollar,
+  Image,
+  MagicWand,
+  SpinnerGap,
+  X,
+  Plus,
+  ShoppingBag,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -84,16 +99,12 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
 
   const handleUrlParse = async (inputUrl: string) => {
     if (!inputUrl) return
-    
+
     setIsLoading(true)
     try {
       const { store: detectedStore, storeName: detectedStoreName } = detectStore(inputUrl)
       setStore(detectedStore)
       setStoreName(detectedStoreName)
-      
-      // Simulate URL parsing (in a real app, this would call a backend service)
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
       toast.success(`Detected store: ${detectedStoreName}`)
     } catch (error) {
       console.error('Failed to parse URL:', error)
@@ -130,12 +141,12 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!name.trim()) {
       toast.error('Please enter an item name')
       return
     }
-    
+
     if (!price || isNaN(parseFloat(price))) {
       toast.error('Please enter a valid price')
       return
@@ -162,7 +173,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
       addedAt: editItem?.addedAt || Date.now(),
       updatedAt: Date.now(),
       addedFrom: editItem?.addedFrom || 'manual',
-      collectionIds: editItem?.collectionIds || []
+      collectionIds: editItem?.collectionIds || [],
     }
 
     onSave(item)
@@ -171,7 +182,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -179,10 +190,9 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
             {editItem ? 'Edit Item' : 'Add to Universal Cart'}
           </DialogTitle>
           <DialogDescription>
-            {editItem 
+            {editItem
               ? 'Update the details of this item in your cart'
-              : 'Add any product from any store to your universal wishlist'
-            }
+              : 'Add any product from any store to your universal wishlist'}
           </DialogDescription>
         </DialogHeader>
 
@@ -197,16 +207,19 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
               <Input
                 id="url"
                 value={url}
-                onChange={(e) => handleUrlChange(e.target.value)}
+                onChange={e => handleUrlChange(e.target.value)}
                 placeholder="https://amazon.com/product/..."
                 className="pr-12"
               />
               {isLoading && (
-                <SpinnerGap size={20} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
+                <SpinnerGap
+                  size={20}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
+                />
               )}
             </div>
             {store !== 'other' && (
-              <Badge 
+              <Badge
                 className="mt-1"
                 style={{ backgroundColor: STORE_METADATA[store].color, color: 'white' }}
               >
@@ -225,12 +238,12 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={e => setName(e.target.value)}
                 placeholder="Sony WH-1000XM5 Headphones"
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
               <Select value={category} onValueChange={setCategory}>
@@ -239,7 +252,9 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
                 </SelectTrigger>
                 <SelectContent>
                   {ITEM_CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -251,7 +266,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
             <Textarea
               id="description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={e => setDescription(e.target.value)}
               placeholder="Brief description of the item..."
               rows={2}
             />
@@ -270,12 +285,12 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
                 step="0.01"
                 min="0"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={e => setPrice(e.target.value)}
                 placeholder="99.99"
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="originalPrice">Original Price</Label>
               <Input
@@ -284,11 +299,11 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
                 step="0.01"
                 min="0"
                 value={originalPrice}
-                onChange={(e) => setOriginalPrice(e.target.value)}
+                onChange={e => setOriginalPrice(e.target.value)}
                 placeholder="129.99"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
               <Select value={currency} onValueChange={setCurrency}>
@@ -304,7 +319,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="quantity">Quantity</Label>
               <Input
@@ -312,7 +327,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
                 type="number"
                 min="1"
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                onChange={e => setQuantity(parseInt(e.target.value) || 1)}
               />
             </div>
           </div>
@@ -327,17 +342,17 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
               <Input
                 id="imageUrl"
                 value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
+                onChange={e => setImageUrl(e.target.value)}
                 placeholder="https://example.com/image.jpg"
                 className="flex-1"
               />
               {imageUrl && (
                 <div className="w-12 h-10 rounded border overflow-hidden flex-shrink-0">
-                  <img 
-                    src={imageUrl} 
-                    alt="Preview" 
+                  <img
+                    src={imageUrl}
+                    alt="Preview"
                     className="w-full h-full object-cover"
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                    onError={e => (e.currentTarget.style.display = 'none')}
                   />
                 </div>
               )}
@@ -348,10 +363,13 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Store</Label>
-              <Select value={store} onValueChange={(v: StoreType) => {
-                setStore(v)
-                setStoreName(STORE_METADATA[v].name)
-              }}>
+              <Select
+                value={store}
+                onValueChange={(v: StoreType) => {
+                  setStore(v)
+                  setStoreName(STORE_METADATA[v].name)
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -364,7 +382,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Priority</Label>
               <Select value={priority} onValueChange={(v: Priority) => setPriority(v)}>
@@ -391,7 +409,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
             <div className="flex gap-2">
               <Input
                 value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
+                onChange={e => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Add a tag..."
                 className="flex-1"
@@ -424,7 +442,7 @@ export function AddItemForm({ open, onClose, onSave, editItem, initialUrl }: Add
             <Textarea
               id="notes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={e => setNotes(e.target.value)}
               placeholder="Any additional notes..."
               rows={2}
             />

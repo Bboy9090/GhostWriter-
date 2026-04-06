@@ -49,3 +49,9 @@ This document reflects how GhostWriter actually behaves after the capture-to-vau
 | 2     | `src/components/IOSCapture.tsx` (import shared OCR), `src/lib/capture-filters.ts`                                                |
 | 3     | `src/lib/vault-api.ts`, `src/App.tsx` (cloud panel), `backend-go/internal/handlers/rest.go`, `hybrid_search.go`, `database/*.go` |
 | 4     | `backend-go/internal/handlers/websocket.go`, `src/lib/offline-sync.ts`                                                           |
+
+## Follow-up (trust / no fake latency)
+
+- Capture entry IDs use `crypto.randomUUID()` when available (`capture-store.ts`).
+- Cart URL detection and local “add friend” no longer use artificial `setTimeout` delays; work is immediate client-side.
+- QuickCapture barcode mode uses state for “scanning” so Stop / layout behave correctly with the live video layer.

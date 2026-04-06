@@ -10,8 +10,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import {
-  Users, UserPlus, UserCircle, Chat, Share, Check, X,
-  DotsThree, Clock, MagnifyingGlass, Bell
+  Users,
+  UserPlus,
+  UserCircle,
+  Chat,
+  Share,
+  Check,
+  X,
+  DotsThree,
+  Clock,
+  MagnifyingGlass,
+  Bell,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import {
@@ -37,7 +46,7 @@ export function FriendsPanel({
   onUpdateFriend,
   onRemoveFriend,
   onStartChat,
-  onViewWishlist
+  onViewWishlist,
 }: FriendsPanelProps) {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [username, setUsername] = useState('')
@@ -50,13 +59,12 @@ export function FriendsPanel({
   const filteredFriends = (list: Friend[]) => {
     if (!searchQuery) return list
     const q = searchQuery.toLowerCase()
-    return list.filter(f => 
-      f.displayName.toLowerCase().includes(q) || 
-      f.username.toLowerCase().includes(q)
+    return list.filter(
+      f => f.displayName.toLowerCase().includes(q) || f.username.toLowerCase().includes(q)
     )
   }
 
-  const handleAddFriend = async (e: React.FormEvent) => {
+  const handleAddFriend = (e: React.FormEvent) => {
     e.preventDefault()
     if (!username.trim()) {
       toast.error('Please enter a username')
@@ -64,18 +72,14 @@ export function FriendsPanel({
     }
 
     setIsLoading(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Create friend request
+
     const newFriend: Friend = {
       id: generateId(),
       username: username.trim().toLowerCase(),
       displayName: username.trim(),
       status: 'pending',
       addedAt: Date.now(),
-      sharedCollections: []
+      sharedCollections: [],
     }
 
     onAddFriend(newFriend)
@@ -96,7 +100,12 @@ export function FriendsPanel({
   }
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   const getLastActiveText = (lastActive?: number) => {
@@ -118,7 +127,10 @@ export function FriendsPanel({
               <Users size={20} weight="duotone" />
               Friends
               {pendingFriends.length > 0 && (
-                <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center p-0 text-xs">
+                <Badge
+                  variant="destructive"
+                  className="h-5 min-w-5 flex items-center justify-center p-0 text-xs"
+                >
                   {pendingFriends.length}
                 </Badge>
               )}
@@ -128,18 +140,21 @@ export function FriendsPanel({
               Add
             </Button>
           </div>
-          
+
           <div className="relative mt-2">
-            <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <MagnifyingGlass
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
             <Input
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search friends..."
               className="pl-9 h-9"
             />
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <Tabs defaultValue="friends" className="w-full">
             <TabsList className="w-full grid grid-cols-2 mb-3">
@@ -167,19 +182,21 @@ export function FriendsPanel({
                           {getInitials(friend.displayName)}
                         </AvatarFallback>
                       </Avatar>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium text-sm truncate">{friend.displayName}</h4>
                           <span className="text-xs text-muted-foreground">@{friend.username}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className={`w-2 h-2 rounded-full ${
-                            // eslint-disable-next-line react-hooks/purity -- last-active indicator needs current time
-                            friend.lastActive && Date.now() - friend.lastActive < 300000 
-                              ? 'bg-green-500' 
-                              : 'bg-gray-400'
-                          }`} />
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              // eslint-disable-next-line react-hooks/purity -- last-active indicator needs current time
+                              friend.lastActive && Date.now() - friend.lastActive < 300000
+                                ? 'bg-green-500'
+                                : 'bg-gray-400'
+                            }`}
+                          />
                           {getLastActiveText(friend.lastActive)}
                           {friend.mutualFriends && (
                             <>
@@ -221,7 +238,7 @@ export function FriendsPanel({
                               Send Message
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => onRemoveFriend(friend.id)}
                               className="text-destructive"
                             >
@@ -260,7 +277,7 @@ export function FriendsPanel({
                           {getInitials(friend.displayName)}
                         </AvatarFallback>
                       </Avatar>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium text-sm truncate">{friend.displayName}</h4>
@@ -315,19 +332,19 @@ export function FriendsPanel({
               <UserPlus size={24} weight="duotone" />
               Add Friend
             </DialogTitle>
-            <DialogDescription>
-              Send a friend request to share wishlists and chat
-            </DialogDescription>
+            <DialogDescription>Send a friend request to share wishlists and chat</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleAddFriend} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Username</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  @
+                </span>
                 <Input
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={e => setUsername(e.target.value)}
                   placeholder="username"
                   className="pl-8"
                   disabled={isLoading}
