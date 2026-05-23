@@ -1,0 +1,57 @@
+{
+  "packageId": "com.bobbysworld.ghostwriter",
+  "name": "Ghost Writer",
+  "displayName": "Ghost Writer",
+  "version": "1.0.0",
+  "description": "AI-powered writing and publishing studio for Bobby's World / Blue Phoenix OS",
+  "publisher": "Bobby's World",
+  "category": "Productivity",
+  "platform": {
+    "windows": {
+      "msix": {
+        "packageId": "com.bobbysworld.ghostwriter",
+        "displayName": "Ghost Writer",
+        "publisherDisplayName": "Bobby's World",
+        "publisher": "CN=Bobby's World",
+        "architecture": "x64",
+        "minOSVersion": "10.0.19041.0",
+        "targetOSVersion": "10.0.22000.0"
+      }
+    },
+    "bluePhoenixOS": {
+      "compatible": true,
+      "nativeIntegration": true
+    }
+  },
+  "capabilities": {
+    "localStorage": true,
+    "fileSystemAccess": true,
+    "offlineMode": true,
+    "aiIntegration": "optional"
+  },
+  "icon": {
+    "default": "/ghostwriter-icon.svg",
+    "sizes": [
+      "44x44",
+      "150x150",
+      "310x310"
+    ]
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Bboy9090/GhostWriter-",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bboy9090/GhostWriter-.git"
+  },
+  "keywords": [
+    "writing",
+    "editor",
+    "ai",
+    "productivity",
+    "publishing",
+    "markdown",
+    "templates",
+    "bobby's world",
+    "blue phoenix os"
+  ]
+}
