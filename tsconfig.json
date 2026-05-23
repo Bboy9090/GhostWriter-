@@ -56,6 +56,9 @@
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "src/**/*.backup",
+    "src/*-backup/**",
+    "src/App.tsx.backup"
   ]
 }

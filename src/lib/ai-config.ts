@@ -118,7 +118,6 @@ export function getAIAction(id: string): AIAction | undefined {
 
 // Apply AI action to text (stub - requires API implementation)
 export async function applyAIAction(
-  text: string,
   actionId: string
 ): Promise<{ success: boolean; result?: string; error?: string }> {
   const config = getAIConfig();
