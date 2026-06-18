@@ -1,5 +1,5 @@
 {
-  "name": "ghostwriter",
+  "name": "ghost-writer",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -148,18 +148,23 @@
       "packages/*"
     ]
   },
-  "description": "GhostWriter portal UI for stealth screen text extraction.",
-  "author": "GhostWriter Team",
+  "description": "AI-powered writing and publishing studio for Bobby's World / Blue Phoenix OS",
+  "author": "Bobby's World",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Bboy9090/GhostWriter-.git"
   },
   "keywords": [
-    "ocr",
-    "text-extraction",
-    "semantic-search",
+    "writing",
+    "editor",
     "ai",
+    "productivity",
+    "publishing",
+    "markdown",
+    "templates",
+    "bobby's world",
+    "blue phoenix os",
     "react",
     "typescript",
     "vite"
