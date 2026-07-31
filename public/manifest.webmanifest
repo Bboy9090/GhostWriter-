@@ -1,10 +1,10 @@
 {
   "name": "GhostWriter",
   "short_name": "GhostWriter",
-  "description": "Stealth screen text extraction and vault capture. Pop the portal out to float over any app.",
+  "description": "A private, local-first writing studio with templates, automatic saving, backups, and portable exports.",
   "start_url": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0d0b1a",
   "theme_color": "#0d0b1a",
   "orientation": "any",
@@ -22,21 +22,7 @@
       "purpose": "maskable"
     }
   ],
-  "shortcuts": [
-    {
-      "name": "Portal (Always On Top)",
-      "short_name": "Portal",
-      "description": "Open the floating portal widget to place on top of other apps",
-      "url": "/portal.html",
-      "icons": [
-        {
-          "src": "/ghostwriter-icon.svg",
-          "sizes": "512x512",
-          "type": "image/svg+xml"
-        }
-      ]
-    }
-  ],
+  "shortcuts": [],
   "launch_handler": {
     "client_mode": "navigate-existing"
   }
