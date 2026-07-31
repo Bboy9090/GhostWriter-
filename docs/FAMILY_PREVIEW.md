@@ -34,3 +34,5 @@ GhostWriter 1.1 is a local-first writing studio intended for supervised friends-
 ## Release gate
 
 The preview may be tagged only when dependency installation, type checking, lint, unit tests, production build, and the Chromium smoke test pass on the same commit.
+
+The same commit must also pass `npm audit --omit=dev` with zero known production-runtime vulnerabilities. See [`SECURITY_BASELINE_1.1.md`](SECURITY_BASELINE_1.1.md).

@@ -35,12 +35,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-select',
-          ],
-          'utils-vendor': ['date-fns', 'zod', 'clsx', 'tailwind-merge'],
+          'ui-vendor': ['@radix-ui/react-slot', 'lucide-react', 'sonner'],
+          'utils-vendor': ['clsx', 'tailwind-merge'],
         },
       },
     },
