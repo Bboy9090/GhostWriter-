@@ -68,7 +68,10 @@ func (h *Handler) HandleWebSocket(c *websocket.Conn) {
 		var wsMsg WebSocketMessage
 		if err := json.Unmarshal(msg, &wsMsg); err != nil {
 			log.Printf("Error parsing WebSocket message: %v", err)
-			c.WriteJSON(fiber.Map{"error": "Invalid message format"})
+			if writeErr := c.WriteJSON(fiber.Map{"error": "Invalid message format"}); writeErr != nil {
+				log.Printf("Error sending invalid-message response: %v", writeErr)
+				break
+			}
 			continue
 		}
 
