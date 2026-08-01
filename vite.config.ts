@@ -3,8 +3,6 @@ import react from '@vitejs/plugin-react-swc'
 import { defineConfig, PluginOption } from 'vite'
 import { visualizer } from 'rollup-plugin-visualizer'
 
-import sparkPlugin from '@github/spark/spark-vite-plugin'
-import createIconImportProxy from '@github/spark/vitePhosphorIconProxyPlugin'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -17,9 +15,6 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // DO NOT REMOVE
-    createIconImportProxy() as PluginOption,
-    sparkPlugin() as PluginOption,
     // Bundle analyzer (only in analyze mode)
     process.env.ANALYZE === 'true' &&
       (visualizer({
@@ -36,19 +31,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: {
-        main: resolve(projectRoot, 'index.html'),
-        portal: resolve(projectRoot, 'portal.html'),
-      },
+      input: resolve(projectRoot, 'index.html'),
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-select',
-          ],
-          'utils-vendor': ['date-fns', 'zod', 'clsx', 'tailwind-merge'],
+          'ui-vendor': ['@radix-ui/react-slot', 'lucide-react', 'sonner'],
+          'utils-vendor': ['clsx', 'tailwind-merge'],
         },
       },
     },
