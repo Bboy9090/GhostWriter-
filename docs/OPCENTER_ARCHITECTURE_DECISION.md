@@ -1,8 +1,8 @@
 # GhostWriter Op-Center Architecture Decision
 
-**Status:** Proposed  
-**Decision type:** Product boundary, security architecture, deployment strategy  
-**Target branch:** `architecture/ghostwriter-opcenter-boundary`  
+**Status:** Proposed
+**Decision type:** Product boundary, security architecture, deployment strategy
+**Target branch:** `architecture/ghostwriter-opcenter-boundary`
 **Primary repository:** `Bboy9090/GhostWriter-`
 
 ## 1. Executive Decision

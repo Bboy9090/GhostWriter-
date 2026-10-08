@@ -5,7 +5,7 @@ test.describe('GhostWriter E2E Tests', () => {
     await page.goto('/');
 
     // Wait for the page to load
-    await expect(page).toHaveTitle(/GhostWriter/i);
+    await expect(page).toHaveTitle(/Ghost\s*Writer/i);
   });
 
   test('app is accessible', async ({ page }) => {

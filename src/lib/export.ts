@@ -23,10 +23,10 @@ export function stripMarkdown(text: string): string {
     // Remove blockquotes
     .replace(/^>\s+/gm, '')
     // Remove list markers
-    .replace(/^[\*\-\+]\s+/gm, '')
+    .replace(/^[*+-]\s+/gm, '')
     .replace(/^\d+\.\s+/gm, '')
     // Remove horizontal rules
-    .replace(/^[\*\-_]{3,}$/gm, '')
+    .replace(/^[*_-]{3,}$/gm, '')
     // Clean up extra whitespace
     .replace(/\n{3,}/g, '\n\n')
     .trim();

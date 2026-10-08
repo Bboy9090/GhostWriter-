@@ -2,6 +2,8 @@
 
 **AI-powered writing and publishing studio for Bobby's World / Blue Phoenix OS**
 
+> **Current status: friends-and-family preview candidate.** The active application is a local-first writing studio. It does not currently provide cloud sync, live AI writing, PDF/DOCX export, or a signed desktop/mobile installer. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
+
 Ghost Writer is a productivity-focused writing application that helps you create, organize, and export written content. With built-in templates, optional AI assistance, and flexible export options, Ghost Writer empowers you to focus on your craft.
 
 ---

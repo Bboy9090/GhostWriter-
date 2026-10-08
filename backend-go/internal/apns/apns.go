@@ -89,10 +89,8 @@ func (a *APNSClient) SendNotification(deviceToken, title, body string, badge int
 func (a *APNSClient) SendSilentNotification(deviceToken string, customData map[string]interface{}) error {
 	p := payload.NewPayload().ContentAvailable()
 	
-	if customData != nil {
-		for key, value := range customData {
-			p.Custom(key, value)
-		}
+	for key, value := range customData {
+		p.Custom(key, value)
 	}
 
 	notification := &apns2.Notification{
@@ -122,10 +120,8 @@ func (a *APNSClient) buildPayload(title, body string, badge int, customData map[
 		Badge(badge).
 		Sound("default")
 
-	if customData != nil {
-		for key, value := range customData {
-			p.Custom(key, value)
-		}
+	for key, value := range customData {
+		p.Custom(key, value)
 	}
 
 	return p

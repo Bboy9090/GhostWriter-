@@ -118,7 +118,6 @@ func (d *Database) SearchEntries(ctx context.Context, query *models.SearchQuery,
 	if query.EndDate != nil {
 		sqlQuery += fmt.Sprintf(" AND created_at <= $%d", argIndex)
 		args = append(args, query.EndDate)
-		argIndex++
 	}
 
 	sqlQuery += " ORDER BY similarity DESC"
