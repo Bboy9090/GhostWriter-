@@ -58,6 +58,21 @@ export default function App() {
     setProjects(next)
   }
 
+  // Navigation and backup must not discard edits waiting for the debounce.
+  const flushCurrentProject = () => {
+    if (!currentProject) return true
+    try {
+      saveProject(currentProject)
+      refreshProjects()
+      setSaveStatus('saved')
+      return true
+    } catch {
+      setSaveStatus('error')
+      toast.error('Could not save. Export this draft as Markdown or Text before leaving it.')
+      return false
+    }
+  }
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('ghostwriter:theme', dark ? 'dark' : 'light')
@@ -72,10 +87,31 @@ export default function App() {
         setSaveStatus('saved')
       } catch {
         setSaveStatus('error')
-        toast.error('Could not save. Export a backup before continuing.')
+        toast.error('Could not save. Export this draft as Markdown or Text before leaving it.')
       }
     }, 700)
     return () => window.clearTimeout(timer)
+  }, [currentProject])
+
+  useEffect(() => {
+    if (!currentProject) return
+    const saveBeforeLeaving = () => {
+      try {
+        saveProject(currentProject)
+      } catch {
+        // Keep the in-memory draft available if the browser remains open.
+        setSaveStatus('error')
+      }
+    }
+    const saveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') saveBeforeLeaving()
+    }
+    window.addEventListener('pagehide', saveBeforeLeaving)
+    document.addEventListener('visibilitychange', saveWhenHidden)
+    return () => {
+      window.removeEventListener('pagehide', saveBeforeLeaving)
+      document.removeEventListener('visibilitychange', saveWhenHidden)
+    }
   }, [currentProject])
 
   const filteredProjects = useMemo(
@@ -84,15 +120,21 @@ export default function App() {
   )
 
   const beginProject = (template: Template) => {
+    if (!flushCurrentProject()) return
     const title = template.id === 'blank' ? 'Untitled Document' : `New ${template.name}`
-    const project = createProject(title, template.id, template.content)
-    setCurrentProject(project)
-    setShowTemplates(false)
-    refreshProjects()
-    toast.success('Project created and saved on this device')
+    try {
+      const project = createProject(title, template.id, template.content)
+      setCurrentProject(project)
+      setShowTemplates(false)
+      refreshProjects()
+      toast.success('Project created and saved on this device')
+    } catch {
+      toast.error('Could not create a project. Free browser storage or export your existing drafts.')
+    }
   }
 
   const openProject = (id: string) => {
+    if (!flushCurrentProject()) return
     const project = getProject(id)
     if (!project) {
       toast.error('That project could not be opened')
@@ -111,6 +153,7 @@ export default function App() {
   }
 
   const exportBackup = () => {
+    if (!flushCurrentProject()) return
     download(exportAllProjects(), `ghostwriter-backup-${new Date().toISOString().slice(0, 10)}.json`)
     toast.success('Backup downloaded')
   }
