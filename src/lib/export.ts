@@ -1,5 +1,5 @@
 // Export functionality for Ghost Writer
-// Supports markdown and plain text export
+// Supports Markdown, plain text, and local Word export
 
 import type { Project } from './project-storage';
 
@@ -87,6 +87,15 @@ Word count: ${project.metadata.wordCount}
 
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   downloadBlob(blob, `${sanitizeFilename(project.title)}.txt`);
+}
+
+// Export a snapshot of the in-memory draft, even when local storage is full.
+export async function exportAsDocx(project: Project): Promise<void> {
+  const snapshot = { title: project.title, content: project.content };
+  const { createDocx } = await import('./docx-export');
+  const bytes = await createDocx(snapshot);
+  downloadBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+    `${sanitizeFilename(snapshot.title) || 'ghostwriter-document'}.docx`);
 }
 
 // Helper function to trigger download

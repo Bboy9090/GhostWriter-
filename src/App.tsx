@@ -22,7 +22,7 @@ import {
   type Project,
   type ProjectMetadata,
 } from './lib/project-storage'
-import { exportAsMarkdown, exportAsText } from './lib/export'
+import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
 
 const APP_VERSION = '1.1.0-family.1'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -50,6 +50,7 @@ export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('ghostwriter:theme') !== 'light')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const importRef = useRef<HTMLInputElement>(null)
+  const [exportingDocx, setExportingDocx] = useState(false)
 
   const refreshProjects = () => {
     const next = getAllProjectsMetadata().sort(
@@ -158,6 +159,19 @@ export default function App() {
     toast.success('Backup downloaded')
   }
 
+  const exportWord = async () => {
+    if (!currentProject || exportingDocx) return
+    setExportingDocx(true)
+    try {
+      await exportAsDocx(currentProject)
+      toast.success('Word document download started')
+    } catch {
+      toast.error('Word export failed. Your draft is still here; try Markdown or Text export.')
+    } finally {
+      setExportingDocx(false)
+    }
+  }
+
   const restoreBackup = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -225,6 +239,7 @@ export default function App() {
                   <Badge variant="outline">{words} words</Badge><Badge variant="outline">{readTime} min</Badge>
                   <Badge variant={saveStatus === 'error' ? 'destructive' : 'secondary'}>{saveStatus === 'saved' ? 'Saved locally' : saveStatus === 'saving' ? 'Saving…' : 'Save failed'}</Badge>
                   <Button size="sm" variant="outline" onClick={() => exportAsMarkdown(currentProject)}><Download className="mr-2 h-4 w-4" />Markdown</Button>
+                  <Button size="sm" variant="outline" onClick={exportWord} disabled={exportingDocx}><Download className="mr-2 h-4 w-4" />{exportingDocx ? 'Preparing Word…' : 'Word (.docx)'}</Button>
                   <Button size="sm" variant="outline" onClick={() => exportAsText(currentProject)}><Download className="mr-2 h-4 w-4" />Text</Button>
                 </div>
               </CardContent>
@@ -245,7 +260,7 @@ export default function App() {
 
       {showProjects && <div className="fixed inset-0 z-40 overflow-y-auto bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Projects"><Card className="mx-auto max-w-2xl"><CardHeader><CardTitle>Your projects</CardTitle><CardDescription>Stored only in this browser unless you export a backup.</CardDescription></CardHeader><CardContent><div className="relative mb-4"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search project titles" value={query} onChange={event => setQuery(event.target.value)} /></div><div className="max-h-[55vh] space-y-2 overflow-y-auto">{filteredProjects.map(project => <div key={project.id} className="flex items-center gap-2 rounded-lg border border-border p-3"><button className="flex-1 text-left" onClick={() => openProject(project.id)}><strong className="block">{project.title}</strong><span className="text-xs text-muted-foreground">{project.wordCount} words · {new Date(project.modified).toLocaleString()}</span></button><Button size="sm" variant="ghost" aria-label={`Delete ${project.title}`} onClick={() => removeProject(project.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>)}{filteredProjects.length === 0 && <p className="py-8 text-center text-muted-foreground">No matching projects.</p>}</div><Button className="mt-4 w-full" variant="outline" onClick={() => setShowProjects(false)}>Close</Button></CardContent></Card></div>}
 
-      {showOnboarding && <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Welcome to GhostWriter"><Card className="mx-auto max-w-xl"><CardHeader><CardTitle>Welcome to GhostWriter</CardTitle><CardDescription>A quiet place to draft, organize, and export your writing.</CardDescription></CardHeader><CardContent className="space-y-4 text-sm"><ol className="list-decimal space-y-2 pl-5"><li>Create a project from a template or blank page.</li><li>Your work auto-saves in this browser.</li><li>Download backups regularly—clearing browser data can erase local projects.</li><li>Export finished work as Markdown or plain text.</li></ol><div className="rounded-lg bg-muted p-3"><strong>Privacy:</strong> this preview does not require an account and does not upload writing to a GhostWriter server. Optional analytics report general app usage on hosted Vercel deployments; they should be disabled if you require zero telemetry.</div><div className="rounded-lg border border-amber-500/40 p-3"><strong>Preview limitation:</strong> synchronization, AI writing, PDF/DOCX export, and app-store distribution are not included in this release.</div><Button className="w-full" onClick={() => { localStorage.setItem(ONBOARDING_KEY, 'true'); setShowOnboarding(false) }}>Start writing</Button></CardContent></Card></div>}
+      {showOnboarding && <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Welcome to GhostWriter"><Card className="mx-auto max-w-xl"><CardHeader><CardTitle>Welcome to GhostWriter</CardTitle><CardDescription>A quiet place to draft, organize, and export your writing.</CardDescription></CardHeader><CardContent className="space-y-4 text-sm"><ol className="list-decimal space-y-2 pl-5"><li>Create a project from a template or blank page.</li><li>Your work auto-saves in this browser.</li><li>Download backups regularly—clearing browser data can erase local projects.</li><li>Export finished work as Word, Markdown, or plain text. Word export keeps your text and Markdown symbols as typed.</li></ol><div className="rounded-lg bg-muted p-3"><strong>Privacy:</strong> this preview does not require an account and does not upload writing to a GhostWriter server. Optional analytics report general app usage on hosted Vercel deployments; they should be disabled if you require zero telemetry.</div><div className="rounded-lg border border-amber-500/40 p-3"><strong>Preview limitation:</strong> synchronization, AI writing, PDF export, and app-store distribution are not included in this release.</div><Button className="w-full" onClick={() => { localStorage.setItem(ONBOARDING_KEY, 'true'); setShowOnboarding(false) }}>Start writing</Button></CardContent></Card></div>}
     </div>
   )
 }
