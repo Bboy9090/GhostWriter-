@@ -205,12 +205,16 @@ export function clearAllProjects(): void {
 
 // Export all projects as JSON
 export function exportAllProjects(): Blob {
-  const metadata = getAllProjectsMetadata();
+  const rawIndex = localStorage.getItem(PROJECTS_KEY);
+  const metadata: ProjectMetadata[] = rawIndex ? JSON.parse(rawIndex) : [];
+  if (!Array.isArray(metadata)) throw new Error('The project list is damaged. Backup was not created.');
   const projects: Project[] = [];
 
   for (const meta of metadata) {
+    if (!meta || typeof meta.id !== 'string') throw new Error('The project list is damaged. Backup was not created.');
     const project = getProject(meta.id);
-    if (project) projects.push(project);
+    if (!isValidProject(project)) throw new Error('A project could not be read. Backup was not created.');
+    projects.push(project);
   }
 
   const exportData = {
@@ -223,6 +227,24 @@ export function exportAllProjects(): Blob {
   return new Blob([json], { type: 'application/json' });
 }
 
+export class RestoreError extends Error {
+  constructor(message: string, public readonly restoredCount: number) {
+    super(message);
+    this.name = 'RestoreError';
+  }
+}
+
+function isValidProject(value: unknown): value is Project {
+  if (!value || typeof value !== 'object') return false;
+  const project = value as Partial<Project>;
+  const metadata = project.metadata;
+  return typeof project.title === 'string' && typeof project.template === 'string' &&
+    typeof project.content === 'string' && typeof project.created === 'string' &&
+    typeof project.modified === 'string' && !!metadata && typeof metadata === 'object' &&
+    Array.isArray(metadata.tags) && metadata.tags.every(tag => typeof tag === 'string') &&
+    typeof metadata.category === 'string';
+}
+
 // Import projects from JSON
 export function importProjects(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -232,8 +254,14 @@ export function importProjects(file: File): Promise<number> {
       try {
         const data = JSON.parse(e.target?.result as string);
 
-        if (!data.projects || !Array.isArray(data.projects)) {
+        if (!data.projects || !Array.isArray(data.projects) || !data.projects.every(isValidProject)) {
           throw new Error('Invalid backup file format');
+        }
+
+        const rawIndex = localStorage.getItem(PROJECTS_KEY);
+        const index: unknown = rawIndex ? JSON.parse(rawIndex) : [];
+        if (!Array.isArray(index) || !index.every(item => item && typeof item.id === 'string')) {
+          throw new Error('The existing project list is damaged');
         }
 
         let imported = 0;
@@ -243,7 +271,11 @@ export function importProjects(file: File): Promise<number> {
           project.created = new Date().toISOString();
           project.modified = new Date().toISOString();
 
-          saveProject(project);
+          try {
+            saveProject(project);
+          } catch {
+            throw new RestoreError('Restore stopped because storage could not be written. Check the project list before retrying.', imported);
+          }
           imported++;
         }
 

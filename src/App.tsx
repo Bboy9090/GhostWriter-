@@ -18,6 +18,7 @@ import {
   getProject,
   getStorageStats,
   importProjects,
+  RestoreError,
   saveProject,
   type Project,
   type ProjectMetadata,
@@ -155,8 +156,12 @@ export default function App() {
 
   const exportBackup = () => {
     if (!flushCurrentProject()) return
-    download(exportAllProjects(), `ghostwriter-backup-${new Date().toISOString().slice(0, 10)}.json`)
-    toast.success('Backup downloaded')
+    try {
+      download(exportAllProjects(), `ghostwriter-backup-${new Date().toISOString().slice(0, 10)}.json`)
+      toast.success('Backup download started')
+    } catch {
+      toast.error('Backup failed because a project or the project list could not be read. Your original data is still on this device.')
+    }
   }
 
   const exportWord = async () => {
@@ -179,8 +184,13 @@ export default function App() {
       const imported = await importProjects(file)
       refreshProjects()
       toast.success(`${imported} project${imported === 1 ? '' : 's'} restored`)
-    } catch {
-      toast.error('That is not a valid GhostWriter backup')
+    } catch (error) {
+      refreshProjects()
+      if (error instanceof RestoreError) {
+        toast.error(`Restore stopped after ${error.restoredCount} completed project(s). Storage could not be written; check your project list before retrying.`)
+      } else {
+        toast.error('The backup could not be read or is invalid. No projects were restored.')
+      }
     } finally {
       event.target.value = ''
     }
