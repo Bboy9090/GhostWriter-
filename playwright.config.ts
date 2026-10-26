@@ -41,7 +41,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...(process.env.GHOSTWRITER_SYSTEM_CHROME === '1' ? { channel: 'chrome' } : {}) },
     },
 
     {

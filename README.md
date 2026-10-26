@@ -2,7 +2,7 @@
 
 **AI-powered writing and publishing studio for Bobby's World / Blue Phoenix OS**
 
-> **Current status: friends-and-family preview candidate.** The active application is a local-first writing studio. It does not currently provide cloud sync, live AI writing, PDF/DOCX export, or a signed desktop/mobile installer. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
+> **Current status: friends-and-family preview candidate.** The active application is a local-first writing studio. It does not currently provide cloud sync, live AI writing, PDF export, or a signed desktop/mobile installer. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
 
 Ghost Writer is a productivity-focused writing application that helps you create, organize, and export written content. With built-in templates, optional AI assistance, and flexible export options, Ghost Writer empowers you to focus on your craft.
 
@@ -33,7 +33,8 @@ Ghost Writer is a productivity-focused writing application that helps you create
 ### 📤 Export Options
 - Markdown (.md) - Preserves formatting
 - Plain text (.txt) - Universal compatibility
-- Future: PDF, DOCX, HTML
+- Word (.docx) - Full draft and title, generated locally; Markdown symbols remain literal
+- Future: PDF, HTML
 
 ### 💾 Local Project Storage
 - All data stored locally in your browser
@@ -286,3 +287,7 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ---
 
 **Ghost Writer** - *Write without limits. Publish with confidence.* ✍️
+
+### Word export
+
+Use **Word (.docx)** in an open project to download the current editor snapshot without sending writing to a server. It preserves literal text, Unicode, tabs and blank lines; Markdown syntax is not converted into rich formatting. The exporter must load once online before it can be reused from the offline cache. If Word cannot represent a pasted character or generation fails, the draft stays open and Markdown/Text remain available. This is document export, not a typeset print interior or publication certification.
