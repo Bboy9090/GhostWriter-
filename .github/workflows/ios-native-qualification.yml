@@ -7,7 +7,7 @@ on:
       - 'ios-native/**'
       - '.github/workflows/ios-native-qualification.yml'
   push:
-    branches: [main]
+    branches: [main, "release/ios-project-qualification-20261031"]
     paths:
       - 'ios-native/**'
       - '.github/workflows/ios-native-qualification.yml'
