@@ -108,7 +108,7 @@ enum TextPipeline {
                         "title": segment.title ?? (autoHeadingEnabled && !segment.paragraphs.isEmpty
                                                    ? buildHeading(from: segment.paragraphs[0], wordCount: headingWordCount)
                                                    : "Segment \(index + 1)"),
-                        "capturedAt": segment.capturedAt ?? NSNull(),
+                        "capturedAt": segment.capturedAt.map { $0 as Any } ?? NSNull(),
                         "paragraphs": segment.paragraphs
                     ]
                 }
