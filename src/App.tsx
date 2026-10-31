@@ -187,7 +187,7 @@ export default function App() {
     } catch (error) {
       refreshProjects()
       if (error instanceof RestoreError) {
-        toast.error(`Restore stopped after ${error.restoredCount} completed project(s). Storage could not be written; check your project list before retrying.`)
+        toast.error(`Restore stopped after ${error.restoredCount} completed project(s). ${error.cleanupFailed ? 'An incomplete record may remain in browser storage. ' : ''}Check your project list before retrying.`)
       } else {
         toast.error('The backup could not be read or is invalid. No projects were restored.')
       }

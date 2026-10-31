@@ -228,7 +228,7 @@ export function exportAllProjects(): Blob {
 }
 
 export class RestoreError extends Error {
-  constructor(message: string, public readonly restoredCount: number) {
+  constructor(message: string, public readonly restoredCount: number, public readonly cleanupFailed = false) {
     super(message);
     this.name = 'RestoreError';
   }
@@ -267,15 +267,31 @@ export function importProjects(file: File): Promise<number> {
         let imported = 0;
         for (const project of data.projects) {
           // Generate new ID to avoid conflicts
-          project.id = generateProjectId();
+          let candidate = '';
+          for (let attempt = 0; attempt < 100; attempt++) {
+            const id = generateProjectId();
+            if (!index.some(item => item.id === id) && localStorage.getItem(`${STORAGE_PREFIX}:project:${id}`) === null) {
+              candidate = id;
+              break;
+            }
+          }
+          if (!candidate) throw new RestoreError('Could not allocate a new project ID.', imported);
+          project.id = candidate;
           project.created = new Date().toISOString();
           project.modified = new Date().toISOString();
 
           try {
             saveProject(project);
           } catch {
-            throw new RestoreError('Restore stopped because storage could not be written. Check the project list before retrying.', imported);
+            let cleanupFailed = false;
+            try {
+              localStorage.removeItem(`${STORAGE_PREFIX}:project:${candidate}`);
+            } catch {
+              cleanupFailed = true;
+            }
+            throw new RestoreError('Restore stopped because storage could not be written.', imported, cleanupFailed);
           }
+          index.push({ id: candidate });
           imported++;
         }
 
