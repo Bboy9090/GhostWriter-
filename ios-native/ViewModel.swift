@@ -167,8 +167,8 @@ final class IOSCaptureViewModel: ObservableObject {
             )
 
             var segments: [Segment] = []
-            var activeSegment = Segment(title: nil, capturedAt: nil, paragraphs: [])
-            segments.append(activeSegment)
+            var activeSegment: Segment? = Segment(title: nil, capturedAt: nil, paragraphs: [])
+            segments.append(activeSegment!)
 
             var prevFrame: CGImage?
             for (index, frame) in frames.enumerated() {
