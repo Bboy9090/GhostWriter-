@@ -1,0 +1,28 @@
+name: GhostWriter
+options:
+  bundleIdPrefix: com.bobbysworld
+settings:
+  base:
+    SWIFT_VERSION: 5.9
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+targets:
+  GhostWriter:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: .
+        excludes:
+          - README.md
+          - project.yml
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bobbysworld.ghostwriter
+        PRODUCT_NAME: GhostWriter
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Ghost Writer
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: GhostWriter uses selected screenshots and screen recordings for on-device OCR.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: GhostWriter can export generated files to your library when you choose to save them.
+        CODE_SIGNING_ALLOWED: NO
+    scheme:
+      testTargets: []

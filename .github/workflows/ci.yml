@@ -74,3 +74,29 @@ jobs:
 
       - name: Run tests
         run: npm test -- --run
+
+
+  ios-native:
+    name: iOS Native Build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios-native
+        run: xcodegen generate
+
+      - name: Build iOS simulator app
+        working-directory: ios-native
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project GhostWriter.xcodeproj \
+            -scheme GhostWriter \
+            -sdk iphonesimulator \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            build

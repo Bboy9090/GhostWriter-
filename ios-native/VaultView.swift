@@ -2,7 +2,7 @@ import SwiftUI
 
 // View for displaying and managing vault entries
 struct VaultView: View {
-    @StateObject private var apiClient = APIClient()
+    private let apiClient = APIClient()
     @State private var entries: [PortalEntry] = []
     @State private var searchQuery: String = ""
     @State private var isLoading: Bool = false
@@ -110,7 +110,7 @@ struct VaultView: View {
             query: searchQuery.isEmpty ? nil : searchQuery,
             limit: 50
         ) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isLoading = false
                 
                 switch result {
@@ -130,7 +130,7 @@ struct VaultView: View {
         errorMessage = nil
         
         apiClient.getEntries(userID: userID, limit: 100) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isLoading = false
                 
                 switch result {
