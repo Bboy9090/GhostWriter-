@@ -1,0 +1,58 @@
+name: GhostWriter dependency repair verification
+on:
+  push:
+    branches:
+      - fix/manifest-dependency-hardening-20261101
+    paths:
+      - .github/workflows/ghostwriter-dependency-repair.yml
+      - package.json
+      - package-lock.json
+      - Dockerfile
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate and commit deterministic lockfile
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git diff --check
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore: synchronize Express production lockfile"
+            git push origin HEAD:fix/manifest-dependency-hardening-20261101
+          fi
+      - name: Clean dependency installation
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run type-check
+      - name: Unit tests
+        run: npm test -- --run
+      - name: Frontend build
+        run: npm run build
+      - name: Build production Docker image
+        run: docker build -t ghostwriter-repair:ci .
+      - name: Verify health endpoint in production container
+        run: |
+          docker run -d --name ghostwriter-repair -p 127.0.0.1:3000:3000 ghostwriter-repair:ci
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ghostwriter-repair
+          exit 1
