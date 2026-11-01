@@ -5,6 +5,16 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      signed_ios:
+        description: Build a signed App Store IPA artifact
+        type: boolean
+        default: false
+      ios_build_number:
+        description: Unique CFBundleVersion for the signed qualification artifact
+        type: string
+        default: "1"
 
 jobs:
   lint:
@@ -100,3 +110,146 @@ jobs:
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+
+  ios-signed-ipa:
+    name: iOS Signed IPA Qualification
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.signed_ios }}
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Require signing inputs
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$IOS_CERTIFICATE_P12"
+          test -n "$IOS_CERTIFICATE_PASSWORD"
+          test -n "$IOS_PROVISIONING_PROFILE"
+          test -n "$APPLE_TEAM_ID"
+          test -n "${{ inputs.ios_build_number }}"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios-native
+        run: xcodegen generate
+
+      - name: Import distribution certificate
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/ghostwriter-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          printf '%s' "$IOS_CERTIFICATE_P12" | base64 -D > "$RUNNER_TEMP/ghostwriter.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/ghostwriter.p12" -k "$KEYCHAIN" -P "$IOS_CERTIFICATE_PASSWORD" -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN"
+          security find-identity -v -p codesigning "$KEYCHAIN" | tee "$RUNNER_TEMP/signing-identities.txt"
+          grep -q "Apple Distribution" "$RUNNER_TEMP/signing-identities.txt"
+
+      - name: Install App Store provisioning profile
+        env:
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          RAW="$RUNNER_TEMP/GhostWriter.mobileprovision"
+          PLIST="$RUNNER_TEMP/profile.plist"
+          printf '%s' "$IOS_PROVISIONING_PROFILE" | base64 -D > "$RAW"
+          security cms -D -i "$RAW" > "$PLIST"
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PLIST")
+          NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PLIST")
+          TEAM=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PLIST")
+          APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PLIST")
+          test "$TEAM" = "$APPLE_TEAM_ID"
+          test "$APP_ID" = "$APPLE_TEAM_ID.com.bobbysworld.ghostwriter"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RAW" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+          echo "PROFILE_NAME=$NAME" >> "$GITHUB_ENV"
+
+      - name: Archive and export signed IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUILD_NUMBER: ${{ inputs.ios_build_number }}
+        working-directory: ios-native
+        run: |
+          set -euo pipefail
+          mkdir -p build/export
+          cat > build/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.bobbysworld.ghostwriter</key><string>$PROFILE_NAME</string>
+            </dict>
+          </dict></plist>
+          EOF
+          xcodebuild \
+            -project GhostWriter.xcodeproj \
+            -scheme GhostWriter \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/GhostWriter.xcarchive \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
+            MARKETING_VERSION="1.0.0" \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath build/GhostWriter.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist
+          IPA=$(find build/export -maxdepth 1 -name '*.ipa' -type f -print -quit)
+          test -n "$IPA"
+          test -s "$IPA"
+          shasum -a 256 "$IPA" > build/export/IPA-SHA256.txt
+
+      - name: Verify exported application identity
+        working-directory: ios-native
+        env:
+          IOS_BUILD_NUMBER: ${{ inputs.ios_build_number }}
+        run: |
+          set -euo pipefail
+          IPA=$(find build/export -maxdepth 1 -name '*.ipa' -type f -print -quit)
+          mkdir -p "$RUNNER_TEMP/ghostwriter-ipa"
+          unzip -q "$IPA" -d "$RUNNER_TEMP/ghostwriter-ipa"
+          APP=$(find "$RUNNER_TEMP/ghostwriter-ipa/Payload" -maxdepth 1 -name '*.app' -type d -print -quit)
+          codesign --verify --deep --strict "$APP"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.bobbysworld.ghostwriter"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "$IOS_BUILD_NUMBER"
+          {
+            echo "sha=$GITHUB_SHA"
+            echo "bundleId=com.bobbysworld.ghostwriter"
+            echo "version=1.0.0"
+            echo "build=$IOS_BUILD_NUMBER"
+            echo "signature=verified"
+            echo "distribution=artifact_only"
+          } > build/export/IOS-SIGNED-RECEIPT.txt
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ghostwriter-ios-signed-ipa-${{ inputs.ios_build_number }}
+          path: |
+            ios-native/build/export/*.ipa
+            ios-native/build/export/IPA-SHA256.txt
+            ios-native/build/export/IOS-SIGNED-RECEIPT.txt
+          if-no-files-found: error
+          retention-days: 30
