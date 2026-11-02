@@ -36,6 +36,11 @@ struct VaultView: View {
                 .cornerRadius(10)
                 .padding(.horizontal)
                 
+                Text("Cloud Vault is optional. Tap Search or Refresh when you want to connect.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+
                 // Search button
                 Button(action: performSearch) {
                     HStack {
@@ -94,9 +99,7 @@ struct VaultView: View {
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheet(items: [shareContent])
             }
-            .onAppear {
-                loadRecentEntries()
-            }
+            
         }
     }
     
@@ -118,7 +121,7 @@ struct VaultView: View {
                     entries = results
                     
                 case .failure(let error):
-                    errorMessage = "Search failed: \(error.localizedDescription)"
+                    errorMessage = "Cloud vault is unavailable right now. Local capture and export are still available."
                 }
             }
         }
@@ -138,7 +141,7 @@ struct VaultView: View {
                     entries = results
                     
                 case .failure(let error):
-                    errorMessage = "Failed to load entries: \(error.localizedDescription)"
+                    errorMessage = "Cloud vault is unavailable right now. Local capture and export are still available."
                 }
             }
         }
