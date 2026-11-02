@@ -6,7 +6,7 @@ struct EnhancedContentView: View {
     @StateObject private var pushManager = PushNotificationManager.shared
     @State private var selectedTab = 0
     @State private var userID: String = UUID().uuidString
-    @State private var serverURL: String = "ws://localhost:8080/ws"
+    @State private var serverURL: String = "wss://ghostwriter-api-production-8034.up.railway.app/ws"
     @State private var showSettings = false
     
     var body: some View {
@@ -38,9 +38,6 @@ struct EnhancedContentView: View {
             .tag(2)
         }
         .onAppear {
-            // Request push notification permissions
-            pushManager.requestAuthorization()
-            
             // Load saved user ID if exists
             if let savedUserID = UserDefaults.standard.string(forKey: "userID") {
                 userID = savedUserID
@@ -115,8 +112,8 @@ struct SettingsView: View {
                     }
                     
                     if let error = webSocketClient.lastError {
-                        Text("Error: \(error)")
-                            .foregroundColor(.red)
+                        Text("Cloud sync is unavailable right now. Capture and export still work locally.")
+                            .foregroundColor(.secondary)
                             .font(.caption)
                     }
                 }
@@ -147,6 +144,27 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section(header: Text("Privacy & Support")) {
+                    NavigationLink("Privacy") {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("GhostWriter Privacy").font(.title2).bold()
+                                Text("Screenshot and screen-recording OCR runs on device. GhostWriter only sends text to the optional cloud vault when you explicitly connect cloud sync. Selected photos and recordings are accessed only after you choose them. You can use capture, OCR, copy, and share without cloud sync.")
+                                Text("Notifications are optional and requested only when you choose Enable Notifications.")
+                            }.padding()
+                        }.navigationTitle("Privacy")
+                    }
+                    NavigationLink("Support") {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("GhostWriter Support").font(.title2).bold()
+                                Text("Core capture and export work locally. Cloud vault sync is optional. If cloud sync is unavailable, disconnect it and continue using local OCR/export.")
+                                Text("Support repository: github.com/Bboy9090/GhostWriter-")
+                            }.padding()
+                        }.navigationTitle("Support")
+                    }
+                }
+
                 Section(header: Text("About")) {
                     HStack {
                         Text("Version")
