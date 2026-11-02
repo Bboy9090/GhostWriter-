@@ -5,7 +5,7 @@ class APIClient {
     private let baseURL: String
     private let session: URLSession
     
-    init(baseURL: String = "http://localhost:8080") {
+    init(baseURL: String = "https://ghostwriter-api-production-8034.up.railway.app") {
         self.baseURL = baseURL
         self.session = URLSession.shared
     }
