@@ -1,16 +1,6 @@
-name: iOS Native Qualification
+name: iOS Native Qualification (manual)
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'ios-native/**'
-      - '.github/workflows/ios-native-qualification.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'ios-native/**'
-      - '.github/workflows/ios-native-qualification.yml'
   workflow_dispatch:
 
 permissions:
