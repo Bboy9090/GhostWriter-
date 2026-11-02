@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './com
 import { Input } from './components/ui/input'
 import { Textarea } from './components/ui/textarea'
 import { Badge } from './components/ui/badge'
+import { AIWritingPanel } from './components/AIWritingPanel'
 import { TEMPLATES, type Template } from './lib/templates'
 import {
   clearAllProjects,
@@ -255,6 +256,13 @@ export default function App() {
               </CardContent>
             </Card>
             <Card><CardContent className="pt-6"><Textarea aria-label="Writing editor" value={currentProject.content} onChange={event => { setSaveStatus('saving'); setCurrentProject({...currentProject, content: event.target.value}) }} placeholder="Start writing…" className="min-h-[58vh] resize-y border-0 font-serif text-base leading-7 shadow-none focus-visible:ring-0" /></CardContent></Card>
+            <AIWritingPanel
+              draft={currentProject.content}
+              onApply={content => {
+                setSaveStatus('saving')
+                setCurrentProject({ ...currentProject, content })
+              }}
+            />
           </section>
         ) : (
           <Card className="mx-auto mt-12 max-w-2xl"><CardContent className="py-14 text-center"><div className="mb-4 text-6xl">✍️</div><h2 className="text-2xl font-bold">Your words stay yours</h2><p className="mx-auto mt-2 max-w-lg text-muted-foreground">Create a blank document or start from a practical template. GhostWriter automatically saves your work on this device.</p><div className="mt-6 flex justify-center gap-3"><Button size="lg" onClick={() => setShowTemplates(true)}>Create a project</Button>{projects.length > 0 && <Button size="lg" variant="outline" onClick={() => setShowProjects(true)}>Open a project</Button>}</div></CardContent></Card>

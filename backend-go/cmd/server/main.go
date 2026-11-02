@@ -128,6 +128,7 @@ func main() {
 	app.Get("/health", handler.HealthCheck)
 	app.Get("/entries", handler.GetEntries)
 	app.Post("/vault/search", handler.SearchVault)
+	app.Post("/ai/write", handler.AIWrite)
 
 	// WebSocket route
 	app.Get("/ws", websocket.New(handler.HandleWebSocket))

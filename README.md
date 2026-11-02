@@ -2,7 +2,7 @@
 
 **AI-powered writing and publishing studio for Bobby's World / Blue Phoenix OS**
 
-> **Current status: friends-and-family preview candidate.** The active application is a local-first writing studio. It does not currently provide cloud sync, live AI writing, PDF export, or a signed desktop/mobile installer. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
+> **Current status: friends-and-family preview candidate.** The active application is a local-first writing studio. Live AI writing is available only when the GhostWriter API is configured and the user explicitly supplies their own OpenAI API key (BYOK); GhostWriter does not substitute demo AI output. Cloud sync, PDF export, and signed desktop/mobile distribution remain separate release lanes. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
 
 Ghost Writer is a productivity-focused writing application that helps you create, organize, and export written content. With built-in templates, optional AI assistance, and flexible export options, Ghost Writer empowers you to focus on your craft.
 
@@ -23,12 +23,13 @@ Ghost Writer is a productivity-focused writing application that helps you create
 - **Blog** - Blog post with intro, body, conclusion
 - **Chapter** - Book chapter with scenes and sections
 
-### 🤖 AI Assistance (Optional)
-- Content suggestions and improvements
-- Grammar and style checking
-- Tone adjustments
-- Works completely offline - AI is optional, not required
-- Privacy-first: No AI calls without explicit consent
+### 🤖 AI Assistance (Optional, Real BYOK)
+- Improve, shorten, expand, grammar-fix, tone rewrite, and summarize actions
+- Uses the configured GhostWriter backend and OpenAI Responses API
+- Requires the user to explicitly provide an OpenAI API key and model
+- The key is stored in the user's browser configuration and forwarded only for the explicit AI request; the GhostWriter backend does not persist it
+- No mock or simulated AI success is returned when the provider fails
+- Core writing, storage, backup, and export features continue to work without AI
 
 ### 📤 Export Options
 - Markdown (.md) - Preserves formatting

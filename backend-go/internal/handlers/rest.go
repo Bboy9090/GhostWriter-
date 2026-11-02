@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"log"
+	"strings"
 	"time"
+
+	"github.com/Bboy9090/GhostWriter/backend-go/internal/aiwriting"
 
 	"github.com/Bboy9090/GhostWriter/backend-go/internal/models"
 	"github.com/gofiber/fiber/v2"
@@ -131,5 +134,59 @@ func (h *Handler) GetEntries(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"entries": entries,
 		"count":   len(entries),
+	})
+}
+
+
+type aiWriteRequest struct {
+	Action string `json:"action"`
+	Text   string `json:"text"`
+	Model  string `json:"model"`
+}
+
+// AIWrite performs an explicit BYOK writing transformation.
+// The bearer credential is forwarded to OpenAI for this request only and is never persisted.
+func (h *Handler) AIWrite(c *fiber.Ctx) error {
+	auth := strings.TrimSpace(c.Get("Authorization"))
+	if !strings.HasPrefix(auth, "Bearer ") || strings.TrimSpace(strings.TrimPrefix(auth, "Bearer ")) == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"ok":    false,
+			"code":  "AI_CREDENTIAL_REQUIRED",
+			"error": "An OpenAI API key is required for this explicit AI request.",
+		})
+	}
+	apiKey := strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
+
+	var input aiWriteRequest
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"ok": false, "code": "INVALID_REQUEST", "error": "Invalid JSON request body.",
+		})
+	}
+
+	service := aiwriting.NewService("")
+	result, err := service.Generate(c.UserContext(), apiKey, aiwriting.Request{
+		Action: input.Action,
+		Text:   input.Text,
+		Model:  input.Model,
+	})
+	if err != nil {
+		log.Printf("AI writing request failed: %v", err)
+		status := fiber.StatusBadGateway
+		if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "unsupported") || strings.Contains(err.Error(), "limit") || strings.Contains(err.Error(), "invalid model") {
+			status = fiber.StatusBadRequest
+		}
+		return c.Status(status).JSON(fiber.Map{
+			"ok": false, "code": "AI_WRITE_FAILED", "error": err.Error(),
+		})
+	}
+
+	c.Set("Cache-Control", "no-store")
+	return c.JSON(fiber.Map{
+		"ok":       true,
+		"action":   input.Action,
+		"text":     result.Text,
+		"provider": "openai",
+		"model":    result.Model,
 	})
 }
