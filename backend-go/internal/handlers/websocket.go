@@ -24,19 +24,21 @@ const (
 )
 
 type Handler struct {
-	db        database.DB
-	redis     *redis.RedisClient
-	apns      *apns.APNSClient
-	embedding *embeddings.EmbeddingService
+	db           database.DB
+	redis        *redis.RedisClient
+	apns         *apns.APNSClient
+	embedding    *embeddings.EmbeddingService
+	vaultEnabled bool
 }
 
 // NewHandler creates a new handler
-func NewHandler(db database.DB, redisClient *redis.RedisClient, apnsClient *apns.APNSClient, embeddingService *embeddings.EmbeddingService) *Handler {
+func NewHandler(db database.DB, redisClient *redis.RedisClient, apnsClient *apns.APNSClient, embeddingService *embeddings.EmbeddingService, vaultEnabled bool) *Handler {
 	return &Handler{
-		db:        db,
-		redis:     redisClient,
-		apns:      apnsClient,
-		embedding: embeddingService,
+		db:           db,
+		redis:        redisClient,
+		apns:         apnsClient,
+		embedding:    embeddingService,
+		vaultEnabled: vaultEnabled,
 	}
 }
 
