@@ -19,11 +19,11 @@ permissions:
 jobs:
   ios-native:
     name: Build unsigned iOS app
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 35
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Install XcodeGen
         run: brew install xcodegen
