@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 // Push notification manager for APNS
