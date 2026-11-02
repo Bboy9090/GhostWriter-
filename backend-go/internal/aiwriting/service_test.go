@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"io"
 	"strings"
 	"testing"
 )
@@ -13,9 +14,8 @@ func TestGenerateReturnsProviderOutputText(t *testing.T) {
 	var sawStoreFalse bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth = r.Header.Get("Authorization")
-		buf := new(strings.Builder)
-		_, _ = buf.ReadFrom(r.Body)
-		sawStoreFalse = strings.Contains(buf.String(), `"store":false`)
+		body, _ := io.ReadAll(r.Body)
+		sawStoreFalse = strings.Contains(string(body), `"store":false`)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"output":[{"type":"message","content":[{"type":"output_text","text":"Polished result."}]}]}`))
 	}))
