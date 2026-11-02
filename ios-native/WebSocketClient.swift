@@ -11,7 +11,7 @@ class WebSocketClient: ObservableObject {
     private let serverURL: URL
     private var pingTimer: Timer?
     
-    init(serverURL: String = "ws://localhost:8080/ws") {
+    init(serverURL: String = "wss://ghostwriter-api-production-8034.up.railway.app/ws") {
         guard let url = URL(string: serverURL) else {
             fatalError("Invalid WebSocket URL")
         }
