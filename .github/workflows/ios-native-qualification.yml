@@ -1,0 +1,36 @@
+name: iOS Native Qualification (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-native:
+    name: Build unsigned iOS app
+    runs-on: macos-15
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios-native
+        run: xcodegen generate
+
+      - name: Build for iOS Simulator
+        working-directory: ios-native
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project GhostWriter.xcodeproj \
+            -scheme GhostWriter \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
