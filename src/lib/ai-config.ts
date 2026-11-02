@@ -116,56 +116,64 @@ export function getAIAction(id: string): AIAction | undefined {
   return AI_ACTIONS.find(action => action.id === id);
 }
 
-// Apply AI action to text (stub - requires API implementation)
+// Apply an AI action through the configured GhostWriter backend.
+// The OpenAI key is sent only with this explicit request and is not persisted by the backend.
 export async function applyAIAction(
-  actionId: string
-): Promise<{ success: boolean; result?: string; error?: string }> {
+  actionId: string,
+  text: string
+): Promise<{ success: boolean; result?: string; error?: string; model?: string }> {
   const config = getAIConfig();
 
-  // Check if AI is enabled and configured
-  if (!isAIAvailable()) {
+  if (!config.enabled || config.provider !== 'openai' || !config.apiKey.trim()) {
     return {
       success: false,
-      error: 'AI is not configured. Enable AI in settings to use this feature.'
+      error: 'Configure OpenAI BYOK in AI settings before using AI writing.'
     };
   }
 
   const action = getAIAction(actionId);
-  if (!action) {
+  if (!action) return { success: false, error: 'Invalid AI action' };
+  if (!text.trim()) return { success: false, error: 'There is no text to send.' };
+  if (!config.model.trim()) return { success: false, error: 'Choose an OpenAI model in AI settings.' };
+
+  const configuredBase = (import.meta.env.VITE_GHOSTWRITER_API_URL || import.meta.env.VITE_API_URL || '').trim();
+  if (!configuredBase) {
     return {
       success: false,
-      error: 'Invalid AI action'
+      error: 'GhostWriter AI backend is not configured for this build.'
     };
   }
 
   try {
-    // This is a stub - in a real implementation, you would call the AI API here
-    // For MVP, we return a placeholder response
+    const response = await fetch(`${configuredBase.replace(/\/$/, '')}/ai/write`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${config.apiKey.trim()}`
+      },
+      body: JSON.stringify({
+        action: actionId,
+        text,
+        model: config.model.trim()
+      })
+    });
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Return a message indicating AI is not yet implemented
-    return {
-      success: false,
-      error: 'AI integration is not yet implemented. This feature will be available in a future update.\n\nFor now, Ghost Writer works perfectly offline without AI assistance!'
+    const body = await response.json().catch(() => ({})) as {
+      ok?: boolean;
+      text?: string;
+      model?: string;
+      error?: string;
     };
 
-    // Real implementation would look like:
-    // const response = await callAIAPI(config, action.prompt + text);
-    // return { success: true, result: response };
-
-  } catch (error) {
-    console.error('AI action error:', error);
-
-    // Fallback behavior when AI is not available
-    if (config.offlineFallback) {
+    if (!response.ok || !body.ok || !body.text) {
       return {
         success: false,
-        error: 'AI service is unavailable. Ghost Writer works fully offline without AI features.'
+        error: body.error || `AI request failed (${response.status})`
       };
     }
 
+    return { success: true, result: body.text, model: body.model };
+  } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'AI request failed'
