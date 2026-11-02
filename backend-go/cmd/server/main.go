@@ -35,53 +35,58 @@ func main() {
 	}
 
 	// Get configuration from environment.
-	// MONGODB_URI takes precedence over DB_URL when both are set,
-	// and DB_URL may be a MongoDB URI when migrating from Railway.
+	// Vault/search infrastructure is optional. AI BYOK can run without database or Redis.
 	dbURL := resolveDatabaseURL()
-	redisURL := getEnv("REDIS_URL", "localhost:6379")
+	redisURL := strings.TrimSpace(os.Getenv("REDIS_URL"))
 	port := getEnv("PORT", "8080")
-	openaiAPIKey := getEnv("OPENAI_API_KEY", "")
+	openaiAPIKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	vaultEnabled := dbURL != "" && redisURL != ""
 
 	log.Printf("GhostWriter API starting up on 0.0.0.0:%s", port)
-	log.Printf("Database URL configured: %v", dbURL != "")
-	log.Printf("Redis URL configured: %v", redisURL != "")
+	log.Printf("Vault database configured: %v", dbURL != "")
+	log.Printf("Vault Redis configured: %v", redisURL != "")
+	log.Printf("Vault routes enabled: %v", vaultEnabled)
 
-	// Initialize database with retry logic so the service survives a slow DB start.
-	// NewDatabaseFromURL auto-detects PostgreSQL vs MongoDB from the URI scheme.
+	if (dbURL == "") != (redisURL == "") {
+		log.Println("Warning: partial vault configuration detected; vault/search/WebSocket routes will remain disabled")
+	}
+
 	var db database.DB
-	if err := retry(maxRetries, retryInterval, func() error {
-		var err error
-		db, err = database.NewDatabaseFromURL(dbURL)
-		return err
-	}); err != nil {
-		log.Fatalf("FATAL: could not connect to database after %d attempts: %v", maxRetries, err)
-	}
-	defer db.Close()
-
-	// Initialize schema
-	ctx := context.Background()
-	if err := db.InitSchema(ctx); err != nil {
-		log.Fatalf("FATAL: failed to initialize database schema: %v", err)
-	}
-
-	// Initialize Redis with retry logic
 	var redisClient *redis.RedisClient
-	if err := retry(maxRetries, retryInterval, func() error {
-		var err error
-		redisClient, err = redis.NewRedisClient(redisURL)
-		return err
-	}); err != nil {
-		log.Fatalf("FATAL: could not connect to Redis after %d attempts: %v", maxRetries, err)
-	}
-	defer redisClient.Close()
-
-	// Initialize embedding service (optional – only when API key is provided)
 	var embeddingService *embeddings.EmbeddingService
-	if openaiAPIKey != "" {
-		embeddingService = embeddings.NewEmbeddingService(openaiAPIKey)
-		log.Println("OpenAI embedding service initialized")
+
+	if vaultEnabled {
+		if err := retry(maxRetries, retryInterval, func() error {
+			var err error
+			db, err = database.NewDatabaseFromURL(dbURL)
+			return err
+		}); err != nil {
+			log.Fatalf("FATAL: could not connect to configured vault database after %d attempts: %v", maxRetries, err)
+		}
+		defer db.Close()
+
+		ctx := context.Background()
+		if err := db.InitSchema(ctx); err != nil {
+			log.Fatalf("FATAL: failed to initialize configured vault database schema: %v", err)
+		}
+
+		if err := retry(maxRetries, retryInterval, func() error {
+			var err error
+			redisClient, err = redis.NewRedisClient(redisURL)
+			return err
+		}); err != nil {
+			log.Fatalf("FATAL: could not connect to configured vault Redis after %d attempts: %v", maxRetries, err)
+		}
+		defer redisClient.Close()
+
+		if openaiAPIKey != "" {
+			embeddingService = embeddings.NewEmbeddingService(openaiAPIKey)
+			log.Println("OpenAI embedding service initialized for vault search")
+		} else {
+			log.Println("Vault search will use keyword-only mode because OPENAI_API_KEY is not configured")
+		}
 	} else {
-		log.Println("Warning: OPENAI_API_KEY not set, embeddings will not be generated")
+		log.Println("Starting in AI-only/local-editor API mode; vault infrastructure is not configured")
 	}
 
 	// Initialize APNS (optional)
@@ -106,7 +111,7 @@ func main() {
 	}
 
 	// Create handlers
-	handler := handlers.NewHandler(db, redisClient, apnsClient, embeddingService)
+	handler := handlers.NewHandler(db, redisClient, apnsClient, embeddingService, vaultEnabled)
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
@@ -124,14 +129,16 @@ func main() {
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
-	// Routes
+	// Always-available truth/AI routes.
 	app.Get("/health", handler.HealthCheck)
-	app.Get("/entries", handler.GetEntries)
-	app.Post("/vault/search", handler.SearchVault)
 	app.Post("/ai/write", handler.AIWrite)
 
-	// WebSocket route
-	app.Get("/ws", websocket.New(handler.HandleWebSocket))
+	// Vault routes exist only when both database and Redis were configured and initialized.
+	if vaultEnabled {
+		app.Get("/entries", handler.GetEntries)
+		app.Post("/vault/search", handler.SearchVault)
+		app.Get("/ws", websocket.New(handler.HandleWebSocket))
+	}
 
 	// Start server – bind to 0.0.0.0 so it is reachable inside containers/VMs
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
@@ -186,7 +193,7 @@ func resolveDatabaseURL() string {
 		log.Println("Using MONGODB_URI for database connection")
 		return mongoURI
 	}
-	dbURL := getEnv("DB_URL", "postgres://bobby_admin:bronx_password@localhost:5432/ghostwriter_vault?sslmode=disable")
+	dbURL := strings.TrimSpace(os.Getenv("DB_URL"))
 	if strings.HasPrefix(dbURL, "mongodb://") || strings.HasPrefix(dbURL, "mongodb+srv://") {
 		log.Println("DB_URL contains a MongoDB URI; using MongoDB driver")
 	}

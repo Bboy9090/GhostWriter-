@@ -105,3 +105,28 @@ func TestRetry_ExhaustsAttempts(t *testing.T) {
 		t.Errorf("expected 3 calls, got %d", calls)
 	}
 }
+
+
+func TestResolveDatabaseURL_NoImplicitLocalDatabase(t *testing.T) {
+	oldDB, hadDB := os.LookupEnv("DB_URL")
+	oldMongo, hadMongo := os.LookupEnv("MONGODB_URI")
+	t.Cleanup(func() {
+		if hadDB {
+			_ = os.Setenv("DB_URL", oldDB)
+		} else {
+			_ = os.Unsetenv("DB_URL")
+		}
+		if hadMongo {
+			_ = os.Setenv("MONGODB_URI", oldMongo)
+		} else {
+			_ = os.Unsetenv("MONGODB_URI")
+		}
+	})
+
+	_ = os.Unsetenv("DB_URL")
+	_ = os.Unsetenv("MONGODB_URI")
+
+	if got := resolveDatabaseURL(); got != "" {
+		t.Fatalf("expected no implicit database configuration, got %q", got)
+	}
+}

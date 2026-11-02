@@ -98,7 +98,9 @@ func (h *Handler) HealthCheck(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":    "healthy",
 		"timestamp": time.Now().UTC(),
-		"service":   "ghostwriter-api",
+		"service":       "ghostwriter-api",
+		"ai_writing":    "byok",
+		"vault_enabled": h.vaultEnabled,
 	})
 }
 
