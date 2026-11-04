@@ -1,6 +1,6 @@
 {
-  "name": "GhostWriter",
-  "short_name": "GhostWriter",
+  "name": "Bobby's Word Bench",
+  "short_name": "Word Bench",
   "description": "A private, local-first writing studio with templates, automatic saving, backups, and portable exports.",
   "start_url": "/",
   "display": "standalone",
