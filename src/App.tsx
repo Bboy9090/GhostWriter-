@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Clock3, Download, FilePlus, FolderOpen, HardDriveDownload, History, MessageSquarePlus, Moon, RotateCcw, Search, Sun, Trash2, Upload } from 'lucide-react'
+import { CheckCircle2, Clock3, Download, FilePlus, FolderOpen, GitCompareArrows, HardDriveDownload, History, MessageSquarePlus, Moon, RotateCcw, Search, Sun, Trash2, Upload } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -28,6 +28,7 @@ import {
   type ProjectMetadata,
 } from './lib/project-storage'
 import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
+import { diffDocumentLines } from './lib/document-diff'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -59,6 +60,7 @@ export default function App() {
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [compareRevisionId, setCompareRevisionId] = useState<string | null>(null)
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number; quote: string } | null>(null)
 
   const refreshProjects = () => {
@@ -290,6 +292,10 @@ export default function App() {
     }
   }
 
+  const comparedRevision = currentProject?.revisions?.find(revision => revision.id === compareRevisionId) || null
+  const checkpointDiff = currentProject && comparedRevision
+    ? diffDocumentLines(comparedRevision.content, currentProject.content)
+    : null
   const storage = getStorageStats()
   const words = currentProject ? countWords(currentProject.content) : 0
   const readTime = currentProject ? estimateReadingTime(currentProject.content) : 0
@@ -472,15 +478,62 @@ export default function App() {
                         {revision.content.slice(0, 220) || 'Empty document'}
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => restoreRevision(revision.id)}>
-                      <RotateCcw className="mr-2 h-4 w-4" />Restore
-                    </Button>
+                    <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                      <Button size="sm" variant="outline" onClick={() => setCompareRevisionId(revision.id)}>
+                        <GitCompareArrows className="mr-2 h-4 w-4" />Compare
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => restoreRevision(revision.id)}>
+                        <RotateCcw className="mr-2 h-4 w-4" />Restore
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
+              {comparedRevision && checkpointDiff && (
+                <div className="mt-5 rounded-lg border border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
+                    <div>
+                      <div className="font-semibold">Checkpoint comparison</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(comparedRevision.created).toLocaleString()} → current draft
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <Badge variant="outline">+{checkpointDiff.added} lines</Badge>
+                      <Badge variant="outline">-{checkpointDiff.removed} lines</Badge>
+                      <Badge variant="secondary">{checkpointDiff.unchanged} unchanged</Badge>
+                      <Button size="sm" variant="ghost" onClick={() => setCompareRevisionId(null)}>Clear</Button>
+                    </div>
+                  </div>
+                  <div className="max-h-[38vh] overflow-auto font-mono text-xs">
+                    {checkpointDiff.lines.map((line, index) => (
+                      <div
+                        key={`${index}-${line.kind}-${line.oldLine ?? 'x'}-${line.newLine ?? 'x'}`}
+                        className={
+                          line.kind === 'added'
+                            ? 'bg-emerald-500/10 text-emerald-200'
+                            : line.kind === 'removed'
+                              ? 'bg-rose-500/10 text-rose-200'
+                              : 'text-muted-foreground'
+                        }
+                      >
+                        <div className="grid grid-cols-[3rem_3rem_1fr] gap-2 px-3 py-1">
+                          <span className="text-right opacity-60">{line.oldLine ?? ''}</span>
+                          <span className="text-right opacity-60">{line.newLine ?? ''}</span>
+                          <span className="whitespace-pre-wrap break-words">
+                            {line.kind === 'added' ? '+ ' : line.kind === 'removed' ? '- ' : '  '}
+                            {line.text || ' '}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="mt-4 flex gap-2">
                 <Button className="flex-1" onClick={saveRevision}>Save checkpoint</Button>
-                <Button className="flex-1" variant="outline" onClick={() => setShowHistory(false)}>Close</Button>
+                <Button className="flex-1" variant="outline" onClick={() => { setShowHistory(false); setCompareRevisionId(null) }}>Close</Button>
               </div>
             </CardContent>
           </Card>
