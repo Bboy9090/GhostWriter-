@@ -1,10 +1,10 @@
-# Ghost Writer
+# Bobby's Word Bench
 
-**AI-powered writing and publishing studio for Bobby's World / Blue Phoenix OS**
+**Private, local-first writing and publishing workbench from Bobby's Workshop**
 
-> **Current status: friends-and-family preview candidate.** The active application is a local-first writing studio. Live AI writing is available only when the GhostWriter API is configured and the user explicitly supplies their own OpenAI API key (BYOK); GhostWriter does not substitute demo AI output. Cloud sync, PDF export, and signed desktop/mobile distribution remain separate release lanes. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
+> **Current status: friends-and-family preview candidate.** The active application is Bobby's Word Bench, a local-first writing studio. Live AI writing is available only when the GhostWriter API is configured and the user explicitly supplies their own OpenAI API key (BYOK); GhostWriter does not substitute demo AI output. Cloud sync, PDF export, and signed desktop/mobile distribution remain separate release lanes. See [`docs/FAMILY_PREVIEW.md`](docs/FAMILY_PREVIEW.md) for the tested scope and limitations.
 
-Ghost Writer is a productivity-focused writing application that helps you create, organize, and export written content. With built-in templates, optional AI assistance, and flexible export options, Ghost Writer empowers you to focus on your craft.
+Bobby's Word Bench is a productivity-focused writing application that helps you create, organize, and export written content. With built-in templates, optional AI assistance, and flexible export options, Bobby's Word Bench helps you stay focused on the work.
 
 ---
 
@@ -137,7 +137,7 @@ Tests:
 
 ### Windows (MSIX)
 
-Package Ghost Writer for Windows and Blue Phoenix OS:
+Package Bobby's Word Bench for desktop distribution:
 
 ```bash
 npm run build
@@ -209,7 +209,7 @@ ghost-writer/
 
 ## 🔒 Privacy & Security
 
-Ghost Writer is designed with privacy as a core principle:
+Bobby's Word Bench is designed with privacy as a core principle:
 
 - **Local-first:** All data stored in your browser's localStorage
 - **No cloud required:** Fully functional offline
@@ -287,7 +287,7 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 ---
 
-**Ghost Writer** - *Write without limits. Publish with confidence.* ✍️
+**Bobby's Word Bench** — *Draft it. Shape it. Finish it.*
 
 ### Word export
 
