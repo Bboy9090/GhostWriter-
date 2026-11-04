@@ -20,12 +20,17 @@ export function diffDocumentLines(before: string, after: string): DocumentDiff {
   const rows = a.length + 1
   const cols = b.length + 1
   const lcs = Array.from({ length: rows }, () => new Uint32Array(cols))
+  const score = (i: number, j: number) => lcs[i]?.[j] ?? 0
 
   for (let i = a.length - 1; i >= 0; i--) {
+    const row = lcs[i]
+    if (!row) continue
     for (let j = b.length - 1; j >= 0; j--) {
-      lcs[i][j] = a[i] === b[j]
-        ? lcs[i + 1][j + 1] + 1
-        : Math.max(lcs[i + 1][j], lcs[i][j + 1])
+      const beforeLine = a[i] ?? ''
+      const afterLine = b[j] ?? ''
+      row[j] = beforeLine === afterLine
+        ? score(i + 1, j + 1) + 1
+        : Math.max(score(i + 1, j), score(i, j + 1))
     }
   }
 
@@ -36,8 +41,11 @@ export function diffDocumentLines(before: string, after: string): DocumentDiff {
   let newLine = 1
 
   while (i < a.length && j < b.length) {
-    if (a[i] === b[j]) {
-      lines.push({ kind: 'same', text: a[i], oldLine, newLine })
+    const beforeLine = a[i] ?? ''
+    const afterLine = b[j] ?? ''
+
+    if (beforeLine === afterLine) {
+      lines.push({ kind: 'same', text: beforeLine, oldLine, newLine })
       i++
       j++
       oldLine++
@@ -45,24 +53,24 @@ export function diffDocumentLines(before: string, after: string): DocumentDiff {
       continue
     }
 
-    if (lcs[i + 1][j] >= lcs[i][j + 1]) {
-      lines.push({ kind: 'removed', text: a[i], oldLine, newLine: null })
+    if (score(i + 1, j) >= score(i, j + 1)) {
+      lines.push({ kind: 'removed', text: beforeLine, oldLine, newLine: null })
       i++
       oldLine++
     } else {
-      lines.push({ kind: 'added', text: b[j], oldLine: null, newLine })
+      lines.push({ kind: 'added', text: afterLine, oldLine: null, newLine })
       j++
       newLine++
     }
   }
 
   while (i < a.length) {
-    lines.push({ kind: 'removed', text: a[i], oldLine, newLine: null })
+    lines.push({ kind: 'removed', text: a[i] ?? '', oldLine, newLine: null })
     i++
     oldLine++
   }
   while (j < b.length) {
-    lines.push({ kind: 'added', text: b[j], oldLine: null, newLine })
+    lines.push({ kind: 'added', text: b[j] ?? '', oldLine: null, newLine })
     j++
     newLine++
   }
