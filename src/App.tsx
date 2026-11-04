@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { Download, FilePlus, FolderOpen, HardDriveDownload, Moon, Search, Sun, Trash2, Upload } from 'lucide-react'
+import { CheckCircle2, Download, FilePlus, FolderOpen, HardDriveDownload, MessageSquarePlus, Moon, Search, Sun, Trash2, Upload } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -22,6 +22,7 @@ import {
   RestoreError,
   saveProject,
   type Project,
+  type DocumentComment,
   type ProjectMetadata,
 } from './lib/project-storage'
 import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
@@ -52,7 +53,10 @@ export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('ghostwriter:theme') !== 'light')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const importRef = useRef<HTMLInputElement>(null)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
   const [exportingDocx, setExportingDocx] = useState(false)
+  const [commentBody, setCommentBody] = useState('')
+  const [selectedRange, setSelectedRange] = useState<{ start: number; end: number; quote: string } | null>(null)
 
   const refreshProjects = () => {
     const next = getAllProjectsMetadata().sort(
@@ -206,6 +210,56 @@ export default function App() {
     toast.success('Local projects cleared')
   }
 
+  const captureSelection = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    const start = editor.selectionStart
+    const end = editor.selectionEnd
+    const quote = editor.value.slice(start, end)
+    setSelectedRange(end > start && quote.trim() ? { start, end, quote } : null)
+  }
+
+  const addComment = () => {
+    if (!currentProject || !selectedRange || !commentBody.trim()) return
+    const comment: DocumentComment = {
+      id: `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      start: selectedRange.start,
+      end: selectedRange.end,
+      quote: selectedRange.quote,
+      body: commentBody.trim(),
+      created: new Date().toISOString(),
+      resolved: false,
+    }
+    setSaveStatus('saving')
+    setCurrentProject({
+      ...currentProject,
+      comments: [...(currentProject.comments || []), comment],
+    })
+    setCommentBody('')
+    setSelectedRange(null)
+    toast.success('Comment added to the selected text')
+  }
+
+  const patchComment = (commentId: string, patch: Partial<DocumentComment>) => {
+    if (!currentProject) return
+    setSaveStatus('saving')
+    setCurrentProject({
+      ...currentProject,
+      comments: (currentProject.comments || []).map(comment =>
+        comment.id === commentId ? { ...comment, ...patch } : comment
+      ),
+    })
+  }
+
+  const removeComment = (commentId: string) => {
+    if (!currentProject) return
+    setSaveStatus('saving')
+    setCurrentProject({
+      ...currentProject,
+      comments: (currentProject.comments || []).filter(comment => comment.id !== commentId),
+    })
+  }
+
   const storage = getStorageStats()
   const words = currentProject ? countWords(currentProject.content) : 0
   const readTime = currentProject ? estimateReadingTime(currentProject.content) : 0
@@ -254,7 +308,97 @@ export default function App() {
                 </div>
               </CardContent>
             </Card>
-            <Card><CardContent className="pt-6"><Textarea aria-label="Writing editor" value={currentProject.content} onChange={event => { setSaveStatus('saving'); setCurrentProject({...currentProject, content: event.target.value}) }} placeholder="Start writing…" className="min-h-[58vh] resize-y border-0 font-serif text-base leading-7 shadow-none focus-visible:ring-0" /></CardContent></Card>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <Card>
+                <CardContent className="pt-6">
+                  <Textarea
+                    ref={editorRef}
+                    aria-label="Writing editor"
+                    value={currentProject.content}
+                    onSelect={captureSelection}
+                    onKeyUp={captureSelection}
+                    onClick={captureSelection}
+                    onChange={event => {
+                      setSaveStatus('saving')
+                      setCurrentProject({...currentProject, content: event.target.value})
+                      setSelectedRange(null)
+                    }}
+                    placeholder="Start writing…"
+                    className="min-h-[58vh] resize-y border-0 font-serif text-base leading-7 shadow-none focus-visible:ring-0"
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MessageSquarePlus className="h-4 w-4" />
+                    Review comments
+                  </CardTitle>
+                  <CardDescription>Select text in the editor, then add a note without changing the draft.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2 rounded-lg border border-border p-3">
+                    <div className="text-xs font-medium text-muted-foreground">Selected text</div>
+                    <div className="max-h-24 overflow-y-auto whitespace-pre-wrap rounded bg-muted p-2 text-sm">
+                      {selectedRange?.quote || 'Select a passage in the editor.'}
+                    </div>
+                    <Input
+                      aria-label="Comment text"
+                      value={commentBody}
+                      onChange={event => setCommentBody(event.target.value)}
+                      placeholder="Add review note…"
+                      disabled={!selectedRange}
+                    />
+                    <Button
+                      className="w-full"
+                      size="sm"
+                      onClick={addComment}
+                      disabled={!selectedRange || !commentBody.trim()}
+                    >
+                      <MessageSquarePlus className="mr-2 h-4 w-4" />
+                      Add comment
+                    </Button>
+                  </div>
+
+                  <div className="max-h-[44vh] space-y-3 overflow-y-auto">
+                    {(currentProject.comments || []).length === 0 && (
+                      <p className="py-4 text-center text-sm text-muted-foreground">No review comments yet.</p>
+                    )}
+                    {(currentProject.comments || [])
+                      .slice()
+                      .sort((a, b) => Number(a.resolved) - Number(b.resolved) || a.start - b.start)
+                      .map(comment => (
+                        <div key={comment.id} className={`rounded-lg border p-3 ${comment.resolved ? 'border-border bg-muted/40 opacity-70' : 'border-amber-500/30 bg-amber-500/5'}`}>
+                          <div className="line-clamp-3 whitespace-pre-wrap text-xs font-medium">“{comment.quote}”</div>
+                          <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-muted-foreground">{new Date(comment.created).toLocaleString()}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => patchComment(comment.id, { resolved: !comment.resolved })}
+                                aria-label={comment.resolved ? 'Reopen comment' : 'Resolve comment'}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeComment(comment.id)}
+                                aria-label="Delete comment"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
             <AIWritingPanel
               draft={currentProject.content}
               onApply={content => {
