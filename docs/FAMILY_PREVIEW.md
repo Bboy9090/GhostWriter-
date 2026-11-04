@@ -1,6 +1,6 @@
-# GhostWriter 1.1 Family Preview
+# Bobby's Word Bench 1.1 Family Preview
 
-GhostWriter 1.1 is a local-first writing studio intended for supervised friends-and-family testing.
+Bobby's Word Bench 1.1 is a local-first writing studio intended for supervised friends-and-family testing.
 
 ## Included
 
@@ -9,7 +9,7 @@ GhostWriter 1.1 is a local-first writing studio intended for supervised friends-
 - project search and deletion
 - full JSON backup and restore
 - Word (.docx), Markdown and plain-text export
-- optional real BYOK AI writing actions through the GhostWriter backend
+- optional real BYOK AI writing actions through the legacy GhostWriter-compatible backend
 - dark and light themes
 - installable offline-capable PWA shell
 - first-run privacy and limitations notice
@@ -18,7 +18,7 @@ GhostWriter 1.1 is a local-first writing studio intended for supervised friends-
 
 - Projects are stored in the current browser. Clearing browser data can erase them.
 - Backups must be downloaded manually and restored manually on another device.
-- AI writing requires a configured GhostWriter backend plus an explicit user-supplied OpenAI API key and model; it is not available offline and never falls back to simulated AI text.
+- AI writing requires a configured legacy GhostWriter-compatible backend plus an explicit user-supplied OpenAI API key and model; it is not available offline and never falls back to simulated AI text.
 - Cloud sync, collaboration, PDF export, desktop installers, and app-store distribution are not included.
 - Offline support begins after a successful online production load and service-worker installation.
 - This is a prerelease for feedback, not a production or store release.
