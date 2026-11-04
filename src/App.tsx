@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Download, FilePlus, FolderOpen, HardDriveDownload, MessageSquarePlus, Moon, Search, Sun, Trash2, Upload } from 'lucide-react'
+import { CheckCircle2, Clock3, Download, FilePlus, FolderOpen, HardDriveDownload, History, MessageSquarePlus, Moon, RotateCcw, Search, Sun, Trash2, Upload } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -12,6 +12,7 @@ import {
   clearAllProjects,
   countWords,
   createProject,
+  createProjectRevision,
   deleteProject,
   estimateReadingTime,
   exportAllProjects,
@@ -20,6 +21,7 @@ import {
   getStorageStats,
   importProjects,
   RestoreError,
+  restoreProjectRevision,
   saveProject,
   type Project,
   type DocumentComment,
@@ -56,6 +58,7 @@ export default function App() {
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number; quote: string } | null>(null)
 
   const refreshProjects = () => {
@@ -260,6 +263,33 @@ export default function App() {
     })
   }
 
+  const saveRevision = () => {
+    if (!currentProject) return
+    try {
+      const next = createProjectRevision(currentProject)
+      setCurrentProject(next)
+      refreshProjects()
+      setSaveStatus('saved')
+      toast.success('Version checkpoint saved')
+    } catch {
+      toast.error('Could not save version checkpoint')
+    }
+  }
+
+  const restoreRevision = (revisionId: string) => {
+    if (!currentProject) return
+    if (!window.confirm('Restore this version? Your current draft will be saved as a new checkpoint first.')) return
+    try {
+      const next = restoreProjectRevision(currentProject, revisionId)
+      setCurrentProject(next)
+      refreshProjects()
+      setSaveStatus('saved')
+      toast.success('Version restored; previous draft preserved')
+    } catch {
+      toast.error('Could not restore that version')
+    }
+  }
+
   const storage = getStorageStats()
   const words = currentProject ? countWords(currentProject.content) : 0
   const readTime = currentProject ? estimateReadingTime(currentProject.content) : 0
@@ -302,6 +332,8 @@ export default function App() {
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline">{words} words</Badge><Badge variant="outline">{readTime} min</Badge>
                   <Badge variant={saveStatus === 'error' ? 'destructive' : 'secondary'}>{saveStatus === 'saved' ? 'Saved locally' : saveStatus === 'saving' ? 'Saving…' : 'Save failed'}</Badge>
+                  <Button size="sm" variant="outline" onClick={saveRevision}><Clock3 className="mr-2 h-4 w-4" />Checkpoint</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowHistory(true)}><History className="mr-2 h-4 w-4" />History ({currentProject.revisions?.length || 0})</Button>
                   <Button size="sm" variant="outline" onClick={() => exportAsMarkdown(currentProject)}><Download className="mr-2 h-4 w-4" />Markdown</Button>
                   <Button size="sm" variant="outline" onClick={exportWord} disabled={exportingDocx}><Download className="mr-2 h-4 w-4" />{exportingDocx ? 'Preparing Word…' : 'Word (.docx)'}</Button>
                   <Button size="sm" variant="outline" onClick={() => exportAsText(currentProject)}><Download className="mr-2 h-4 w-4" />Text</Button>
@@ -416,6 +448,44 @@ export default function App() {
         <span>Bobby&apos;s Word Bench {APP_VERSION} · Local-first writing studio</span>
         <div className="flex gap-3"><button className="min-h-11 px-2 underline" onClick={() => setShowOnboarding(true)}>Help & privacy</button><button className="min-h-11 px-2 text-destructive underline" onClick={wipeAll}>Clear local data</button></div>
       </footer>
+
+      {showHistory && currentProject && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Version history">
+          <Card className="mx-auto max-w-2xl">
+            <CardHeader>
+              <CardTitle>Version history</CardTitle>
+              <CardDescription>Manual local checkpoints. Restoring a version first preserves your current draft as a new checkpoint.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+                {(currentProject.revisions || []).length === 0 && (
+                  <p className="py-10 text-center text-sm text-muted-foreground">No checkpoints yet.</p>
+                )}
+                {(currentProject.revisions || []).map(revision => (
+                  <div key={revision.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                    <div className="min-w-0 flex-1">
+                      <strong className="block truncate">{revision.title}</strong>
+                      <span className="text-xs text-muted-foreground">
+                        {revision.wordCount} words · {new Date(revision.created).toLocaleString()}
+                      </span>
+                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">
+                        {revision.content.slice(0, 220) || 'Empty document'}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => restoreRevision(revision.id)}>
+                      <RotateCcw className="mr-2 h-4 w-4" />Restore
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Button className="flex-1" onClick={saveRevision}>Save checkpoint</Button>
+                <Button className="flex-1" variant="outline" onClick={() => setShowHistory(false)}>Close</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {showTemplates && <div className="fixed inset-0 z-40 overflow-y-auto bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Choose a template"><Card className="mx-auto max-w-2xl"><CardHeader><CardTitle>Choose a starting point</CardTitle><CardDescription>Every project can be changed freely after creation.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{TEMPLATES.map(template => <button key={template.id} className="rounded-xl border border-border p-4 text-left hover:bg-muted" onClick={() => beginProject(template)}><span className="text-2xl">{template.icon}</span><strong className="mt-2 block">{template.name}</strong><span className="text-sm text-muted-foreground">{template.description}</span></button>)}<Button className="sm:col-span-2" variant="outline" onClick={() => setShowTemplates(false)}>Cancel</Button></CardContent></Card></div>}
 
