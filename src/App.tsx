@@ -198,7 +198,7 @@ export default function App() {
   }
 
   const wipeAll = () => {
-    if (!window.confirm('Delete every GhostWriter project stored in this browser? This cannot be undone.')) return
+    if (!window.confirm('Delete every Bobby's Word Bench project stored in this browser? This cannot be undone.')) return
     if (!window.confirm('Final warning: export a backup first if you need these projects. Continue?')) return
     clearAllProjects()
     setCurrentProject(null)
@@ -219,7 +219,7 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-2xl" aria-hidden>✍️</span>
-              <h1 className="text-xl font-bold">GhostWriter</h1>
+              <h1 className="text-xl font-bold">Bobby&apos;s Word Bench</h1>
             </div>
             <p className="text-xs text-muted-foreground">Private, local-first writing studio</p>
           </div>
@@ -269,7 +269,7 @@ export default function App() {
       </main>
 
       <footer className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 border-t border-border px-4 py-6 text-xs text-muted-foreground">
-        <span>GhostWriter {APP_VERSION} · Local-first writing studio</span>
+        <span>Bobby&apos;s Word Bench {APP_VERSION} · Local-first writing studio</span>
         <div className="flex gap-3"><button className="min-h-11 px-2 underline" onClick={() => setShowOnboarding(true)}>Help & privacy</button><button className="min-h-11 px-2 text-destructive underline" onClick={wipeAll}>Clear local data</button></div>
       </footer>
 
@@ -277,7 +277,7 @@ export default function App() {
 
       {showProjects && <div className="fixed inset-0 z-40 overflow-y-auto bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Projects"><Card className="mx-auto max-w-2xl"><CardHeader><CardTitle>Your projects</CardTitle><CardDescription>Stored only in this browser unless you export a backup.</CardDescription></CardHeader><CardContent><div className="relative mb-4"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search project titles" value={query} onChange={event => setQuery(event.target.value)} /></div><div className="max-h-[55vh] space-y-2 overflow-y-auto">{filteredProjects.map(project => <div key={project.id} className="flex items-center gap-2 rounded-lg border border-border p-3"><button className="flex-1 text-left" onClick={() => openProject(project.id)}><strong className="block">{project.title}</strong><span className="text-xs text-muted-foreground">{project.wordCount} words · {new Date(project.modified).toLocaleString()}</span></button><Button size="sm" variant="ghost" aria-label={`Delete ${project.title}`} onClick={() => removeProject(project.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>)}{filteredProjects.length === 0 && <p className="py-8 text-center text-muted-foreground">No matching projects.</p>}</div><Button className="mt-4 w-full" variant="outline" onClick={() => setShowProjects(false)}>Close</Button></CardContent></Card></div>}
 
-      {showOnboarding && <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Welcome to GhostWriter"><Card className="mx-auto max-w-xl"><CardHeader><CardTitle>Welcome to GhostWriter</CardTitle><CardDescription>A quiet place to draft, organize, and export your writing.</CardDescription></CardHeader><CardContent className="space-y-4 text-sm"><ol className="list-decimal space-y-2 pl-5"><li>Create a project from a template or blank page.</li><li>Your work auto-saves in this browser.</li><li>Download backups regularly—clearing browser data can erase local projects.</li><li>Export finished work as Word, Markdown, or plain text. Word export keeps your text and Markdown symbols as typed.</li></ol><div className="rounded-lg bg-muted p-3"><strong>Privacy:</strong> this app does not require an account and does not upload writing to a GhostWriter server. Optional analytics report general app usage on hosted Vercel deployments; they should be disabled if you require zero telemetry.</div><div className="rounded-lg border border-amber-500/40 p-3"><strong>Current feature set:</strong> GhostWriter is local-first. Synchronization, AI writing, and PDF export are not part of this version.</div><Button className="min-h-11 w-full" onClick={() => { localStorage.setItem(ONBOARDING_KEY, 'true'); setShowOnboarding(false) }}>Start writing</Button></CardContent></Card></div>}
+      {showOnboarding && <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Welcome to GhostWriter"><Card className="mx-auto max-w-xl"><CardHeader><CardTitle>Welcome to Bobby&apos;s Word Bench</CardTitle><CardDescription>A quiet place to draft, organize, and export your writing.</CardDescription></CardHeader><CardContent className="space-y-4 text-sm"><ol className="list-decimal space-y-2 pl-5"><li>Create a project from a template or blank page.</li><li>Your work auto-saves in this browser.</li><li>Download backups regularly—clearing browser data can erase local projects.</li><li>Export finished work as Word, Markdown, or plain text. Word export keeps your text and Markdown symbols as typed.</li></ol><div className="rounded-lg bg-muted p-3"><strong>Privacy:</strong> this app does not require an account and does not upload writing to a Bobby's Word Bench server. Optional analytics report general app usage on hosted Vercel deployments; they should be disabled if you require zero telemetry.</div><div className="rounded-lg border border-amber-500/40 p-3"><strong>Current feature set:</strong> Bobby's Word Bench is local-first. Synchronization, AI writing, and PDF export are not part of this version.</div><Button className="min-h-11 w-full" onClick={() => { localStorage.setItem(ONBOARDING_KEY, 'true'); setShowOnboarding(false) }}>Start writing</Button></CardContent></Card></div>}
     </div>
   )
 }
