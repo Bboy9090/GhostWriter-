@@ -1,6 +1,16 @@
 // Project storage utilities for Ghost Writer
 // All data stored in browser localStorage
 
+export interface DocumentComment {
+  id: string;
+  start: number;
+  end: number;
+  quote: string;
+  body: string;
+  created: string;
+  resolved: boolean;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -8,6 +18,7 @@ export interface Project {
   content: string;
   created: string;
   modified: string;
+  comments?: DocumentComment[];
   metadata: {
     wordCount: number;
     characterCount: number;
@@ -98,7 +109,11 @@ export function getProject(id: string): Project | null {
     const projectKey = `${STORAGE_PREFIX}:project:${id}`;
     const data = localStorage.getItem(projectKey);
     if (!data) return null;
-    return JSON.parse(data);
+    const project = JSON.parse(data) as Project;
+    return {
+      ...project,
+      comments: Array.isArray(project.comments) ? project.comments : [],
+    };
   } catch (error) {
     console.error('Error loading project:', error);
     return null;
@@ -240,7 +255,21 @@ function isValidProject(value: unknown): value is Project {
   const metadata = project.metadata;
   return typeof project.title === 'string' && typeof project.template === 'string' &&
     typeof project.content === 'string' && typeof project.created === 'string' &&
-    typeof project.modified === 'string' && !!metadata && typeof metadata === 'object' &&
+    typeof project.modified === 'string' &&
+    (project.comments === undefined || (
+      Array.isArray(project.comments) &&
+      project.comments.every(comment =>
+        !!comment &&
+        typeof comment.id === 'string' &&
+        typeof comment.start === 'number' &&
+        typeof comment.end === 'number' &&
+        typeof comment.quote === 'string' &&
+        typeof comment.body === 'string' &&
+        typeof comment.created === 'string' &&
+        typeof comment.resolved === 'boolean'
+      )
+    )) &&
+    !!metadata && typeof metadata === 'object' &&
     Array.isArray(metadata.tags) && metadata.tags.every(tag => typeof tag === 'string') &&
     typeof metadata.category === 'string';
 }
@@ -317,6 +346,7 @@ export function createProject(title: string, templateId: string, content: string
     content,
     created: now,
     modified: now,
+    comments: [],
     metadata: {
       wordCount: countWords(content),
       characterCount: countCharacters(content),
