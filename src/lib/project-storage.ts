@@ -11,6 +11,14 @@ export interface DocumentComment {
   resolved: boolean;
 }
 
+export interface ProjectRevision {
+  id: string;
+  created: string;
+  title: string;
+  content: string;
+  wordCount: number;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -19,6 +27,7 @@ export interface Project {
   created: string;
   modified: string;
   comments?: DocumentComment[];
+  revisions?: ProjectRevision[];
   metadata: {
     wordCount: number;
     characterCount: number;
@@ -113,6 +122,7 @@ export function getProject(id: string): Project | null {
     return {
       ...project,
       comments: Array.isArray(project.comments) ? project.comments : [],
+      revisions: Array.isArray(project.revisions) ? project.revisions : [],
     };
   } catch (error) {
     console.error('Error loading project:', error);
@@ -256,6 +266,17 @@ function isValidProject(value: unknown): value is Project {
   return typeof project.title === 'string' && typeof project.template === 'string' &&
     typeof project.content === 'string' && typeof project.created === 'string' &&
     typeof project.modified === 'string' &&
+    (project.revisions === undefined || (
+      Array.isArray(project.revisions) &&
+      project.revisions.every(revision =>
+        !!revision &&
+        typeof revision.id === 'string' &&
+        typeof revision.created === 'string' &&
+        typeof revision.title === 'string' &&
+        typeof revision.content === 'string' &&
+        typeof revision.wordCount === 'number'
+      )
+    )) &&
     (project.comments === undefined || (
       Array.isArray(project.comments) &&
       project.comments.every(comment =>
@@ -347,6 +368,7 @@ export function createProject(title: string, templateId: string, content: string
     created: now,
     modified: now,
     comments: [],
+    revisions: [],
     metadata: {
       wordCount: countWords(content),
       characterCount: countCharacters(content),
@@ -357,4 +379,41 @@ export function createProject(title: string, templateId: string, content: string
 
   saveProject(project);
   return project;
+}
+
+
+export function createProjectRevision(project: Project): Project {
+  const revision: ProjectRevision = {
+    id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    created: new Date().toISOString(),
+    title: project.title,
+    content: project.content,
+    wordCount: countWords(project.content),
+  };
+  const next = {
+    ...project,
+    revisions: [revision, ...(project.revisions || [])].slice(0, 50),
+  };
+  saveProject(next);
+  return next;
+}
+
+export function restoreProjectRevision(project: Project, revisionId: string): Project {
+  const revision = (project.revisions || []).find(item => item.id === revisionId);
+  if (!revision) throw new Error('Revision not found');
+  const safetyRevision: ProjectRevision = {
+    id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    created: new Date().toISOString(),
+    title: project.title,
+    content: project.content,
+    wordCount: countWords(project.content),
+  };
+  const next = {
+    ...project,
+    title: revision.title,
+    content: revision.content,
+    revisions: [safetyRevision, ...(project.revisions || [])].slice(0, 50),
+  };
+  saveProject(next);
+  return next;
 }
