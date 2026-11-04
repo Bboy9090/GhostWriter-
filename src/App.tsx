@@ -198,7 +198,7 @@ export default function App() {
   }
 
   const wipeAll = () => {
-    if (!window.confirm('Delete every Bobby's Word Bench project stored in this browser? This cannot be undone.')) return
+    if (!window.confirm("Delete every Bobby's Word Bench project stored in this browser? This cannot be undone.")) return
     if (!window.confirm('Final warning: export a backup first if you need these projects. Continue?')) return
     clearAllProjects()
     setCurrentProject(null)
