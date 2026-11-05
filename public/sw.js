@@ -1,5 +1,5 @@
-const CACHE = 'ghostwriter-family-preview-v1'
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/ghostwriter-icon.svg']
+const CACHE = 'word-bench-shell-v1'
+const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/word-bench-icon.svg']
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)))

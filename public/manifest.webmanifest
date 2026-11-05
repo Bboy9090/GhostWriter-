@@ -11,12 +11,12 @@
   "categories": ["productivity", "utilities"],
   "icons": [
     {
-      "src": "/ghostwriter-icon.svg",
+      "src": "/word-bench-icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
     },
     {
-      "src": "/ghostwriter-maskable.svg",
+      "src": "/word-bench-maskable.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
