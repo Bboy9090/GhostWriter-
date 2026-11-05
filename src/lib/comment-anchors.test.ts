@@ -34,4 +34,31 @@ describe('comment anchor rebasing', () => {
     expect(result[0]?.anchorState).toBe('anchored')
     expect(result[0]?.start).toBe(0)
   })
+
+  it('keeps an unresolved anchor unresolved across unrelated edits', () => {
+    const unresolved = {
+      ...comment(5, 9, 'this'),
+      anchorState: 'unresolved' as const,
+    }
+    const result = rebaseDocumentComments('Keep that passage', 'Keep that passage!', [unresolved])
+    expect(result[0]?.anchorState).toBe('unresolved')
+    expect(result[0]?.quote).toBe('this')
+  })
+
+  it('does not move a comment to a surviving duplicate after its occurrence is deleted', () => {
+    const result = rebaseDocumentComments(
+      'Echo here and Echo again',
+      'here and Echo again',
+      [comment(0, 4, 'Echo')],
+    )
+    expect(result[0]?.anchorState).toBe('unresolved')
+    expect(result[0]?.start).toBe(0)
+  })
+
+
+  it('treats overlapping quote matches as ambiguous', () => {
+    const result = rebaseDocumentComments('x ana y', 'banana', [comment(2, 5, 'ana')])
+    expect(result[0]?.anchorState).toBe('unresolved')
+  })
+
 })
