@@ -19,7 +19,7 @@ Bobby's Word Bench 1.1 is a local-first writing studio intended for supervised f
 - Projects are stored in the current browser. Clearing browser data can erase them.
 - Backups must be downloaded manually and restored manually on another device.
 - AI writing requires a configured legacy GhostWriter-compatible backend plus an explicit user-supplied OpenAI API key and model; it is not available offline and never falls back to simulated AI text.
-- Cloud sync, collaboration, PDF export, desktop installers, and app-store distribution are not included.
+- Cloud sync, collaboration, desktop installers, and app-store distribution are not included. Print / PDF is available through the browser's native print dialog and keeps manuscript content on-device.
 - Offline support begins after a successful online production load and service-worker installation.
 - This is a prerelease for feedback, not a production or store release.
 
