@@ -3,10 +3,6 @@ import JSZip from 'jszip'
 import { createDocx } from '../lib/docx-export'
 import { DocxImportError, parseDocx } from '../lib/docx-import'
 
-function exactArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-}
-
 describe('DOCX import', () => {
   it('round-trips Word Bench paragraph text, blank lines, tabs and Unicode', async () => {
     const source = 'Opening line\n\nTabbed\ttext\nUnicode: café 世界 ✨'
@@ -23,7 +19,7 @@ describe('DOCX import', () => {
     zip.file('notes.txt', 'not a Word document')
     const bytes = await zip.generateAsync({ type: 'uint8array' })
 
-    await expect(parseDocx(exactArrayBuffer(bytes), 'notes.docx'))
+    await expect(parseDocx(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, 'notes.docx'))
       .rejects.toThrow('not a complete DOCX package')
   })
 
@@ -33,7 +29,7 @@ describe('DOCX import', () => {
     zip.file('_rels/.rels', '<Relationships />')
     const bytes = await zip.generateAsync({ type: 'uint8array' })
 
-    await expect(parseDocx(exactArrayBuffer(bytes), 'empty.docx'))
+    await expect(parseDocx(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, 'empty.docx'))
       .rejects.toThrow('does not contain word/document.xml')
   })
 
