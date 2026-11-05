@@ -173,3 +173,40 @@ export function getExportPreview(project: Project, format: 'markdown' | 'text', 
 
   return content.substring(0, maxChars) + '...';
 }
+
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[character] || character));
+}
+
+export function exportAsHtml(project: Project): void {
+  const title = escapeHtml(project.title || 'Untitled Document');
+  const content = escapeHtml(project.content);
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<style>
+  body{max-width:760px;margin:48px auto;padding:0 24px;font:18px/1.65 Georgia,"Times New Roman",serif;color:#171717;background:#fff}
+  h1{font:700 2rem/1.2 system-ui,-apple-system,sans-serif;margin:0 0 8px}
+  .meta{font:13px/1.4 system-ui,-apple-system,sans-serif;color:#666;margin-bottom:32px}
+  article{white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<h1>${title}</h1>
+<div class="meta">${project.metadata.wordCount} words</div>
+<article>${content}</article>
+</body>
+</html>
+`;
+  downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${sanitizeFilename(project.title) || 'word-bench-document'}.html`);
+}
