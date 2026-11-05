@@ -27,12 +27,21 @@ function textFromDocumentXml(xml: string): string {
     throw new DocxImportError('The Word document XML is malformed.')
   }
 
-  const paragraphs = Array.from(document.getElementsByTagNameNS(
-    'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-    'p',
-  ))
+  const wordNamespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+  const paragraphs = Array.from(document.getElementsByTagNameNS(wordNamespace, 'p'))
 
-  return paragraphs.map(paragraph => {
+  const contentParagraphs = paragraphs.filter((paragraph, index) => {
+    if (index !== 0) return true
+    const style = paragraph.getElementsByTagNameNS(wordNamespace, 'pStyle')[0]
+    const styleValue =
+      style?.getAttributeNS(wordNamespace, 'val') ||
+      style?.getAttribute('w:val') ||
+      style?.getAttribute('val') ||
+      ''
+    return styleValue.toLowerCase() !== 'title'
+  })
+
+  return contentParagraphs.map(paragraph => {
     const parts: string[] = []
     const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_ELEMENT)
     let node = walker.nextNode()
