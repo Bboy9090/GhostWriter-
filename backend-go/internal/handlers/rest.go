@@ -69,7 +69,7 @@ func (h *Handler) SearchVault(c *fiber.Ctx) error {
 			}
 		}
 	} else {
-		log.Printf("Embedding service disabled: vector leg of search skipped for query %q", searchQuery.Query)
+		log.Printf("Embedding service disabled: vector leg of search skipped")
 	}
 
 	kwLimit := limit * 3
