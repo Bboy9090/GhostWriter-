@@ -19,6 +19,7 @@ export interface AIAction {
 }
 
 const STORAGE_KEY = 'ghostwriter:ai-config';
+const SESSION_KEY = 'ghostwriter:ai-session-key';
 
 // Default AI configuration (disabled by default)
 const DEFAULT_CONFIG: AIConfig = {
@@ -87,18 +88,29 @@ export const AI_ACTIONS: AIAction[] = [
 export function getAIConfig(): AIConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_CONFIG;
-    return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+    const parsed = stored ? JSON.parse(stored) as Partial<AIConfig> : {};
+    // Migrate legacy persistent settings without retaining a previously saved secret.
+    // The user must enter their BYOK token again after this upgrade.
+    if (stored && Object.prototype.hasOwnProperty.call(parsed, 'apiKey')) {
+      const { apiKey: _discard, ...preferences } = parsed;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    }
+    const { apiKey: _legacy, ...safePreferences } = parsed;
+    return { ...DEFAULT_CONFIG, ...safePreferences, apiKey: sessionStorage.getItem(SESSION_KEY) || '' };
   } catch (error) {
     console.error('Error loading AI config:', error);
-    return DEFAULT_CONFIG;
+    return { ...DEFAULT_CONFIG };
   }
 }
 
-// Save AI configuration
+// Save nonsecret preferences persistently; keep the BYOK token in this tab's
+// session only. sessionStorage survives reloads but not normal tab closure.
 export function saveAIConfig(config: AIConfig): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    const { apiKey, ...preferences } = config;
+    if (apiKey.trim()) sessionStorage.setItem(SESSION_KEY, apiKey.trim());
+    else sessionStorage.removeItem(SESSION_KEY);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
   } catch (error) {
     console.error('Error saving AI config:', error);
     throw new Error('Failed to save AI configuration');
@@ -228,6 +240,7 @@ export function enableAI(): void {
 // Clear AI configuration (for privacy/reset)
 export function clearAIConfig(): void {
   localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
 }
 
 // Get provider-specific configuration hints

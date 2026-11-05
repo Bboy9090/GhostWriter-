@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import App from '../App'
 import { createProject, getProject } from '../lib/project-storage'
+import { getAIConfig, saveAIConfig } from '../lib/ai-config'
 
 vi.mock('sonner', () => ({
   Toaster: () => null,
@@ -17,6 +18,7 @@ describe('edits waiting for autosave', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     localStorage.clear()
+    sessionStorage.clear()
     localStorage.setItem('ghostwriter:onboarding-complete', 'true')
   })
 
@@ -24,6 +26,26 @@ describe('edits waiting for autosave', () => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
     vi.useRealTimers()
+  })
+
+  it('clears the session BYOK credential through Clear local data', () => {
+    saveAIConfig({
+      enabled: true,
+      provider: 'openai',
+      apiKey: 'session-only-secret',
+      endpoint: '',
+      model: 'test-model',
+      offlineFallback: false,
+    })
+    expect(getAIConfig().apiKey).toBe('session-only-secret')
+
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Clear local data' }))
+
+    expect(confirm).toHaveBeenCalledTimes(2)
+    expect(sessionStorage.getItem('ghostwriter:ai-session-key')).toBeNull()
+    expect(getAIConfig().apiKey).toBe('')
   })
 
   it('preserves the latest text when switching projects before the debounce fires', () => {

@@ -33,6 +33,7 @@ import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
 import { acceptDocumentChange, inferDocumentEditRange, invalidatePendingDocumentChanges, isHistoryShortcut, rebaseDocumentChanges } from './lib/change-tracking'
 import { findNextTextMatch, replaceAllText, replaceTextMatch, type TextMatch } from './lib/find-replace'
+import { clearAIConfig } from './lib/ai-config'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -227,6 +228,7 @@ export default function App() {
     if (!window.confirm("Delete every Bobby's Word Bench project stored in this browser? This cannot be undone.")) return
     if (!window.confirm('Final warning: export a backup first if you need these projects. Continue?')) return
     clearAllProjects()
+    clearAIConfig()
     setCurrentProject(null)
     refreshProjects()
     toast.success('Local projects cleared')
