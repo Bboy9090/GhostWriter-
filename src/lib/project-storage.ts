@@ -9,6 +9,7 @@ export interface DocumentComment {
   body: string;
   created: string;
   resolved: boolean;
+  anchorState?: 'anchored' | 'unresolved';
 }
 
 export interface ProjectRevision {
