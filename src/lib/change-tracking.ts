@@ -20,6 +20,16 @@ export function isHistoryShortcut(
   return normalized === 'z' || normalized === 'y'
 }
 
+export function invalidatePendingDocumentChanges(
+  changes: DocumentChange[],
+): DocumentChange[] {
+  return changes.map(change =>
+    change.status === 'pending'
+      ? { ...change, anchorState: 'unresolved' as const }
+      : change
+  )
+}
+
 export function inferDocumentEditRange(
   previousText: string,
   nextText: string,
