@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   acceptDocumentChange,
+  inferDocumentEditRange,
   rebaseDocumentChanges,
   resolveDocumentChangeRange,
 } from './change-tracking'
@@ -26,6 +27,40 @@ describe('tracked change anchoring', () => {
   it('uses the original range when it still matches', () => {
     expect(resolveDocumentChangeRange('alpha beta gamma', pending(6, 10, 'beta')))
       .toEqual({ start: 6, end: 10 })
+  })
+
+  it('infers insertion, deletion, and replacement ranges without browser beforeinput', () => {
+    expect(inferDocumentEditRange('beta beta', 'prefix beta beta'))
+      .toEqual({ start: 0, end: 0 })
+    expect(inferDocumentEditRange('prefix beta beta', 'beta beta'))
+      .toEqual({ start: 0, end: 7 })
+    expect(inferDocumentEditRange('alpha beta gamma', 'alpha zeta gamma'))
+      .toEqual({ start: 6, end: 9 })
+  })
+
+  it('rebases a pasted prefix before the second duplicate passage', () => {
+    const previous = 'beta beta'
+    const next = 'prefix beta beta'
+    const [change] = rebaseDocumentChanges(
+      previous,
+      next,
+      [pending(5, 9, 'beta')],
+      inferDocumentEditRange(previous, next),
+    )
+    expect(change).toMatchObject({ start: 12, end: 16, anchorState: 'anchored' })
+    expect(acceptDocumentChange(next, change!)).toBe('prefix beta delta')
+  })
+
+  it('rebases after a deletion before the tracked passage', () => {
+    const previous = 'prefix alpha beta'
+    const next = 'alpha beta'
+    const [change] = rebaseDocumentChanges(
+      previous,
+      next,
+      [pending(13, 17, 'beta')],
+      inferDocumentEditRange(previous, next),
+    )
+    expect(change).toMatchObject({ start: 6, end: 10, anchorState: 'anchored' })
   })
 
   it('shifts a pending change when an edit occurs before its passage', () => {
