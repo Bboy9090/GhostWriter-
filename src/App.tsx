@@ -31,7 +31,7 @@ import {
 import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
-import { acceptDocumentChange } from './lib/change-tracking'
+import { acceptDocumentChange, inferDocumentEditRange, rebaseDocumentChanges } from './lib/change-tracking'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -60,6 +60,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const importRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const pendingEditRef = useRef<{ start: number; end: number } | null>(null)
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [changeReplacement, setChangeReplacement] = useState('')
@@ -234,6 +235,15 @@ export default function App() {
     setSelectedRange(end > start && quote.trim() ? { start, end, quote } : null)
   }
 
+  const capturePendingEditRange = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    pendingEditRef.current = {
+      start: editor.selectionStart,
+      end: editor.selectionEnd,
+    }
+  }
+
   const addComment = () => {
     if (!currentProject || !selectedRange || !commentBody.trim()) return
     const comment: DocumentComment = {
@@ -290,6 +300,7 @@ export default function App() {
       replacement,
       created: new Date().toISOString(),
       status: 'pending',
+      anchorState: 'anchored',
     }
     setSaveStatus('saving')
     setCurrentProject({
@@ -325,6 +336,9 @@ export default function App() {
     }
 
     setSaveStatus('saving')
+    const acceptedChanges = (currentProject.changes || []).map(item =>
+      item.id === changeId ? { ...item, status: 'accepted' as const } : item
+    )
     setCurrentProject({
       ...currentProject,
       content: nextContent,
@@ -333,8 +347,11 @@ export default function App() {
         nextContent,
         currentProject.comments || [],
       ),
-      changes: (currentProject.changes || []).map(item =>
-        item.id === changeId ? { ...item, status: 'accepted' as const } : item
+      changes: rebaseDocumentChanges(
+        currentProject.content,
+        nextContent,
+        acceptedChanges,
+        { start: change.start, end: change.end },
       ),
     })
     toast.success('Tracked change accepted')
@@ -436,11 +453,20 @@ export default function App() {
                     aria-label="Writing editor"
                     value={currentProject.content}
                     onSelect={captureSelection}
+                    onKeyDown={capturePendingEditRange}
+                    onPaste={capturePendingEditRange}
+                    onCut={capturePendingEditRange}
+                    onDrop={capturePendingEditRange}
+                    onCompositionStart={capturePendingEditRange}
                     onKeyUp={captureSelection}
                     onClick={captureSelection}
                     onChange={event => {
                       setSaveStatus('saving')
                       const nextContent = event.target.value
+                      const editRange =
+                        pendingEditRef.current ??
+                        inferDocumentEditRange(currentProject.content, nextContent)
+                      pendingEditRef.current = null
                       setCurrentProject({
                         ...currentProject,
                         content: nextContent,
@@ -448,6 +474,12 @@ export default function App() {
                           currentProject.content,
                           nextContent,
                           currentProject.comments || [],
+                        ),
+                        changes: rebaseDocumentChanges(
+                          currentProject.content,
+                          nextContent,
+                          currentProject.changes || [],
+                          editRange,
                         ),
                       })
                       setSelectedRange(null)
@@ -527,7 +559,7 @@ export default function App() {
                             : 'border-border bg-muted/40 opacity-70'
                         }`}>
                           <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                            {change.status}
+                            {change.status}{change.anchorState === 'unresolved' ? ' · anchor unresolved' : ''}
                           </div>
                           <div className="mt-2 text-xs">
                             <div className="rounded bg-rose-500/10 p-2 text-rose-300 line-through">− {change.original}</div>
@@ -596,6 +628,7 @@ export default function App() {
               draft={currentProject.content}
               onApply={content => {
                 setSaveStatus('saving')
+                const editRange = inferDocumentEditRange(currentProject.content, content)
                 setCurrentProject({
                   ...currentProject,
                   content,
@@ -603,6 +636,12 @@ export default function App() {
                     currentProject.content,
                     content,
                     currentProject.comments || [],
+                  ),
+                  changes: rebaseDocumentChanges(
+                    currentProject.content,
+                    content,
+                    currentProject.changes || [],
+                    editRange,
                   ),
                 })
               }}

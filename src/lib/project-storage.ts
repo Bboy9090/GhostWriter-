@@ -20,6 +20,7 @@ export interface DocumentChange {
   replacement: string;
   created: string;
   status: 'pending' | 'accepted' | 'rejected';
+  anchorState?: 'anchored' | 'unresolved';
 }
 
 export interface ProjectRevision {
@@ -134,7 +135,12 @@ export function getProject(id: string): Project | null {
     return {
       ...project,
       comments: Array.isArray(project.comments) ? project.comments : [],
-      changes: Array.isArray(project.changes) ? project.changes : [],
+      changes: Array.isArray(project.changes)
+        ? project.changes.map(change => ({
+            ...change,
+            anchorState: change.anchorState === 'unresolved' ? 'unresolved' : 'anchored',
+          }))
+        : [],
       revisions: Array.isArray(project.revisions) ? project.revisions : [],
     };
   } catch (error) {
@@ -313,7 +319,8 @@ function isValidProject(value: unknown): value is Project {
         typeof change.original === 'string' &&
         typeof change.replacement === 'string' &&
         typeof change.created === 'string' &&
-        (change.status === 'pending' || change.status === 'accepted' || change.status === 'rejected')
+        (change.status === 'pending' || change.status === 'accepted' || change.status === 'rejected') &&
+        (change.anchorState === undefined || change.anchorState === 'anchored' || change.anchorState === 'unresolved')
       )
     )) &&
     !!metadata && typeof metadata === 'object' &&
