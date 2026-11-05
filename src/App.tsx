@@ -28,7 +28,7 @@ import {
   type DocumentChange,
   type ProjectMetadata,
 } from './lib/project-storage'
-import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
+import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
 import { acceptDocumentChange } from './lib/change-tracking'
@@ -418,6 +418,7 @@ export default function App() {
                   <Button size="sm" variant="outline" onClick={() => exportAsMarkdown(currentProject)}><Download className="mr-2 h-4 w-4" />Markdown</Button>
                   <Button size="sm" variant="outline" onClick={exportWord} disabled={exportingDocx}><Download className="mr-2 h-4 w-4" />{exportingDocx ? 'Preparing Word…' : 'Word (.docx)'}</Button>
                   <Button size="sm" variant="outline" onClick={() => exportAsText(currentProject)}><Download className="mr-2 h-4 w-4" />Text</Button>
+                  <Button size="sm" variant="outline" onClick={() => exportAsHtml(currentProject)}><Download className="mr-2 h-4 w-4" />HTML</Button>
                   <Button size="sm" variant="outline" onClick={printPdf}><Download className="mr-2 h-4 w-4" />Print / PDF</Button>
                 </div>
               </CardContent>
