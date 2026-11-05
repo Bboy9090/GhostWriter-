@@ -35,6 +35,7 @@ import { diffDocumentLines } from './lib/document-diff'
 import { acceptDocumentChange, inferDocumentEditRange, invalidatePendingDocumentChanges, isHistoryShortcut, rebaseDocumentChanges } from './lib/change-tracking'
 import { findNextTextMatch, replaceAllText, replaceTextMatch, type TextMatch } from './lib/find-replace'
 import { clearAIConfig } from './lib/ai-config'
+import { buildDocumentOutline } from './lib/document-outline'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -541,6 +542,25 @@ export default function App() {
   const storage = getStorageStats()
   const words = currentProject ? countWords(currentProject.content) : 0
   const readTime = currentProject ? estimateReadingTime(currentProject.content) : 0
+  const documentOutline = useMemo(
+    () => currentProject ? buildDocumentOutline(currentProject.content) : [],
+    [currentProject?.content],
+  )
+
+  const jumpToOutlineEntry = (start: number) => {
+    const editor = editorRef.current
+    if (!editor) return
+    editor.focus()
+    editor.setSelectionRange(start, start)
+    setSelectedRange(null)
+    window.requestAnimationFrame(() => {
+      const before = editor.value.slice(0, start)
+      const lineIndex = before.split('\n').length - 1
+      const computed = window.getComputedStyle(editor)
+      const lineHeight = Number.parseFloat(computed.lineHeight) || 28
+      editor.scrollTop = Math.max(0, lineIndex * lineHeight - editor.clientHeight * 0.3)
+    })
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -697,6 +717,34 @@ export default function App() {
                   <CardDescription>Select text to add a comment or propose a tracked replacement. Suggestions do not change the draft until accepted.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Document outline</div>
+                      <Badge variant="outline">{documentOutline.length}</Badge>
+                    </div>
+                    {documentOutline.length === 0 ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Add Markdown headings (# Heading) or Chapter/Part/Prologue/Epilogue lines to build navigation.
+                      </p>
+                    ) : (
+                      <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
+                        {documentOutline.map(entry => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            className="block w-full truncate rounded px-2 py-1 text-left text-xs hover:bg-muted"
+                            style={{ paddingLeft: `${Math.min(5, Math.max(1, entry.level)) * 0.5 + 0.25}rem` }}
+                            title={`Line ${entry.line}: ${entry.label}`}
+                            onClick={() => jumpToOutlineEntry(entry.start)}
+                          >
+                            <span className="mr-2 text-muted-foreground">{entry.line}</span>
+                            {entry.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-2 rounded-lg border border-border p-3">
                     <div className="text-xs font-medium text-muted-foreground">Selected text</div>
                     <div className="max-h-24 overflow-y-auto whitespace-pre-wrap rounded bg-muted p-2 text-sm">
