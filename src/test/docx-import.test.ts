@@ -12,7 +12,7 @@ describe('DOCX import', () => {
     const source = 'Opening line\n\nTabbed\ttext\nUnicode: café 世界 ✨'
     const exported = await createDocx({ title: 'Round trip', content: source })
 
-    const imported = await parseDocx(exactArrayBuffer(exported), 'Round trip.docx')
+    const imported = await parseDocx(exported, 'Round trip.docx')
 
     expect(imported.title).toBe('Round trip')
     expect(imported.content).toBe(source)
