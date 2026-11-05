@@ -230,17 +230,20 @@ export default function App() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    if (!flushCurrentProject()) {
+      event.target.value = ''
+      return
+    }
+
     try {
       const imported = await importDocxFile(file)
-      if (currentProject) flushCurrentProject(currentProject.id)
-
       const project = createProject(imported.title, 'blank', imported.content)
-      setProjects(getAllProjectsMetadata())
       setCurrentProject(project)
       setShowProjects(false)
       setShowTemplates(false)
-      setDocumentChanges([])
-      setActiveSidebarTab('chapters')
+      setSelectedRange(null)
+      setActiveFindMatch(null)
+      refreshProjects()
       toast.success('Word document imported')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Word import failed')
