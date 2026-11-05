@@ -5,11 +5,74 @@ export interface ResolvedChangeRange {
   end: number
 }
 
-export function resolveDocumentChangeRange(
+export interface DocumentEditRange {
+  start: number
+  end: number
+}
+
+function rangeMatches(
   content: string,
   change: Pick<DocumentChange, 'start' | 'end' | 'original'>,
+): boolean {
+  return (
+    Boolean(change.original) &&
+    change.start >= 0 &&
+    change.end >= change.start &&
+    content.slice(change.start, change.end) === change.original
+  )
+}
+
+export function rebaseDocumentChanges(
+  previousText: string,
+  nextText: string,
+  changes: DocumentChange[],
+  edit: DocumentEditRange | null,
+): DocumentChange[] {
+  if (previousText === nextText || changes.length === 0) return changes
+
+  const delta = nextText.length - previousText.length
+
+  return changes.map(change => {
+    if (change.status !== 'pending') return change
+    if (change.anchorState === 'unresolved') return change
+
+    if (!rangeMatches(previousText, change)) {
+      return { ...change, anchorState: 'unresolved' }
+    }
+
+    if (!edit) {
+      return rangeMatches(nextText, change)
+        ? { ...change, anchorState: 'anchored' }
+        : { ...change, anchorState: 'unresolved' }
+    }
+
+    if (change.end <= edit.start) {
+      return rangeMatches(nextText, change)
+        ? { ...change, anchorState: 'anchored' }
+        : { ...change, anchorState: 'unresolved' }
+    }
+
+    if (change.start >= edit.end) {
+      const shifted = {
+        ...change,
+        start: change.start + delta,
+        end: change.end + delta,
+        anchorState: 'anchored' as const,
+      }
+      return rangeMatches(nextText, shifted)
+        ? shifted
+        : { ...change, anchorState: 'unresolved' }
+    }
+
+    return { ...change, anchorState: 'unresolved' }
+  })
+}
+
+export function resolveDocumentChangeRange(
+  content: string,
+  change: Pick<DocumentChange, 'start' | 'end' | 'original' | 'anchorState'>,
 ): ResolvedChangeRange | null {
-  if (!change.original) return null
+  if (!change.original || change.anchorState === 'unresolved') return null
 
   if (
     change.start >= 0 &&
@@ -19,21 +82,12 @@ export function resolveDocumentChangeRange(
     return { start: change.start, end: change.end }
   }
 
-  const matches: number[] = []
-  let at = content.indexOf(change.original)
-  while (at >= 0 && matches.length < 2) {
-    matches.push(at)
-    at = content.indexOf(change.original, at + 1)
-  }
-
-  if (matches.length !== 1) return null
-  const start = matches[0]!
-  return { start, end: start + change.original.length }
+  return null
 }
 
 export function acceptDocumentChange(
   content: string,
-  change: Pick<DocumentChange, 'start' | 'end' | 'original' | 'replacement'>,
+  change: Pick<DocumentChange, 'start' | 'end' | 'original' | 'replacement' | 'anchorState'>,
 ): string | null {
   const range = resolveDocumentChangeRange(content, change)
   if (!range) return null
