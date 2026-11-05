@@ -14,6 +14,13 @@ describe('DOCX import', () => {
     expect(imported.content).toBe(source)
   })
 
+  it("preserves another Word document's Title-styled opening paragraph", async () => {
+    const exported = await createDocx({ title: 'A real opening title', content: 'The story begins.' })
+    const imported = await parseDocx(exported, 'Different filename.docx')
+    expect(imported.title).toBe('Different filename')
+    expect(imported.content).toBe('A real opening title\nThe story begins.')
+  })
+
   it('rejects ZIP files that are not complete DOCX packages', async () => {
     const zip = new JSZip()
     zip.file('notes.txt', 'not a Word document')
