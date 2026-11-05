@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyAIAction, getProviderHints, saveAIConfig, validateAIConfig } from './ai-config'
+import { applyAIAction, clearAIConfig, getAIConfig, getProviderHints, saveAIConfig, validateAIConfig } from './ai-config'
 
 describe('real AI writing client', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     vi.stubEnv('VITE_API_URL', 'https://ghostwriter-api.example')
     saveAIConfig({
       enabled: true,
@@ -18,6 +19,32 @@ describe('real AI writing client', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.restoreAllMocks()
+  })
+
+  it('never persists a BYOK key in durable browser storage', () => {
+    expect(localStorage.getItem('ghostwriter:ai-config')).not.toContain('test-key')
+    expect(sessionStorage.getItem('ghostwriter:ai-session-key')).toBe('test-key')
+    expect(getAIConfig().apiKey).toBe('test-key')
+    sessionStorage.clear()
+    expect(getAIConfig().apiKey).toBe('')
+    expect(getAIConfig().provider).toBe('openai')
+  })
+
+  it('scrubs legacy persisted BYOK secrets without silently reusing them', () => {
+    localStorage.setItem('ghostwriter:ai-config', JSON.stringify({
+      enabled: true, provider: 'openai', apiKey: 'legacy-private-key', model: 'test-model'
+    }))
+    sessionStorage.clear()
+    expect(getAIConfig().apiKey).toBe('')
+    expect(getAIConfig().model).toBe('test-model')
+    expect(localStorage.getItem('ghostwriter:ai-config')).not.toContain('legacy-private-key')
+    expect(localStorage.getItem('ghostwriter:ai-config')).not.toContain('apiKey')
+  })
+
+  it('clears the session credential and durable preferences on reset', () => {
+    clearAIConfig()
+    expect(sessionStorage.getItem('ghostwriter:ai-session-key')).toBeNull()
+    expect(localStorage.getItem('ghostwriter:ai-config')).toBeNull()
   })
 
   it('sends explicit text to the backend and returns provider output', async () => {
