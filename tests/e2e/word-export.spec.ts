@@ -26,3 +26,33 @@ test('downloads an actual Word package with current text despite storage failure
   await expect(page.getByRole('textbox', { name: 'Writing editor' })).toHaveValue(text)
   await expect(page.getByRole('button', { name: 'Word (.docx)', exact: true })).toBeEnabled()
 })
+
+
+test('downloads a valid local EPUB package from the current draft', async ({ page }, testInfo) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Start writing' }).click()
+  await page.getByRole('button', { name: 'New', exact: true }).click()
+  await page.getByRole('button', { name: /Blank Document/ }).click()
+  await page.getByRole('textbox', { name: 'Project title' }).fill('Memory Hero Draft')
+  const text = 'Opening page.\n\nSecond page with & <symbols>.'
+  await page.getByRole('textbox', { name: 'Writing editor' }).fill(text)
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'EPUB', exact: true }).click()
+  const download = await pending
+  expect(download.suggestedFilename()).toBe('memory-hero-draft.epub')
+
+  const output = testInfo.outputPath('memory-hero-draft.epub')
+  await download.saveAs(output)
+  const zip = await JSZip.loadAsync(await readFile(output))
+
+  expect(await zip.file('mimetype')!.async('string')).toBe('application/epub+zip')
+  expect(zip.file('META-INF/container.xml')).not.toBeNull()
+  expect(zip.file('OEBPS/package.opf')).not.toBeNull()
+  expect(zip.file('OEBPS/nav.xhtml')).not.toBeNull()
+
+  const content = await zip.file('OEBPS/content.xhtml')!.async('string')
+  expect(content).toContain('Opening page.')
+  expect(content).toContain('Second page with &amp; &lt;symbols&gt;.')
+  await expect(page.getByRole('textbox', { name: 'Writing editor' })).toHaveValue(text)
+})
