@@ -28,7 +28,7 @@ import {
   type DocumentChange,
   type ProjectMetadata,
 } from './lib/project-storage'
-import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
+import { exportAsDocx, exportAsEpub, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
 import { importDocxFile } from './lib/docx-import'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
@@ -67,6 +67,7 @@ export default function App() {
   const pendingEditRef = useRef<{ start: number; end: number } | null>(null)
   const pendingHistoryEditRef = useRef(false)
   const [exportingDocx, setExportingDocx] = useState(false)
+  const [exportingEpub, setExportingEpub] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [changeReplacement, setChangeReplacement] = useState('')
   const [showHistory, setShowHistory] = useState(false)
@@ -204,6 +205,19 @@ export default function App() {
       toast.error('Word export failed. Your draft is still here; try Markdown or Text export.')
     } finally {
       setExportingDocx(false)
+    }
+  }
+
+  const exportEpub = async () => {
+    if (!currentProject || exportingEpub) return
+    setExportingEpub(true)
+    try {
+      await exportAsEpub(currentProject)
+      toast.success('EPUB download started')
+    } catch {
+      toast.error('EPUB export failed. Your draft is still available in Word, HTML, Markdown, and Text.')
+    } finally {
+      setExportingEpub(false)
     }
   }
 
@@ -572,6 +586,7 @@ export default function App() {
                   <Button size="sm" variant="outline" onClick={exportWord} disabled={exportingDocx}><Download className="mr-2 h-4 w-4" />{exportingDocx ? 'Preparing Word…' : 'Word (.docx)'}</Button>
                   <Button size="sm" variant="outline" onClick={() => exportAsText(currentProject)}><Download className="mr-2 h-4 w-4" />Text</Button>
                   <Button size="sm" variant="outline" onClick={() => exportAsHtml(currentProject)}><Download className="mr-2 h-4 w-4" />HTML</Button>
+                  <Button size="sm" variant="outline" onClick={exportEpub} disabled={exportingEpub}><Download className="mr-2 h-4 w-4" />{exportingEpub ? 'Preparing EPUB…' : 'EPUB'}</Button>
                   <Button size="sm" variant="outline" onClick={printPdf}><Download className="mr-2 h-4 w-4" />Print / PDF</Button>
                 </div>
               </CardContent>
