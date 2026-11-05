@@ -23,6 +23,22 @@ describe('find and replace', () => {
     })
   })
 
+  it('preserves original offsets when Unicode case folding changes length', () => {
+    expect(findNextTextMatch('İ foo!', 'foo')).toEqual({ start: 2, end: 5 })
+    expect(replaceAllText('İ foo!', 'foo', 'bar')).toEqual({
+      content: 'İ bar!',
+      count: 1,
+    })
+  })
+
+  it('treats regex metacharacters as literal search text', () => {
+    expect(findNextTextMatch('a+b a.b', 'a+b')).toEqual({ start: 0, end: 3 })
+    expect(replaceAllText('a+b a+b', 'a+b', 'x')).toEqual({
+      content: 'x x',
+      count: 2,
+    })
+  })
+
   it('leaves content untouched for an empty or missing query', () => {
     expect(replaceAllText('alpha', '', 'x')).toEqual({ content: 'alpha', count: 0 })
     expect(replaceAllText('alpha', 'z', 'x')).toEqual({ content: 'alpha', count: 0 })
