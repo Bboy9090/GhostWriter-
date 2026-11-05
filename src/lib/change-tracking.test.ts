@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   acceptDocumentChange,
   inferDocumentEditRange,
+  invalidatePendingDocumentChanges,
   isHistoryShortcut,
   rebaseDocumentChanges,
   resolveDocumentChangeRange,
@@ -25,6 +26,15 @@ const pending = (
 })
 
 describe('tracked change anchoring', () => {
+  it('invalidates pending anchors after history operations instead of guessing duplicate identity', () => {
+    const changes = invalidatePendingDocumentChanges([
+      pending(0, 4, 'beta'),
+      { ...pending(5, 9, 'beta'), id: 'accepted', status: 'accepted' },
+    ])
+    expect(changes[0]?.anchorState).toBe('unresolved')
+    expect(changes[1]?.status).toBe('accepted')
+  })
+
   it('recognizes history shortcuts so caret evidence is not reused for undo or redo', () => {
     expect(isHistoryShortcut('z', true, false)).toBe(true)
     expect(isHistoryShortcut('Z', false, true)).toBe(true)
