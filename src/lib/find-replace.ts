@@ -3,8 +3,12 @@ export interface TextMatch {
   end: number
 }
 
-function normalized(value: string, caseSensitive: boolean): string {
-  return caseSensitive ? value : value.toLocaleLowerCase()
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&')
+}
+
+function literalMatcher(query: string, caseSensitive: boolean): RegExp {
+  return new RegExp(escapeRegExp(query), caseSensitive ? 'gu' : 'giu')
 }
 
 export function findNextTextMatch(
@@ -14,13 +18,19 @@ export function findNextTextMatch(
   caseSensitive = false,
 ): TextMatch | null {
   if (!query) return null
-  const haystack = normalized(content, caseSensitive)
-  const needle = normalized(query, caseSensitive)
-  const safeFrom = Math.max(0, Math.min(from, content.length))
 
-  let start = haystack.indexOf(needle, safeFrom)
-  if (start < 0 && safeFrom > 0) start = haystack.indexOf(needle, 0)
-  return start < 0 ? null : { start, end: start + query.length }
+  const matcher = literalMatcher(query, caseSensitive)
+  const safeFrom = Math.max(0, Math.min(from, content.length))
+  matcher.lastIndex = safeFrom
+
+  let match = matcher.exec(content)
+  if (!match && safeFrom > 0) {
+    matcher.lastIndex = 0
+    match = matcher.exec(content)
+  }
+
+  if (!match) return null
+  return { start: match.index, end: match.index + match[0].length }
 }
 
 export function replaceTextMatch(
@@ -42,17 +52,14 @@ export function replaceAllText(
 ): { content: string; count: number } {
   if (!query) return { content, count: 0 }
 
-  const haystack = normalized(content, caseSensitive)
-  const needle = normalized(query, caseSensitive)
+  const matcher = literalMatcher(query, caseSensitive)
   let cursor = 0
   let output = ''
   let count = 0
 
-  while (cursor < content.length) {
-    const start = haystack.indexOf(needle, cursor)
-    if (start < 0) break
-    output += content.slice(cursor, start) + replacement
-    cursor = start + query.length
+  for (let match = matcher.exec(content); match; match = matcher.exec(content)) {
+    output += content.slice(cursor, match.index) + replacement
+    cursor = match.index + match[0].length
     count += 1
   }
 
