@@ -31,7 +31,7 @@ import {
 import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
-import { acceptDocumentChange } from './lib/change-tracking'
+import { acceptDocumentChange, rebaseDocumentChanges } from './lib/change-tracking'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -60,6 +60,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const importRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const pendingEditRef = useRef<{ start: number; end: number } | null>(null)
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [changeReplacement, setChangeReplacement] = useState('')
@@ -284,6 +285,7 @@ export default function App() {
       replacement,
       created: new Date().toISOString(),
       status: 'pending',
+      anchorState: 'anchored',
     }
     setSaveStatus('saving')
     setCurrentProject({
@@ -319,6 +321,9 @@ export default function App() {
     }
 
     setSaveStatus('saving')
+    const acceptedChanges = (currentProject.changes || []).map(item =>
+      item.id === changeId ? { ...item, status: 'accepted' as const } : item
+    )
     setCurrentProject({
       ...currentProject,
       content: nextContent,
@@ -327,8 +332,11 @@ export default function App() {
         nextContent,
         currentProject.comments || [],
       ),
-      changes: (currentProject.changes || []).map(item =>
-        item.id === changeId ? { ...item, status: 'accepted' as const } : item
+      changes: rebaseDocumentChanges(
+        currentProject.content,
+        nextContent,
+        acceptedChanges,
+        { start: change.start, end: change.end },
       ),
     })
     toast.success('Tracked change accepted')
@@ -425,9 +433,17 @@ export default function App() {
                     onSelect={captureSelection}
                     onKeyUp={captureSelection}
                     onClick={captureSelection}
+                    onBeforeInput={event => {
+                      pendingEditRef.current = {
+                        start: event.currentTarget.selectionStart,
+                        end: event.currentTarget.selectionEnd,
+                      }
+                    }}
                     onChange={event => {
                       setSaveStatus('saving')
                       const nextContent = event.target.value
+                      const editRange = pendingEditRef.current
+                      pendingEditRef.current = null
                       setCurrentProject({
                         ...currentProject,
                         content: nextContent,
@@ -435,6 +451,12 @@ export default function App() {
                           currentProject.content,
                           nextContent,
                           currentProject.comments || [],
+                        ),
+                        changes: rebaseDocumentChanges(
+                          currentProject.content,
+                          nextContent,
+                          currentProject.changes || [],
+                          editRange,
                         ),
                       })
                       setSelectedRange(null)
