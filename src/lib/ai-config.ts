@@ -188,6 +188,8 @@ export function validateAIConfig(config: AIConfig): { valid: boolean; errors: st
   if (config.enabled) {
     if (config.provider === 'none') {
       errors.push('Please select an AI provider');
+    } else if (config.provider !== 'openai') {
+      errors.push('This build supports OpenAI BYOK only; other providers are not connected to the writing endpoint');
     }
 
     if (!config.apiKey || config.apiKey.trim().length === 0) {
@@ -243,25 +245,25 @@ export function getProviderHints(provider: AIConfig['provider']): {
         description: 'Use GPT models from OpenAI',
         apiKeyFormat: 'sk-...',
         defaultEndpoint: 'https://api.openai.com/v1/chat/completions',
-        models: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo']
+        models: ['gpt-6-luna', 'gpt-6.1-sol']
       };
 
     case 'anthropic':
       return {
         name: 'Anthropic',
-        description: 'Use Claude models from Anthropic',
+        description: 'Not connected to this build; AI writing currently supports OpenAI BYOK only',
         apiKeyFormat: 'sk-ant-...',
         defaultEndpoint: 'https://api.anthropic.com/v1/messages',
-        models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku']
+        models: []
       };
 
     case 'custom':
       return {
         name: 'Custom Provider',
-        description: 'Use a custom AI API endpoint',
+        description: 'Custom endpoints are not connected to this build',
         apiKeyFormat: 'Your API key',
         defaultEndpoint: 'https://your-api.com/v1/completions',
-        models: ['your-model-name']
+        models: []
       };
 
     default:

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyAIAction, saveAIConfig } from './ai-config'
+import { applyAIAction, getProviderHints, saveAIConfig, validateAIConfig } from './ai-config'
 
 describe('real AI writing client', () => {
   beforeEach(() => {
@@ -46,6 +46,24 @@ describe('real AI writing client', () => {
       text: 'Original text.',
       model: 'test-model',
     })
+  })
+
+  it('rejects provider settings that the real writing endpoint cannot execute', () => {
+    const template = {
+      enabled: true, provider: 'openai' as const, apiKey: 'test-key',
+      endpoint: '', model: 'gpt-6-luna', offlineFallback: false,
+    }
+    expect(validateAIConfig(template).valid).toBe(true)
+    expect(validateAIConfig({ ...template, provider: 'anthropic' }).errors)
+      .toContain('This build supports OpenAI BYOK only; other providers are not connected to the writing endpoint')
+    expect(validateAIConfig({ ...template, provider: 'custom', endpoint: 'https://example.test' }).valid).toBe(false)
+  })
+
+  it('does not advertise unsupported AI integrations or legacy GPT-4 suggestions', () => {
+    expect(getProviderHints('openai').models).toContain('gpt-6-luna')
+    expect(getProviderHints('openai').models).not.toContain('gpt-3.5-turbo')
+    expect(getProviderHints('anthropic').models).toEqual([])
+    expect(getProviderHints('custom').models).toEqual([])
   })
 
   it('never fabricates a successful result when the backend rejects the request', async () => {
