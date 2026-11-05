@@ -10,6 +10,26 @@ export interface DocumentEditRange {
   end: number
 }
 
+export function isHistoryShortcut(
+  key: string,
+  ctrlKey: boolean,
+  metaKey: boolean,
+): boolean {
+  if (!ctrlKey && !metaKey) return false
+  const normalized = key.toLowerCase()
+  return normalized === 'z' || normalized === 'y'
+}
+
+export function invalidatePendingDocumentChanges(
+  changes: DocumentChange[],
+): DocumentChange[] {
+  return changes.map(change =>
+    change.status === 'pending'
+      ? { ...change, anchorState: 'unresolved' as const }
+      : change
+  )
+}
+
 export function inferDocumentEditRange(
   previousText: string,
   nextText: string,
