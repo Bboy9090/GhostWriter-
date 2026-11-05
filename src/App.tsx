@@ -31,7 +31,7 @@ import {
 import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
-import { acceptDocumentChange, inferDocumentEditRange, isHistoryShortcut, rebaseDocumentChanges } from './lib/change-tracking'
+import { acceptDocumentChange, inferDocumentEditRange, invalidatePendingDocumentChanges, isHistoryShortcut, rebaseDocumentChanges } from './lib/change-tracking'
 import { findNextTextMatch, replaceAllText, replaceTextMatch, type TextMatch } from './lib/find-replace'
 
 const APP_VERSION = '1.1.0'
@@ -62,6 +62,7 @@ export default function App() {
   const importRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const pendingEditRef = useRef<{ start: number; end: number } | null>(null)
+  const pendingHistoryEditRef = useRef(false)
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [changeReplacement, setChangeReplacement] = useState('')
@@ -234,6 +235,7 @@ export default function App() {
   const applyDraftMutation = (
     nextContent: string,
     editRange: { start: number; end: number } | null,
+    invalidatePendingChanges = false,
   ) => {
     if (!currentProject || nextContent === currentProject.content) return
     setSaveStatus('saving')
@@ -245,12 +247,14 @@ export default function App() {
         nextContent,
         currentProject.comments || [],
       ),
-      changes: rebaseDocumentChanges(
-        currentProject.content,
-        nextContent,
-        currentProject.changes || [],
-        editRange,
-      ),
+      changes: invalidatePendingChanges
+        ? invalidatePendingDocumentChanges(currentProject.changes || [])
+        : rebaseDocumentChanges(
+            currentProject.content,
+            nextContent,
+            currentProject.changes || [],
+            editRange,
+          ),
     })
     setSelectedRange(null)
   }
@@ -608,6 +612,7 @@ export default function App() {
                     onKeyDown={event => {
                       if (isHistoryShortcut(event.key, event.ctrlKey, event.metaKey)) {
                         pendingEditRef.current = null
+                        pendingHistoryEditRef.current = true
                         return
                       }
                       capturePendingEditRange()
@@ -620,11 +625,13 @@ export default function App() {
                     onClick={captureSelection}
                     onChange={event => {
                       const nextContent = event.target.value
+                      const isHistoryEdit = pendingHistoryEditRef.current
                       const editRange =
                         pendingEditRef.current ??
                         inferDocumentEditRange(currentProject.content, nextContent)
                       pendingEditRef.current = null
-                      applyDraftMutation(nextContent, editRange)
+                      pendingHistoryEditRef.current = false
+                      applyDraftMutation(nextContent, editRange, isHistoryEdit)
                       setActiveFindMatch(null)
                     }}
                     placeholder="Start writing…"
