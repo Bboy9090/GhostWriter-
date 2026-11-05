@@ -21,7 +21,6 @@ export function rebaseDocumentComments(
   ) suffix++
 
   const oldSuffixStart = previousText.length - suffix
-  const newSuffixStart = nextText.length - suffix
   const delta = nextText.length - previousText.length
 
   return comments.map(comment => {
