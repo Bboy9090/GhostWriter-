@@ -29,6 +29,7 @@ import {
   type ProjectMetadata,
 } from './lib/project-storage'
 import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
+import { importDocxFile } from './lib/docx-import'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
 import { acceptDocumentChange, inferDocumentEditRange, invalidatePendingDocumentChanges, isHistoryShortcut, rebaseDocumentChanges } from './lib/change-tracking'
@@ -61,6 +62,7 @@ export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('ghostwriter:theme') !== 'light')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const importRef = useRef<HTMLInputElement>(null)
+  const docxImportRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const pendingEditRef = useRef<{ start: number; end: number } | null>(null)
   const pendingHistoryEditRef = useRef(false)
@@ -223,6 +225,30 @@ export default function App() {
       event.target.value = ''
     }
   }
+
+  const openWordDocument = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const imported = await importDocxFile(file)
+      if (currentProject) flushCurrentProject(currentProject.id)
+
+      const project = createProject(imported.title, 'blank', imported.content)
+      setProjects(getAllProjectsMetadata())
+      setCurrentProject(project)
+      setShowProjects(false)
+      setShowTemplates(false)
+      setDocumentChanges([])
+      setActiveSidebarTab('chapters')
+      toast.success('Word document imported')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Word import failed')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
 
   const wipeAll = () => {
     if (!window.confirm("Delete every Bobby's Word Bench project stored in this browser? This cannot be undone.")) return
@@ -525,7 +551,7 @@ export default function App() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <section className="mb-5 grid gap-3 md:grid-cols-3">
           <Card><CardHeader className="pb-2"><CardDescription>Privacy</CardDescription><CardTitle className="text-base">Saved in this browser</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">No account or cloud upload is required.</CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardDescription>Recovery</CardDescription><CardTitle className="text-base">Portable backups</CardTitle></CardHeader><CardContent className="flex gap-2"><Button className="min-h-11" size="sm" variant="outline" onClick={exportBackup} disabled={!projects.length}><HardDriveDownload className="mr-2 h-4 w-4" />Backup</Button><Button className="min-h-11" size="sm" variant="outline" onClick={() => importRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Restore</Button><input ref={importRef} className="hidden" type="file" accept="application/json,.json" onChange={restoreBackup} /></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardDescription>Documents & recovery</CardDescription><CardTitle className="text-base">Open Word or restore a backup</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button className="min-h-11" size="sm" variant="outline" onClick={() => docxImportRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Open Word</Button><Button className="min-h-11" size="sm" variant="outline" onClick={exportBackup} disabled={!projects.length}><HardDriveDownload className="mr-2 h-4 w-4" />Backup</Button><Button className="min-h-11" size="sm" variant="outline" onClick={() => importRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Restore</Button><input ref={docxImportRef} className="hidden" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={openWordDocument} /><input ref={importRef} className="hidden" type="file" accept="application/json,.json" onChange={restoreBackup} /></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardDescription>Local storage estimate</CardDescription><CardTitle className="text-base">{Math.round(storage.percentage)}% used</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Back up before clearing browser data or changing devices.</CardContent></Card>
         </section>
 
