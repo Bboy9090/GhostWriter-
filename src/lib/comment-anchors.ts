@@ -9,7 +9,7 @@ function findQuoteMatches(text: string, quote: string): number[] {
   let at = text.indexOf(quote)
   while (at >= 0) {
     matches.push(at)
-    at = text.indexOf(quote, at + Math.max(1, quote.length))
+    at = text.indexOf(quote, at + 1)
   }
   return matches
 }
