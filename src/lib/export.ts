@@ -98,6 +98,15 @@ export async function exportAsDocx(project: Project): Promise<void> {
     `${sanitizeFilename(snapshot.title) || 'ghostwriter-document'}.docx`);
 }
 
+export async function exportAsEpub(project: Project): Promise<void> {
+  const { createEpub } = await import('./epub-export');
+  const bytes = await createEpub(project);
+  downloadBlob(
+    new Blob([bytes], { type: 'application/epub+zip' }),
+    `${sanitizeFilename(project.title) || 'word-bench-book'}.epub`,
+  );
+}
+
 // Helper function to trigger download
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
