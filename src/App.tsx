@@ -32,6 +32,7 @@ import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './li
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
 import { acceptDocumentChange, inferDocumentEditRange, rebaseDocumentChanges } from './lib/change-tracking'
+import { findNextTextMatch, replaceAllText, replaceTextMatch, type TextMatch } from './lib/find-replace'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -67,6 +68,10 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false)
   const [compareRevisionId, setCompareRevisionId] = useState<string | null>(null)
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number; quote: string } | null>(null)
+  const [findQuery, setFindQuery] = useState('')
+  const [replaceValue, setReplaceValue] = useState('')
+  const [findCaseSensitive, setFindCaseSensitive] = useState(false)
+  const [activeFindMatch, setActiveFindMatch] = useState<TextMatch | null>(null)
 
   const refreshProjects = () => {
     const next = getAllProjectsMetadata().sort(
@@ -224,6 +229,101 @@ export default function App() {
     setCurrentProject(null)
     refreshProjects()
     toast.success('Local projects cleared')
+  }
+
+  const applyDraftMutation = (
+    nextContent: string,
+    editRange: { start: number; end: number } | null,
+  ) => {
+    if (!currentProject || nextContent === currentProject.content) return
+    setSaveStatus('saving')
+    setCurrentProject({
+      ...currentProject,
+      content: nextContent,
+      comments: rebaseDocumentComments(
+        currentProject.content,
+        nextContent,
+        currentProject.comments || [],
+      ),
+      changes: rebaseDocumentChanges(
+        currentProject.content,
+        nextContent,
+        currentProject.changes || [],
+        editRange,
+      ),
+    })
+    setSelectedRange(null)
+  }
+
+  const selectEditorMatch = (match: TextMatch) => {
+    setActiveFindMatch(match)
+    window.requestAnimationFrame(() => {
+      const editor = editorRef.current
+      if (!editor) return
+      editor.focus()
+      editor.setSelectionRange(match.start, match.end)
+      editor.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+  }
+
+  const findNext = () => {
+    if (!currentProject || !findQuery) return
+    const from = activeFindMatch?.end ?? editorRef.current?.selectionEnd ?? 0
+    const match = findNextTextMatch(currentProject.content, findQuery, from, findCaseSensitive)
+    if (!match) {
+      setActiveFindMatch(null)
+      toast.error('No match found')
+      return
+    }
+    selectEditorMatch(match)
+  }
+
+  const replaceCurrentFind = () => {
+    if (!currentProject || !findQuery) return
+    const selected = activeFindMatch
+    const expected = findNextTextMatch(
+      currentProject.content,
+      findQuery,
+      selected?.start ?? editorRef.current?.selectionStart ?? 0,
+      findCaseSensitive,
+    )
+    const match = selected &&
+      currentProject.content.slice(selected.start, selected.end).localeCompare(
+        findQuery,
+        undefined,
+        { sensitivity: findCaseSensitive ? 'variant' : 'accent' },
+      ) === 0
+      ? selected
+      : expected
+
+    if (!match) {
+      toast.error('No match selected')
+      return
+    }
+
+    const nextContent = replaceTextMatch(currentProject.content, match, replaceValue)
+    applyDraftMutation(nextContent, { start: match.start, end: match.end })
+    const nextMatch = findNextTextMatch(
+      nextContent,
+      findQuery,
+      match.start + replaceValue.length,
+      findCaseSensitive,
+    )
+    if (nextMatch) selectEditorMatch(nextMatch)
+    else setActiveFindMatch(null)
+  }
+
+  const replaceAllFind = () => {
+    if (!currentProject || !findQuery) return
+    const result = replaceAllText(currentProject.content, findQuery, replaceValue, findCaseSensitive)
+    if (result.count === 0) {
+      toast.error('No matches found')
+      return
+    }
+    const editRange = inferDocumentEditRange(currentProject.content, result.content)
+    applyDraftMutation(result.content, editRange)
+    setActiveFindMatch(null)
+    toast.success(`Replaced ${result.count} match${result.count === 1 ? '' : 'es'}`)
   }
 
   const captureSelection = () => {
@@ -448,6 +548,58 @@ export default function App() {
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <Card>
                 <CardContent className="pt-6">
+                  <div className="mb-3 rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                      <Input
+                        aria-label="Find text"
+                        value={findQuery}
+                        onChange={event => {
+                          setFindQuery(event.target.value)
+                          setActiveFindMatch(null)
+                        }}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            findNext()
+                          }
+                        }}
+                        placeholder="Find in document…"
+                      />
+                      <Input
+                        aria-label="Replace text"
+                        value={replaceValue}
+                        onChange={event => setReplaceValue(event.target.value)}
+                        placeholder="Replace with…"
+                      />
+                      <Button type="button" variant="outline" onClick={findNext} disabled={!findQuery}>
+                        <Search className="mr-2 h-4 w-4" />Find next
+                      </Button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <label className="flex min-h-9 items-center gap-2 rounded border border-border px-3 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={findCaseSensitive}
+                          onChange={event => {
+                            setFindCaseSensitive(event.target.checked)
+                            setActiveFindMatch(null)
+                          }}
+                        />
+                        Match case
+                      </label>
+                      <Button type="button" size="sm" variant="outline" onClick={replaceCurrentFind} disabled={!findQuery}>
+                        Replace
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={replaceAllFind} disabled={!findQuery}>
+                        Replace all
+                      </Button>
+                      {activeFindMatch && (
+                        <span className="text-xs text-muted-foreground">
+                          Match at characters {activeFindMatch.start + 1}–{activeFindMatch.end}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <Textarea
                     ref={editorRef}
                     aria-label="Writing editor"
@@ -461,28 +613,13 @@ export default function App() {
                     onKeyUp={captureSelection}
                     onClick={captureSelection}
                     onChange={event => {
-                      setSaveStatus('saving')
                       const nextContent = event.target.value
                       const editRange =
                         pendingEditRef.current ??
                         inferDocumentEditRange(currentProject.content, nextContent)
                       pendingEditRef.current = null
-                      setCurrentProject({
-                        ...currentProject,
-                        content: nextContent,
-                        comments: rebaseDocumentComments(
-                          currentProject.content,
-                          nextContent,
-                          currentProject.comments || [],
-                        ),
-                        changes: rebaseDocumentChanges(
-                          currentProject.content,
-                          nextContent,
-                          currentProject.changes || [],
-                          editRange,
-                        ),
-                      })
-                      setSelectedRange(null)
+                      applyDraftMutation(nextContent, editRange)
+                      setActiveFindMatch(null)
                     }}
                     placeholder="Start writing…"
                     className="min-h-[58vh] resize-y border-0 font-serif text-base leading-7 shadow-none focus-visible:ring-0"
