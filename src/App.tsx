@@ -60,6 +60,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const importRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const pendingEditRef = useRef<{ start: number; end: number } | null>(null)
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [changeReplacement, setChangeReplacement] = useState('')
@@ -226,6 +227,15 @@ export default function App() {
     const end = editor.selectionEnd
     const quote = editor.value.slice(start, end)
     setSelectedRange(end > start && quote.trim() ? { start, end, quote } : null)
+  }
+
+  const capturePendingEditRange = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    pendingEditRef.current = {
+      start: editor.selectionStart,
+      end: editor.selectionEnd,
+    }
   }
 
   const addComment = () => {
@@ -430,12 +440,20 @@ export default function App() {
                     aria-label="Writing editor"
                     value={currentProject.content}
                     onSelect={captureSelection}
+                    onKeyDown={capturePendingEditRange}
+                    onPaste={capturePendingEditRange}
+                    onCut={capturePendingEditRange}
+                    onDrop={capturePendingEditRange}
+                    onCompositionStart={capturePendingEditRange}
                     onKeyUp={captureSelection}
                     onClick={captureSelection}
                     onChange={event => {
                       setSaveStatus('saving')
                       const nextContent = event.target.value
-                      const editRange = inferDocumentEditRange(currentProject.content, nextContent)
+                      const editRange =
+                        pendingEditRef.current ??
+                        inferDocumentEditRange(currentProject.content, nextContent)
+                      pendingEditRef.current = null
                       setCurrentProject({
                         ...currentProject,
                         content: nextContent,
