@@ -35,7 +35,7 @@ describe('tracked change anchoring', () => {
     expect(inferDocumentEditRange('prefix beta beta', 'beta beta'))
       .toEqual({ start: 0, end: 7 })
     expect(inferDocumentEditRange('alpha beta gamma', 'alpha zeta gamma'))
-      .toEqual({ start: 6, end: 9 })
+      .toEqual({ start: 6, end: 7 })
   })
 
   it('rebases a pasted prefix before the second duplicate passage', () => {
