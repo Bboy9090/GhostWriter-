@@ -28,6 +28,7 @@ import {
   type ProjectMetadata,
 } from './lib/project-storage'
 import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
+import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
 
 const APP_VERSION = '1.1.0'
@@ -358,7 +359,16 @@ export default function App() {
                     onClick={captureSelection}
                     onChange={event => {
                       setSaveStatus('saving')
-                      setCurrentProject({...currentProject, content: event.target.value})
+                      const nextContent = event.target.value
+                      setCurrentProject({
+                        ...currentProject,
+                        content: nextContent,
+                        comments: rebaseDocumentComments(
+                          currentProject.content,
+                          nextContent,
+                          currentProject.comments || [],
+                        ),
+                      })
                       setSelectedRange(null)
                     }}
                     placeholder="Start writing…"
@@ -409,6 +419,11 @@ export default function App() {
                       .map(comment => (
                         <div key={comment.id} className={`rounded-lg border p-3 ${comment.resolved ? 'border-border bg-muted/40 opacity-70' : 'border-amber-500/30 bg-amber-500/5'}`}>
                           <div className="line-clamp-3 whitespace-pre-wrap text-xs font-medium">“{comment.quote}”</div>
+                          {comment.anchorState === 'unresolved' && (
+                            <div className="mt-2 rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-300">
+                              Anchor unresolved — passage changed or was removed. Review this comment manually.
+                            </div>
+                          )}
                           <p className="mt-2 whitespace-pre-wrap text-sm">{comment.body}</p>
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <span className="text-[10px] text-muted-foreground">{new Date(comment.created).toLocaleString()}</span>
@@ -441,7 +456,15 @@ export default function App() {
               draft={currentProject.content}
               onApply={content => {
                 setSaveStatus('saving')
-                setCurrentProject({ ...currentProject, content })
+                setCurrentProject({
+                  ...currentProject,
+                  content,
+                  comments: rebaseDocumentComments(
+                    currentProject.content,
+                    content,
+                    currentProject.comments || [],
+                  ),
+                })
               }}
             />
           </section>
