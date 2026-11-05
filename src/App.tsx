@@ -31,7 +31,7 @@ import {
 import { exportAsDocx, exportAsHtml, exportAsMarkdown, exportAsText } from './lib/export'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
-import { acceptDocumentChange, inferDocumentEditRange, rebaseDocumentChanges } from './lib/change-tracking'
+import { acceptDocumentChange, inferDocumentEditRange, isHistoryShortcut, rebaseDocumentChanges } from './lib/change-tracking'
 import { findNextTextMatch, replaceAllText, replaceTextMatch, type TextMatch } from './lib/find-replace'
 
 const APP_VERSION = '1.1.0'
@@ -605,7 +605,13 @@ export default function App() {
                     aria-label="Writing editor"
                     value={currentProject.content}
                     onSelect={captureSelection}
-                    onKeyDown={capturePendingEditRange}
+                    onKeyDown={event => {
+                      if (isHistoryShortcut(event.key, event.ctrlKey, event.metaKey)) {
+                        pendingEditRef.current = null
+                        return
+                      }
+                      capturePendingEditRange()
+                    }}
                     onPaste={capturePendingEditRange}
                     onCut={capturePendingEditRange}
                     onDrop={capturePendingEditRange}
