@@ -342,6 +342,7 @@ export default function App() {
   const capturePendingEditRange = () => {
     const editor = editorRef.current
     if (!editor) return
+    pendingHistoryEditRef.current = false
     pendingEditRef.current = {
       start: editor.selectionStart,
       end: editor.selectionEnd,
@@ -615,6 +616,7 @@ export default function App() {
                         pendingHistoryEditRef.current = true
                         return
                       }
+                      pendingHistoryEditRef.current = false
                       capturePendingEditRange()
                     }}
                     onPaste={capturePendingEditRange}
