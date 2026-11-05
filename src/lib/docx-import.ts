@@ -21,7 +21,7 @@ function titleFromFilename(name: string): string {
   return withoutExtension || 'Imported Word Document'
 }
 
-function textFromDocumentXml(xml: string): string {
+function textFromDocumentXml(xml: string, filename: string): string {
   const document = new DOMParser().parseFromString(xml, 'application/xml')
   if (document.querySelector('parsererror')) {
     throw new DocxImportError('The Word document XML is malformed.')
@@ -30,18 +30,7 @@ function textFromDocumentXml(xml: string): string {
   const wordNamespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
   const paragraphs = Array.from(document.getElementsByTagNameNS(wordNamespace, 'p'))
 
-  const contentParagraphs = paragraphs.filter((paragraph, index) => {
-    if (index !== 0) return true
-    const style = paragraph.getElementsByTagNameNS(wordNamespace, 'pStyle')[0]
-    const styleValue =
-      style?.getAttributeNS(wordNamespace, 'val') ||
-      style?.getAttribute('w:val') ||
-      style?.getAttribute('val') ||
-      ''
-    return styleValue.toLowerCase() !== 'title'
-  })
-
-  return contentParagraphs.map(paragraph => {
+  const lines = paragraphs.map(paragraph => {
     const parts: string[] = []
     const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_ELEMENT)
     let node = walker.nextNode()
@@ -62,7 +51,18 @@ function textFromDocumentXml(xml: string): string {
       node = walker.nextNode()
     }
     return parts.join('')
-  }).join('\n')
+  })
+
+  // Word Bench exports its document title as a separate Title-styled paragraph.
+  // Only remove it when its text matches the filename. An unrelated document's
+  // first Title-styled paragraph is manuscript content and must be preserved.
+  const firstStyle = paragraphs[0]?.getElementsByTagNameNS(wordNamespace, 'pStyle')[0]
+  const styleValue = firstStyle?.getAttributeNS(wordNamespace, 'val') ||
+    firstStyle?.getAttribute('w:val') || firstStyle?.getAttribute('val') || ''
+  if (styleValue.toLowerCase() === 'title' && lines[0] === titleFromFilename(filename)) {
+    lines.shift()
+  }
+  return lines.join('\n')
 }
 
 export async function parseDocx(bytes: ArrayBuffer, filename = 'Imported Word Document.docx'): Promise<ImportedDocx> {
@@ -97,7 +97,7 @@ export async function parseDocx(bytes: ArrayBuffer, filename = 'Imported Word Do
     throw new DocxImportError('The Word document body exceeds the safe import limit.')
   }
 
-  const content = textFromDocumentXml(xml)
+  const content = textFromDocumentXml(xml, filename)
   if (!content.trim()) {
     throw new DocxImportError('The Word document does not contain readable paragraph text.')
   }
