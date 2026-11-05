@@ -25,11 +25,13 @@ import {
   saveProject,
   type Project,
   type DocumentComment,
+  type DocumentChange,
   type ProjectMetadata,
 } from './lib/project-storage'
 import { exportAsDocx, exportAsMarkdown, exportAsText } from './lib/export'
 import { rebaseDocumentComments } from './lib/comment-anchors'
 import { diffDocumentLines } from './lib/document-diff'
+import { acceptDocumentChange } from './lib/change-tracking'
 
 const APP_VERSION = '1.1.0'
 const ONBOARDING_KEY = 'ghostwriter:onboarding-complete'
@@ -60,6 +62,7 @@ export default function App() {
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const [exportingDocx, setExportingDocx] = useState(false)
   const [commentBody, setCommentBody] = useState('')
+  const [changeReplacement, setChangeReplacement] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [compareRevisionId, setCompareRevisionId] = useState<string | null>(null)
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number; quote: string } | null>(null)
@@ -266,6 +269,71 @@ export default function App() {
     })
   }
 
+  const addTrackedChange = () => {
+    if (!currentProject || !selectedRange) return
+    const replacement = changeReplacement
+    if (replacement === selectedRange.quote) {
+      toast.error('The replacement is identical to the selected text')
+      return
+    }
+    const change: DocumentChange = {
+      id: `change_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      start: selectedRange.start,
+      end: selectedRange.end,
+      original: selectedRange.quote,
+      replacement,
+      created: new Date().toISOString(),
+      status: 'pending',
+    }
+    setSaveStatus('saving')
+    setCurrentProject({
+      ...currentProject,
+      changes: [...(currentProject.changes || []), change],
+    })
+    setChangeReplacement('')
+    setSelectedRange(null)
+    toast.success('Tracked change added for review')
+  }
+
+  const resolveTrackedChange = (changeId: string, decision: 'accepted' | 'rejected') => {
+    if (!currentProject) return
+    const change = (currentProject.changes || []).find(item => item.id === changeId)
+    if (!change || change.status !== 'pending') return
+
+    if (decision === 'rejected') {
+      setSaveStatus('saving')
+      setCurrentProject({
+        ...currentProject,
+        changes: (currentProject.changes || []).map(item =>
+          item.id === changeId ? { ...item, status: 'rejected' as const } : item
+        ),
+      })
+      toast.success('Tracked change rejected; draft unchanged')
+      return
+    }
+
+    const nextContent = acceptDocumentChange(currentProject.content, change)
+    if (nextContent === null) {
+      toast.error('This tracked change can no longer be anchored uniquely. Review the passage manually.')
+      return
+    }
+
+    setSaveStatus('saving')
+    setCurrentProject({
+      ...currentProject,
+      content: nextContent,
+      comments: rebaseDocumentComments(
+        currentProject.content,
+        nextContent,
+        currentProject.comments || [],
+      ),
+      changes: (currentProject.changes || []).map(item =>
+        item.id === changeId ? { ...item, status: 'accepted' as const } : item
+      ),
+    })
+    toast.success('Tracked change accepted')
+  }
+
   const saveRevision = () => {
     if (!currentProject) return
     try {
@@ -381,9 +449,9 @@ export default function App() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <MessageSquarePlus className="h-4 w-4" />
-                    Review comments
+                    Review
                   </CardTitle>
-                  <CardDescription>Select text in the editor, then add a note without changing the draft.</CardDescription>
+                  <CardDescription>Select text to add a comment or propose a tracked replacement. Suggestions do not change the draft until accepted.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2 rounded-lg border border-border p-3">
@@ -407,8 +475,67 @@ export default function App() {
                       <MessageSquarePlus className="mr-2 h-4 w-4" />
                       Add comment
                     </Button>
+                    <div className="border-t border-border pt-2">
+                      <div className="mb-2 text-xs font-medium text-muted-foreground">Tracked replacement</div>
+                      <Textarea
+                        aria-label="Replacement text"
+                        value={changeReplacement}
+                        onChange={event => setChangeReplacement(event.target.value)}
+                        placeholder="Propose replacement text…"
+                        disabled={!selectedRange}
+                        className="min-h-20 text-sm"
+                      />
+                      <Button
+                        className="mt-2 w-full"
+                        size="sm"
+                        variant="outline"
+                        onClick={addTrackedChange}
+                        disabled={!selectedRange}
+                      >
+                        Suggest replacement
+                      </Button>
+                    </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Tracked changes ({(currentProject.changes || []).filter(change => change.status === 'pending').length} pending)
+                    </div>
+                    {(currentProject.changes || []).length === 0 && (
+                      <p className="py-2 text-center text-sm text-muted-foreground">No tracked changes yet.</p>
+                    )}
+                    {(currentProject.changes || [])
+                      .slice()
+                      .sort((a, b) => Number(a.status !== 'pending') - Number(b.status !== 'pending') || a.start - b.start)
+                      .map(change => (
+                        <div key={change.id} className={`rounded-lg border p-3 ${
+                          change.status === 'pending'
+                            ? 'border-blue-500/30 bg-blue-500/5'
+                            : 'border-border bg-muted/40 opacity-70'
+                        }`}>
+                          <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {change.status}
+                          </div>
+                          <div className="mt-2 text-xs">
+                            <div className="rounded bg-rose-500/10 p-2 text-rose-300 line-through">− {change.original}</div>
+                            <div className="mt-1 rounded bg-emerald-500/10 p-2 text-emerald-300">+ {change.replacement || 'Delete selected text'}</div>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-muted-foreground">{new Date(change.created).toLocaleString()}</span>
+                            {change.status === 'pending' && (
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => resolveTrackedChange(change.id, 'accepted')}>Accept</Button>
+                                <Button size="sm" variant="ghost" onClick={() => resolveTrackedChange(change.id, 'rejected')}>Reject</Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="border-t border-border pt-3">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comments</div>
+                  </div>
                   <div className="max-h-[44vh] space-y-3 overflow-y-auto">
                     {(currentProject.comments || []).length === 0 && (
                       <p className="py-4 text-center text-sm text-muted-foreground">No review comments yet.</p>
