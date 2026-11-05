@@ -208,5 +208,5 @@ export function exportAsHtml(project: Project): void {
 </body>
 </html>
 `;
-  downloadFile(html, sanitizeFilename(project.title) + '.html', 'text/html;charset=utf-8');
+  downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${sanitizeFilename(project.title) || 'word-bench-document'}.html`);
 }
