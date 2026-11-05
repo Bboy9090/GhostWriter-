@@ -10,6 +10,31 @@ export interface DocumentEditRange {
   end: number
 }
 
+export function inferDocumentEditRange(
+  previousText: string,
+  nextText: string,
+): DocumentEditRange | null {
+  if (previousText === nextText) return null
+
+  let prefix = 0
+  const maxPrefix = Math.min(previousText.length, nextText.length)
+  while (prefix < maxPrefix && previousText[prefix] === nextText[prefix]) prefix++
+
+  let suffix = 0
+  while (
+    suffix < previousText.length - prefix &&
+    suffix < nextText.length - prefix &&
+    previousText[previousText.length - 1 - suffix] === nextText[nextText.length - 1 - suffix]
+  ) {
+    suffix++
+  }
+
+  return {
+    start: prefix,
+    end: previousText.length - suffix,
+  }
+}
+
 function rangeMatches(
   content: string,
   change: Pick<DocumentChange, 'start' | 'end' | 'original'>,
