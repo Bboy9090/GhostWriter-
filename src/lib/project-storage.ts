@@ -12,6 +12,16 @@ export interface DocumentComment {
   anchorState?: 'anchored' | 'unresolved';
 }
 
+export interface DocumentChange {
+  id: string;
+  start: number;
+  end: number;
+  original: string;
+  replacement: string;
+  created: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
 export interface ProjectRevision {
   id: string;
   created: string;
@@ -28,6 +38,7 @@ export interface Project {
   created: string;
   modified: string;
   comments?: DocumentComment[];
+  changes?: DocumentChange[];
   revisions?: ProjectRevision[];
   metadata: {
     wordCount: number;
@@ -123,6 +134,7 @@ export function getProject(id: string): Project | null {
     return {
       ...project,
       comments: Array.isArray(project.comments) ? project.comments : [],
+      changes: Array.isArray(project.changes) ? project.changes : [],
       revisions: Array.isArray(project.revisions) ? project.revisions : [],
     };
   } catch (error) {
@@ -291,6 +303,19 @@ function isValidProject(value: unknown): value is Project {
         typeof comment.resolved === 'boolean'
       )
     )) &&
+    (project.changes === undefined || (
+      Array.isArray(project.changes) &&
+      project.changes.every(change =>
+        !!change &&
+        typeof change.id === 'string' &&
+        typeof change.start === 'number' &&
+        typeof change.end === 'number' &&
+        typeof change.original === 'string' &&
+        typeof change.replacement === 'string' &&
+        typeof change.created === 'string' &&
+        (change.status === 'pending' || change.status === 'accepted' || change.status === 'rejected')
+      )
+    )) &&
     !!metadata && typeof metadata === 'object' &&
     Array.isArray(metadata.tags) && metadata.tags.every(tag => typeof tag === 'string') &&
     typeof metadata.category === 'string';
@@ -369,6 +394,7 @@ export function createProject(title: string, templateId: string, content: string
     created: now,
     modified: now,
     comments: [],
+    changes: [],
     revisions: [],
     metadata: {
       wordCount: countWords(content),
