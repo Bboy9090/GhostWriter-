@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "repository": "Bboy9090/GhostWriter-",
+  "status": "recorded",
+  "public_name": "Bobby's Word Bench",
+  "checks": [
+    {
+      "path": "desktop_suite/app_meta.json",
+      "format": "json",
+      "key": [
+        "title"
+      ],
+      "expected": "Bobby's Word Bench",
+      "role": "public_name"
+    },
+    {
+      "path": "desktop_suite/app_meta.json",
+      "format": "json",
+      "key": [
+        "slug"
+      ],
+      "expected": "bobbys-word-bench",
+      "role": "internal_identifier"
+    },
+    {
+      "path": "desktop_suite/app_meta.json",
+      "format": "json",
+      "key": [
+        "exe_name"
+      ],
+      "expected": "BobbysWordBench",
+      "role": "internal_identifier"
+    }
+  ],
+  "evidence": "November 2026 publishing roster; 741c43a44107336f6635c1bfe96262b0ef54c0df desktop_suite/app_meta.json",
+  "release_verification": "not_performed"
+}
